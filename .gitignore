@@ -1,0 +1,35 @@
+.idea
+*.iml
+.DS_Store
+.claude
+dist
+
+CONTEXT.md
+
+test_data_large.sql
+
+benchmarks
+
+# Hugo build outputs
+site/public/
+docs/public/
+site/resources/_gen/
+docs/resources/_gen/
+site/hugo_stats.json
+docs/hugo_stats.json
+.hugo_build.lock
+
+# Node.js dependencies  
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Hugo Modules: go.mod and go.sum should be tracked
+# package-lock.json should be tracked for reproducible builds
+
+# Logs
+*.log
+*/**.log
+# Added by goreleaser init:
+dist/
