@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 
 	"github.com/mattn/go-sqlite3"
@@ -57,11 +58,43 @@ var (
 
 func registerDrivers() {
 	registerOnce.Do(func() {
-		sql.Register(driverLogsRead, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(logsReadPragmas)})
+		sql.Register(driverLogsRead, &sqlite3.SQLiteDriver{ConnectHook: logsReadConnectHook})
 		sql.Register(driverLogsWrite, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(logsWritePragmas)})
 		sql.Register(driverMetrics, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(metricsPragmas)})
 		sql.Register(driverMeta, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(metaPragmas)})
 	})
+}
+
+// logsReadConnectHook applies the read pragmas, then registers the authorizer:
+// defense in depth under the AST validation for user queries. Order matters -
+// the authorizer would deny our own pragmas. Registered only on the read pool;
+// jobs and ingestion on the other pools legitimately run PRAGMA (optimize,
+// incremental_vacuum) and, later, ATTACH for cross-DB queries.
+func logsReadConnectHook(conn *sqlite3.SQLiteConn) error {
+	if err := makeConnectHook(logsReadPragmas)(conn); err != nil {
+		return err
+	}
+	conn.RegisterAuthorizer(readAuthorizer)
+	return nil
+}
+
+func readAuthorizer(op int, arg1, arg2, arg3 string) int {
+	switch op {
+	case sqlite3.SQLITE_PRAGMA:
+		// FTS5 runs `PRAGMA data_version` internally on every MATCH to detect
+		// external changes; denying it breaks FTS queries entirely
+		if strings.EqualFold(arg1, "data_version") {
+			return sqlite3.SQLITE_OK
+		}
+		return sqlite3.SQLITE_DENY
+	case sqlite3.SQLITE_ATTACH, sqlite3.SQLITE_DETACH:
+		return sqlite3.SQLITE_DENY
+	case sqlite3.SQLITE_FUNCTION:
+		if strings.EqualFold(arg2, "load_extension") {
+			return sqlite3.SQLITE_DENY
+		}
+	}
+	return sqlite3.SQLITE_OK
 }
 
 func makeConnectHook(pragmas []string) func(*sqlite3.SQLiteConn) error {

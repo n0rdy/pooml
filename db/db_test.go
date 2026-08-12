@@ -55,3 +55,38 @@ func TestMigrateAndPoolsRoundTrip(t *testing.T) {
 		t.Error("write through the read-only pool succeeded; mode=ro not enforced")
 	}
 }
+
+// The authorizer is defense in depth under the AST validation: even raw SQL
+// reaching the read pool must not be able to run PRAGMA/ATTACH/load_extension.
+func TestReadPoolAuthorizer(t *testing.T) {
+	dir := t.TempDir()
+	MigrateAll(dir)
+	pools, err := OpenPools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pools.Close)
+
+	denied := []string{
+		"PRAGMA cache_size",
+		"ATTACH DATABASE 'x.db' AS x",
+		"SELECT load_extension('evil')",
+	}
+	for _, q := range denied {
+		if _, err := pools.LogsRead.Exec(q); err == nil {
+			t.Errorf("%q succeeded on the read pool, want authorizer denial", q)
+		}
+	}
+
+	// same ops stay legal on the write pool (jobs run PRAGMA optimize etc.)
+	var v string
+	if err := pools.LogsWrite.QueryRow("PRAGMA cache_size").Scan(&v); err != nil {
+		t.Errorf("PRAGMA on write pool: %v", err)
+	}
+
+	// plain reads on the read pool are unaffected
+	var cnt int
+	if err := pools.LogsRead.QueryRow("SELECT count(*) FROM logs").Scan(&cnt); err != nil {
+		t.Errorf("plain SELECT on read pool: %v", err)
+	}
+}
