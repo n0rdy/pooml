@@ -7,13 +7,7 @@ dist
 CONTEXT.md
 ROADMAP.md
 
-# tests are local-only, not committed (see CONTEXT.md > Tests)
-*_test.go
-tests/
-
 test_data_large.sql
-
-benchmarks
 
 # Hugo build outputs
 site/public/
