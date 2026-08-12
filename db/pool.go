@@ -23,14 +23,11 @@ const (
 // db.Exec("PRAGMA ...") would only affect the one connection that ran it.
 //
 // cache_size is negative = KB (positive would mean pages).
-// hard_heap_limit caps SQLite's per-connection heap so a runaway user query
-// returns SQLITE_NOMEM instead of OOMing the process.
 var (
 	logsReadPragmas = []string{
 		"PRAGMA synchronous = NORMAL",
 		"PRAGMA temp_store = MEMORY",
-		"PRAGMA cache_size = -10000",         // 10 MB per read conn
-		"PRAGMA hard_heap_limit = 104857600", // 100 MB cap on user queries
+		"PRAGMA cache_size = -10000", // 10 MB per read conn
 	}
 
 	logsWritePragmas = []string{
@@ -44,7 +41,6 @@ var (
 		"PRAGMA synchronous = NORMAL",
 		"PRAGMA temp_store = MEMORY",
 		"PRAGMA cache_size = -10000",
-		"PRAGMA hard_heap_limit = 104857600",
 		"PRAGMA optimize = 0x10002",
 	}
 
@@ -129,6 +125,17 @@ func OpenPools(dbDir string) (*Pools, error) {
 		logsWrite.Close()
 		metrics.Close()
 		return nil, fmt.Errorf("meta pool: %w", err)
+	}
+
+	// hard_heap_limit is process-global (all pools share it) and cannot be
+	// lowered or cleared once set, so it is a one-shot OOM backstop here, not
+	// a per-pool query cap. See CONTEXT.md > Performance > SQLite Configuration.
+	if _, err := meta.Exec("PRAGMA hard_heap_limit = 1073741824"); err != nil {
+		logsRead.Close()
+		logsWrite.Close()
+		metrics.Close()
+		meta.Close()
+		return nil, fmt.Errorf("set hard_heap_limit: %w", err)
 	}
 
 	return &Pools{

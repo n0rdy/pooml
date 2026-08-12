@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	_ "github.com/golang-migrate/migrate/v4/database/sqlite"
+	_ "github.com/golang-migrate/migrate/v4/database/sqlite3"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
@@ -31,20 +31,16 @@ func MigrateAll(dbDir string) {
 }
 
 func migrateOne(name, dbPath string, migrationsFS embed.FS, fsRoot string) {
-	// x-no-tx-wrap=true disables migrate's automatic transaction wrapping -
-	// required because PRAGMAs (and the FTS5 virtual-table CREATE) don't play
-	// well inside a wrapped transaction.
-	// See: https://github.com/golang-migrate/migrate/issues/346
+	// migrate's "sqlite3" registration is mattn-backed, same engine as the
+	// runtime pools. The "sqlite" (modernc) one would silently give migrations
+	// FTS5 while the mattn runtime lacks it without -tags sqlite_fts5.
 	//
-	// _pragma=auto_vacuum(INCREMENTAL) is honored by modernc.org/sqlite (the
-	// driver behind migrate's "sqlite" registration). It runs on connection
-	// open, BEFORE migrate creates its schema_migrations bookkeeping table -
-	// which is the only point at which auto_vacuum can still be persisted in
-	// the DB header. Once any table exists, auto_vacuum is silently ignored.
-	// journal_mode is set in 000001_init.up.sql (Forq-style) since it can be
-	// applied at any time.
+	// x-no-tx-wrap: PRAGMAs and the FTS5 virtual-table CREATE don't work inside
+	// migrate's tx wrapping (github.com/golang-migrate/migrate/issues/346).
+	// _auto_vacuum runs on connection open, before schema_migrations exists -
+	// the only point where auto_vacuum can still be persisted in the DB header.
 	dbURL := fmt.Sprintf(
-		"sqlite://file:%s?cache=shared&mode=rwc&x-no-tx-wrap=true&_pragma=auto_vacuum(INCREMENTAL)",
+		"sqlite3://file:%s?mode=rwc&x-no-tx-wrap=true&_auto_vacuum=incremental",
 		dbPath,
 	)
 

@@ -1,23 +1,33 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 	"time"
 
 	"github.com/n0rdy/pooml/common"
+	"github.com/n0rdy/pooml/ingestion"
 	"github.com/n0rdy/pooml/services"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
-const healthcheckTimeout = 2 * time.Second
+const (
+	healthcheckTimeout = 2 * time.Second
+
+	// matches FluentBit's default chunk size; see CONTEXT.md > Ingestion
+	maxIngestPayloadBytes = 2 << 20
+)
 
 type Router struct {
 	monitoringService *services.MonitoringService
 	throttlingService *services.ThrottlingService
+	pipeline          *ingestion.Pipeline
 	authSecret        string
 	env               string
 	trustProxyHeaders bool
@@ -26,6 +36,7 @@ type Router struct {
 func NewRouter(
 	monitoringService *services.MonitoringService,
 	throttlingService *services.ThrottlingService,
+	pipeline *ingestion.Pipeline,
 	authSecret string,
 	env string,
 	trustProxyHeaders bool,
@@ -33,6 +44,7 @@ func NewRouter(
 	return &Router{
 		monitoringService: monitoringService,
 		throttlingService: throttlingService,
+		pipeline:          pipeline,
 		authSecret:        authSecret,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
@@ -71,10 +83,38 @@ func (ar *Router) healthcheck(w http.ResponseWriter, req *http.Request) {
 	ar.sendErrorResponse(w, http.StatusServiceUnavailable, common.ErrCodeServiceUnhealthy)
 }
 
-// TODO: implement - log ingestion entry point. Reads body (capped at 2 MB),
-// extracts service/host from URL, pushes to ingestChan, returns 204.
+// ingestLogs runs on the request goroutine and must stay fast: no parsing
+// here, just a bounded read and a non-blocking push onto the pipeline.
 func (ar *Router) ingestLogs(w http.ResponseWriter, req *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	service := chi.URLParam(req, "service")
+	host := chi.URLParam(req, "host")
+	if len(service) > 200 || len(host) > 200 {
+		ar.sendErrorResponse(w, http.StatusBadRequest, common.ErrCodeBadRequest)
+		return
+	}
+
+	req.Body = http.MaxBytesReader(w, req.Body, maxIngestPayloadBytes)
+	payload, err := io.ReadAll(req.Body)
+	if err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			ar.sendErrorResponse(w, http.StatusRequestEntityTooLarge, common.ErrCodePayloadTooLarge)
+			return
+		}
+		ar.sendErrorResponse(w, http.StatusBadRequest, common.ErrCodeBadRequest)
+		return
+	}
+	if len(bytes.TrimSpace(payload)) == 0 {
+		ar.sendErrorResponse(w, http.StatusBadRequest, common.ErrCodeEmptyPayload)
+		return
+	}
+
+	if !ar.pipeline.TryIngest(service, host, payload, time.Now().UnixMilli()) {
+		// pipeline saturated: FluentBit retries with backoff
+		ar.sendErrorResponse(w, http.StatusTooManyRequests, common.ErrCodeTooManyRequests)
+		return
+	}
+	ar.sendNoContentEmptyResponse(w)
 }
 
 func (ar *Router) sendNoContentEmptyResponse(w http.ResponseWriter) {

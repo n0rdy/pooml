@@ -16,6 +16,7 @@ import (
 	"github.com/n0rdy/pooml/api"
 	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/db"
+	"github.com/n0rdy/pooml/ingestion"
 	"github.com/n0rdy/pooml/services"
 	"github.com/n0rdy/pooml/ui"
 
@@ -75,8 +76,13 @@ func main() {
 	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
 	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
 
+	// Log ingestion pipeline (broadcaster is shared with the SSE handlers in M6)
+	broadcaster := ingestion.NewBroadcaster()
+	pipeline := ingestion.NewPipeline(pools.LogsWrite, broadcaster)
+	pipeline.Start()
+
 	// Routers
-	apiRouter := api.NewRouter(monitoringService, throttlingService, fixmeAPIAuthPlaceholder, env, trustProxyHeaders)
+	apiRouter := api.NewRouter(monitoringService, throttlingService, pipeline, fixmeAPIAuthPlaceholder, env, trustProxyHeaders)
 	uiRouter := ui.NewRouter(sessionsService, throttlingService, uiSecret, env, trustProxyHeaders)
 
 	apiServer := newAPIServer(apiAddr, apiRouter.NewRouter())
@@ -134,9 +140,22 @@ func main() {
 	httpWG.Wait()
 	log.Info().Msg("HTTP servers shut down")
 
-	// Stages 2-3 (M1 / M9): drain the ingestion pipelines by closing their
-	// channels producer-to-consumer, not by cancelling appCtx - the batch
-	// writers must survive to flush. See CONTEXT.md > Graceful Shutdown.
+	// Stage 2: drain the log ingestion pipeline. Channel close, not appCtx
+	// cancellation - the batch writer must survive to flush its final batch.
+	// Bounded by the shutdown deadline; a stuck flush loses its rows by design.
+	drained := make(chan struct{})
+	go func() {
+		pipeline.Shutdown()
+		close(drained)
+	}()
+	select {
+	case <-drained:
+		log.Info().Msg("ingestion pipeline drained")
+	case <-shutdownCtx.Done():
+		log.Warn().Msg("shutdown deadline reached with ingestion pipeline still draining; proceeding anyway")
+	}
+
+	// Stage 3 (M9): drain the metrics ingestion pipeline the same way.
 
 	// Stage 4: stop background jobs. Only safe once the pipelines above have
 	// drained, since later jobs (retention, backup, optimize) share the pools.
