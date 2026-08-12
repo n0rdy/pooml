@@ -5,6 +5,7 @@
 dist
 
 CONTEXT.md
+ROADMAP.md
 
 test_data_large.sql
 
@@ -33,3 +34,5 @@ yarn-error.log*
 */**.log
 # Added by goreleaser init:
 dist/
+
+CLAUDE.md
