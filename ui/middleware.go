@@ -6,9 +6,11 @@ import (
 
 	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/services"
+	"github.com/n0rdy/pooml/ui/templates"
 	"github.com/n0rdy/pooml/utils"
 
 	"github.com/justinas/nosurf"
+	"github.com/rs/zerolog/log"
 )
 
 // securityHeaders middleware sets HTTP security headers on every UI response.
@@ -44,18 +46,22 @@ func securityHeaders(env string) func(http.Handler) http.Handler {
 	}
 }
 
-// loginThrottle middleware blocks login attempts from IPs that have exceeded
-// the failure threshold. Renders the login page with a rate-limit message
-// instead of just returning 429 with no body, so the UX is still recognizable.
-//
-// TODO: when templ rendering is wired, render the login page (templates.LoginPage)
-// with the error message and HTTP 429 instead of the bare http.Error.
+// loginThrottle blocks login attempts from IPs past the failure threshold.
+// Renders the full login page at 429 rather than a bare error, so a locked-out
+// human still sees a recognizable screen.
 func loginThrottle(throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			ip := utils.ClientIP(req, trustProxyHeaders)
 			if throttlingService.IsLocked(ip) {
-				http.Error(w, "Too many failed login attempts. Try again in a minute.", http.StatusTooManyRequests)
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				w.WriteHeader(http.StatusTooManyRequests)
+				page := templates.LoginPage("throttled",
+					"Too many attempts. The door is locked for a minute - catch your breath.",
+					nosurf.Token(req))
+				if err := page.Render(req.Context(), w); err != nil {
+					log.Error().Err(err).Msg("throttle page render failed")
+				}
 				return
 			}
 			next.ServeHTTP(w, req)
@@ -83,7 +89,11 @@ func sessionAuth(sessionsService *services.SessionsService) func(http.Handler) h
 	}
 }
 
-// csrfPrevention middleware to protect against CSRF attacks
+// csrfPrevention middleware to protect against CSRF attacks.
+// Note: nosurf v1.2 additionally requires every unsafe request to carry one of
+// Sec-Fetch-Site/Origin/Referer and match the host. Browsers always send one
+// on form posts and HTMX requests; bare HTTP clients (tests, curl) must set
+// Origin explicitly or they fail with ErrNoReferer.
 func csrfPrevention(csrfFailureHandler func(w http.ResponseWriter, r *http.Request), env string) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		csrfHandler := nosurf.New(next)
