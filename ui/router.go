@@ -1,12 +1,14 @@
 package ui
 
 import (
+	"context"
 	"crypto/subtle"
 	"net/http"
 	"strconv"
 
 	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/db"
+	"github.com/n0rdy/pooml/ingestion"
 	"github.com/n0rdy/pooml/services"
 	"github.com/n0rdy/pooml/ui/templates"
 	"github.com/n0rdy/pooml/utils"
@@ -27,6 +29,11 @@ type Router struct {
 	throttlingService *services.ThrottlingService
 	apiKeysService    *services.ApiKeysService
 	pools             *db.Pools
+	broadcaster       *ingestion.Broadcaster
+	// streamCtx closes open SSE connections; main cancels it via the server's
+	// RegisterOnShutdown so stage 1 isn't held hostage by live tails. appCtx
+	// (stage 4) would fire too late: Server.Shutdown waits on handlers first.
+	streamCtx         context.Context
 	authSecret        string
 	env               string
 	trustProxyHeaders bool
@@ -37,6 +44,8 @@ func NewRouter(
 	throttlingService *services.ThrottlingService,
 	apiKeysService *services.ApiKeysService,
 	pools *db.Pools,
+	broadcaster *ingestion.Broadcaster,
+	streamCtx context.Context,
 	authSecret string,
 	env string,
 	trustProxyHeaders bool,
@@ -46,6 +55,8 @@ func NewRouter(
 		throttlingService: throttlingService,
 		apiKeysService:    apiKeysService,
 		pools:             pools,
+		broadcaster:       broadcaster,
+		streamCtx:         streamCtx,
 		authSecret:        authSecret,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
@@ -195,8 +206,7 @@ func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Reque
 	notImplemented(w)
 }
 
-// Logs: logsPage, exportLogs, logDetailsPage live in ui/logs.go.
-func (ur *Router) streamLogs(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
+// Logs handlers live in ui/logs.go and ui/stream.go.
 
 // Alerts
 func (ur *Router) alertsPage(w http.ResponseWriter, req *http.Request)    { notImplemented(w) }

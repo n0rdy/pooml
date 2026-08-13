@@ -45,11 +45,20 @@ templ LogsPage(v LogsView, csrfToken string) {
 				<div class="flex items-center gap-2">
 					<button type="submit" class="btn btn-primary btn-sm">Run</button>
 					<button type="button" id="reset-query" class="btn btn-ghost btn-sm" title="Back to the default query, filters cleared">Reset</button>
+					<label class="flex items-center gap-2 cursor-pointer ml-2 text-sm">
+						<input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-success"/>
+						Live
+					</label>
 				</div>
 			</form>
-			<div id="results" class="flex-1 min-h-0 flex flex-col">
+			<div id="results" class="flex-1 min-h-0 flex flex-col relative">
 				@LogsResults(v)
 			</div>
+			<button
+				type="button"
+				id="resume-live"
+				class="btn btn-primary btn-sm shadow-lg fixed bottom-8 right-8 hidden z-20"
+			>&#9660; Resume live tail</button>
 		</div>
 		@logsScript()
 	}
@@ -173,6 +182,11 @@ templ logRowTr(r LogRow, q string) {
 		</td>
 		<td class="msg-cell max-w-xl truncate" title={ r.Message }>{ r.Message }</td>
 	</tr>
+}
+
+// StreamRow is one live-tail row, appended client-side via EventSource.
+templ StreamRow(r LogRow, q string) {
+	@logRowTr(r, q)
 }
 
 // LogDetailRow expands beneath a clicked row; closed client-side.
@@ -394,6 +408,7 @@ templ logsScript() {
 			if (!p) return;
 			if (e.detail.target && e.detail.target.id === "results") {
 				anchorBottom();
+				if (liveWanted) startLive();
 			} else if (heightBefore > 0) {
 				p.scrollTop += p.scrollHeight - heightBefore;
 				heightBefore = 0;
@@ -431,12 +446,82 @@ templ logsScript() {
 			form.requestSubmit();
 		});
 
+		// --- live tail (SSE via EventSource; see CONTEXT.md > Streaming) ---
+		const liveToggle = document.getElementById("live-toggle");
+		const resumeBtn = document.getElementById("resume-live");
+		let es = null;
+		let liveWanted = false;
+
+		function startLive() {
+			stopLive();
+			const params = new URLSearchParams({ q: view.state.doc.toString() });
+			const fts = form.elements.fts.value.trim();
+			if (fts) {
+				params.set("fts", fts);
+				params.set("op", new FormData(form).get("op") || "and");
+			}
+			es = new EventSource("/logs/stream?" + params.toString());
+			es.addEventListener("log", (e) => {
+				const tbody = document.getElementById("log-rows");
+				if (!tbody) return;
+				tbody.insertAdjacentHTML("beforeend", e.data);
+				while (tbody.children.length > 5000) tbody.removeChild(tbody.firstElementChild);
+				fmtTimes();
+				anchorBottom();
+			});
+			es.addEventListener("refresh", (e) => {
+				document.getElementById("results").innerHTML = e.data;
+				fmtTimes();
+				applyWrap();
+			});
+			es.addEventListener("streamerror", (e) => {
+				stopLive();
+				liveToggle.checked = false;
+				liveWanted = false;
+				console.warn("live tail: " + e.data);
+			});
+		}
+		function stopLive() {
+			if (es) { es.close(); es = null; }
+		}
+		function showResume(on) {
+			resumeBtn.classList.toggle("hidden", !on);
+		}
+
+		liveToggle.addEventListener("change", () => {
+			liveWanted = liveToggle.checked;
+			showResume(false);
+			if (liveWanted) { startLive(); anchorBottom(); } else { stopLive(); }
+		});
+
+		// scroll-up stops the stream outright - toggle off, honest state;
+		// the floating button is a shortcut to re-enable from down there
+		document.getElementById("results").addEventListener("scroll", (e) => {
+			const p = e.target;
+			if (!liveWanted || !es || !p.dataset || p.dataset.anchor !== "bottom") return;
+			const nearBottom = p.scrollHeight - p.scrollTop - p.clientHeight < 40;
+			if (!nearBottom) {
+				stopLive();
+				liveWanted = false;
+				liveToggle.checked = false;
+				showResume(true);
+			}
+		}, true);
+
+		resumeBtn.addEventListener("click", () => {
+			showResume(false);
+			liveWanted = true;
+			liveToggle.checked = true;
+			// fresh snapshot covers the gap, then afterSettle reconnects
+			form.requestSubmit();
+		});
+
 		document.getElementById("results").addEventListener("click", (e) => {
 			const closer = e.target.closest(".js-close-detail");
 			if (closer) { closer.closest("tr").remove(); return; }
 			if (e.target.closest("button, a")) return;
 			const tr = e.target.closest("tr.log-row");
-			if (!tr) return;
+			if (!tr || !tr.dataset.id || tr.dataset.id === "0") return;
 			const next = tr.nextElementSibling;
 			if (next && next.classList.contains("detail-row")) { next.remove(); return; }
 			htmx.ajax("GET", "/logs/" + tr.dataset.id, { target: tr, swap: "afterend" });

@@ -207,6 +207,33 @@ func fillResults(view *templates.LogsView, res *query.Result) {
 	}
 }
 
+// rowFromResult builds a viewer row from an executed result row; ok is false
+// when the projection lacks the full logs.* column set.
+func rowFromResult(colIdx map[string]int, row []any) (templates.LogRow, bool) {
+	for _, c := range logViewerColumns {
+		if _, ok := colIdx[c]; !ok {
+			return templates.LogRow{}, false
+		}
+	}
+	r := templates.LogRow{
+		ID:      asInt64(row[colIdx["id"]]),
+		Ts:      asInt64(row[colIdx["timestamp"]]),
+		Service: cellString(row[colIdx["service"]]),
+		Host:    cellString(row[colIdx["host"]]),
+		Raw:     cellString(row[colIdx["raw"]]),
+	}
+	if lv := row[colIdx["level"]]; lv != nil {
+		n := int(asInt64(lv))
+		r.Level = &n
+	}
+	if msg := row[colIdx["message"]]; msg != nil {
+		r.Message = cellString(msg)
+	} else {
+		r.Message = r.Raw
+	}
+	return r, true
+}
+
 // GET /logs/{id} - expanded detail fragment for one log row.
 func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)

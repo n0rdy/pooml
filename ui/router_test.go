@@ -1,6 +1,7 @@
 package ui_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -11,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/n0rdy/pooml/db"
+	"github.com/n0rdy/pooml/ingestion"
 	"github.com/n0rdy/pooml/services"
 	"github.com/n0rdy/pooml/ui"
 )
@@ -20,10 +22,11 @@ const testSecret = "ui-test-secret-0123456789-0123456789"
 var csrfRe = regexp.MustCompile(`name="csrf_token" value="([^"]+)"`)
 
 type client struct {
-	t     *testing.T
-	c     *http.Client
-	srv   *httptest.Server
-	pools *db.Pools
+	t        *testing.T
+	c        *http.Client
+	srv      *httptest.Server
+	pools    *db.Pools
+	pipeline *ingestion.Pipeline
 }
 
 func newClient(t *testing.T) *client {
@@ -36,8 +39,14 @@ func newClient(t *testing.T) *client {
 	}
 	t.Cleanup(pools.Close)
 
+	broadcaster := ingestion.NewBroadcaster()
+	pipeline := ingestion.NewPipeline(pools.LogsWrite, broadcaster)
+	pipeline.Start()
+	t.Cleanup(pipeline.Shutdown)
+
 	router := ui.NewRouter(services.NewSessionsService(), services.NewThrottlingService(),
-		services.NewApiKeysService(pools.Meta), pools, testSecret, "local", false)
+		services.NewApiKeysService(pools.Meta), pools, broadcaster, context.Background(),
+		testSecret, "local", false)
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)
 
@@ -45,7 +54,7 @@ func newClient(t *testing.T) *client {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &client{t: t, srv: srv, pools: pools, c: &http.Client{
+	return &client{t: t, srv: srv, pools: pools, pipeline: pipeline, c: &http.Client{
 		Jar: jar,
 		// don't follow redirects: assertions need the raw status + Location
 		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },

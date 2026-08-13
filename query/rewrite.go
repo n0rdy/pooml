@@ -108,6 +108,30 @@ func (v *Validated) ApplyQuickFilter(column, value string) error {
 	return nil
 }
 
+// HasConditions reports whether the query has a WHERE clause; live tail uses
+// it to pick the broadcaster fast path (strategy A) for unfiltered queries.
+func (v *Validated) HasConditions() bool { return v.stmt.WhereExpr != nil }
+
+// ApplyStreamCursor rewrites for live-tail polling (strategy B): appends
+// `AND id > ?` with a bind parameter so one query shape serves every poll.
+// Ordered by id ASC: live tail follows arrival order, not event time.
+func (v *Validated) ApplyStreamCursor(limit int) error {
+	if v.Shape != ShapeLogViewer || v.Compound {
+		return ErrUnsupportedShape
+	}
+	cond := &sqlp.BinaryExpr{X: &sqlp.Ident{Name: "id"}, Op: sqlp.GT, Y: &sqlp.BindExpr{Name: "?"}}
+	if v.stmt.WhereExpr == nil {
+		v.stmt.WhereExpr = cond
+	} else {
+		v.stmt.WhereExpr = &sqlp.BinaryExpr{X: paren(v.stmt.WhereExpr), Op: sqlp.AND, Y: cond}
+	}
+	tpl := mustParse("SELECT * FROM logs ORDER BY id ASC")
+	v.stmt.OrderingTerms = tpl.OrderingTerms
+	v.stmt.LimitExpr = &sqlp.NumberLit{Value: strconv.Itoa(limit)}
+	v.stmt.OffsetExpr = nil
+	return nil
+}
+
 // findConjunctEq walks only AND-chains and parens (never into OR/NOT
 // branches, where replacing would change hand-written semantics) looking for
 // `col = literal`.

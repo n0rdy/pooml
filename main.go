@@ -76,12 +76,18 @@ func main() {
 	pipeline := ingestion.NewPipeline(pools.LogsWrite, broadcaster)
 	pipeline.Start()
 
+	// SSE connections close the moment Shutdown is called (RegisterOnShutdown
+	// below); appCtx would fire too late - stage 1 waits on handlers first.
+	sseCtx, sseCancel := context.WithCancel(context.Background())
+	defer sseCancel()
+
 	// Routers
 	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, env, trustProxyHeaders)
-	uiRouter := ui.NewRouter(sessionsService, throttlingService, apiKeysService, pools, uiSecret, env, trustProxyHeaders)
+	uiRouter := ui.NewRouter(sessionsService, throttlingService, apiKeysService, pools, broadcaster, sseCtx, uiSecret, env, trustProxyHeaders)
 
 	apiServer := newAPIServer(apiAddr, apiRouter.NewRouter())
 	uiServer := newUIServer(uiAddr, uiRouter.NewRouter())
+	uiServer.RegisterOnShutdown(sseCancel)
 
 	// Start servers; capture failures so an unexpected listener exit triggers shutdown.
 	serverErrCh := make(chan error, 2)
