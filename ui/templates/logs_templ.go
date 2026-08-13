@@ -57,7 +57,7 @@ func LogsPage(v LogsView, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" placeholder=\"Search everything (FTS5 syntax welcome)\" class=\"input input-bordered flex-1 font-mono\"><div class=\"join\" title=\"How the search combines with the SQL below\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" placeholder=\"Search everything (FTS5 syntax welcome)\" class=\"input input-bordered input-sm sm:input-md flex-1 min-w-0 font-mono\"> <label class=\"flex items-center gap-1 cursor-pointer text-sm shrink-0\" title=\"Live tail\"><input type=\"checkbox\" id=\"live-toggle\" class=\"toggle toggle-sm toggle-success\"> Live</label> <button type=\"button\" id=\"sql-toggle\" class=\"btn btn-sm sm:hidden\">SQL</button><div class=\"join hidden sm:flex\" title=\"How the search combines with the SQL below\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -72,20 +72,20 @@ func LogsPage(v LogsView, csrfToken string) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></div><div class=\"flex items-center justify-between px-1\"><span class=\"text-xs font-semibold opacity-80\">SQL query</span> <span class=\"text-xs opacity-60\">Cmd/Ctrl + Enter runs</span></div><div id=\"sql-editor\" data-q=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></div><div id=\"sql-block\" class=\"hidden sm:flex flex-col gap-2\"><div class=\"flex items-center justify-between px-1\"><span class=\"text-xs font-semibold opacity-80\">SQL query</span> <span class=\"text-xs opacity-60 hidden sm:inline\">Cmd/Ctrl + Enter runs</span></div><div id=\"sql-editor\" data-q=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Q)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 41, Col: 17}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 47, Col: 17}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" style=\"min-height: 4rem\" class=\"border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors\"></div><div class=\"flex items-center gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Run</button> <button type=\"button\" id=\"reset-query\" class=\"btn btn-ghost btn-sm\" title=\"Back to the default query, filters cleared\">Reset</button> <label class=\"flex items-center gap-2 cursor-pointer ml-2 text-sm\"><input type=\"checkbox\" id=\"live-toggle\" class=\"toggle toggle-sm toggle-success\"> Live</label></div></form><div id=\"results\" class=\"flex-1 min-h-0 flex flex-col relative\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" style=\"min-height: 4rem\" class=\"border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors\"></div><div class=\"flex items-center gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Run</button> <button type=\"button\" id=\"reset-query\" class=\"btn btn-ghost btn-sm\" title=\"Back to the default query, filters cleared\">Reset</button></div></div></form><div id=\"results\" class=\"flex-1 min-h-0 flex flex-col relative\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -141,7 +141,7 @@ func LogsResults(v LogsView) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(v.Error)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 70, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 73, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -194,7 +194,7 @@ func resultsToolbar(count int, truncated bool, v LogsView) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(rowsLabel(count, truncated))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 80, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 83, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -236,7 +236,7 @@ func exportFooter(v LogsView) templ.Component {
 		var templ_7745c5c3_Var10 templ.SafeURL
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(exportURL(v, "csv")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 91, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 94, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -249,7 +249,7 @@ func exportFooter(v LogsView) templ.Component {
 		var templ_7745c5c3_Var11 templ.SafeURL
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(exportURL(v, "json")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 92, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 95, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -288,7 +288,7 @@ func logViewer(v LogsView) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div id=\"log-scroll\" data-anchor=\"bottom\" class=\"flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100 [overflow-anchor:none]\"><table class=\"table font-mono\"><thead class=\"sticky top-0 bg-base-100 z-10\"><tr class=\"text-xs text-center\"><th class=\"w-32\">time</th><th class=\"w-16\">level</th><th class=\"w-28\">service</th><th>message</th></tr></thead> <tbody id=\"log-rows\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div id=\"log-scroll\" data-anchor=\"bottom\" class=\"flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100 [overflow-anchor:none]\"><table class=\"table font-mono\"><thead class=\"sticky top-0 bg-base-100 z-10\"><tr class=\"text-xs text-center\"><th class=\"w-32\">time</th><th class=\"w-16\">level</th><th class=\"w-28 hidden sm:table-cell\">service</th><th>message</th></tr></thead> <tbody id=\"log-rows\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -386,7 +386,7 @@ func pageSentinel(v LogsView) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageURL(v))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 144, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 147, Col: 22}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 			if templ_7745c5c3_Err != nil {
@@ -434,7 +434,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(rowID(r.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 160, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 163, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 		if templ_7745c5c3_Err != nil {
@@ -447,7 +447,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(r.Ts))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 161, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 164, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
 		if templ_7745c5c3_Err != nil {
@@ -460,7 +460,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(r.Ts))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 161, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 164, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -496,7 +496,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 			var templ_7745c5c3_Var22 string
 			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue(filterURL(q, "level", levelValue(r.Level)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 166, Col: 56}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 169, Col: 56}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 			if templ_7745c5c3_Err != nil {
@@ -509,7 +509,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 			var templ_7745c5c3_Var23 string
 			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(levelName(r.Level))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 169, Col: 25}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 172, Col: 25}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 			if templ_7745c5c3_Err != nil {
@@ -543,7 +543,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</td><td class=\"text-center\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</td><td class=\"text-center hidden sm:table-cell\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -572,7 +572,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.ResolveAttributeValue(serviceTip(r.Service))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 177, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 180, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
 		if templ_7745c5c3_Err != nil {
@@ -585,7 +585,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(filterURL(q, "service", r.Service))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 178, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 181, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
 		if templ_7745c5c3_Err != nil {
@@ -598,7 +598,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 181, Col: 38}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 184, Col: 38}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
@@ -611,7 +611,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(r.Message)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 183, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 186, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 		if templ_7745c5c3_Err != nil {
@@ -624,7 +624,7 @@ func logRowTr(r LogRow, q string) templ.Component {
 		var templ_7745c5c3_Var32 string
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(r.Message)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 183, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 186, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
@@ -697,7 +697,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(rowID(d.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 198, Col: 27}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 201, Col: 27}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -710,7 +710,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var36 string
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(d.Ts))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 199, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 202, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
 		if templ_7745c5c3_Err != nil {
@@ -723,7 +723,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(d.Ts))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 199, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 202, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -736,7 +736,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(d.IngestedAt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 200, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 203, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var38)
 		if templ_7745c5c3_Err != nil {
@@ -749,7 +749,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(d.IngestedAt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 200, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 203, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -762,7 +762,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(d.Service + " on " + d.Host)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 201, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 204, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -775,7 +775,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 		var templ_7745c5c3_Var41 string
 		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(d.Raw)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 204, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 207, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
@@ -793,7 +793,7 @@ func LogDetailRow(d LogDetail) templ.Component {
 			var templ_7745c5c3_Var42 string
 			templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(d.Parsed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 206, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 209, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 			if templ_7745c5c3_Err != nil {
@@ -849,7 +849,7 @@ func genericTable(v LogsView) templ.Component {
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(c)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 220, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 223, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -877,7 +877,7 @@ func genericTable(v LogsView) templ.Component {
 				var templ_7745c5c3_Var45 string
 				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 228, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 231, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 				if templ_7745c5c3_Err != nil {
@@ -890,7 +890,7 @@ func genericTable(v LogsView) templ.Component {
 				var templ_7745c5c3_Var46 string
 				templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 228, Col: 67}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 231, Col: 67}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 				if templ_7745c5c3_Err != nil {
@@ -948,7 +948,7 @@ func logsScript() templ.Component {
 			templ_7745c5c3_Var47 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<style>\n\t\t#sql-editor .cm-content { font-size: 15px; }\n\t\t#sql-editor .cm-gutters { font-size: 12px; }\n\t\t/* container reserves the mounted height so the page doesn't jump when\n\t\t   CodeMirror loads: 4rem total = cm-editor min + the 2x2px border */\n\t\t#sql-editor { min-height: 4rem; }\n\t\t#sql-editor .cm-editor { max-height: 10rem; min-height: calc(4rem - 4px); }\n\t\t/* clickable badges light up on hover so filtering reads as intended */\n\t\t.log-row button.badge:hover {\n\t\t\tfilter: brightness(1.2);\n\t\t\tbox-shadow: 0 0 0 1px currentColor;\n\t\t}\n\t\t/* wrap mode: #results survives fragment swaps, so the class sticks */\n\t\t#results.wrap-lines .msg-cell {\n\t\t\twhite-space: normal;\n\t\t\toverflow-wrap: anywhere;\n\t\t\tmax-width: none;\n\t\t\toverflow: visible;\n\t\t\ttext-overflow: clip;\n\t\t}\n\t\t/* same focus treatment as daisy inputs, so the editor reads as a field */\n\t\t/* cause-and-effect: pulses when a quick filter rewrites the query */\n\t\t#sql-editor.query-updated {\n\t\t\tborder-color: var(--color-primary);\n\t\t\tbox-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);\n\t\t}\n\t\t#sql-editor:focus-within {\n\t\t\toutline: 2px solid var(--color-primary);\n\t\t\toutline-offset: 2px;\n\t\t\tborder-color: var(--color-primary);\n\t\t}\n\t</style><script type=\"module\">\n\t\timport { EditorView, basicSetup } from \"codemirror\";\n\t\timport { placeholder } from \"@codemirror/view\";\n\t\timport { Compartment } from \"@codemirror/state\";\n\t\timport { SQLite, schemaCompletionSource } from \"@codemirror/lang-sql\";\n\t\timport { LanguageSupport, syntaxTree } from \"@codemirror/language\";\n\t\timport { linter, setDiagnostics } from \"@codemirror/lint\";\n\t\timport { oneDark } from \"@codemirror/theme-one-dark\";\n\n\t\tconst host = document.getElementById(\"sql-editor\");\n\n\t\t// Completions are composed by hand instead of using sql()'s bundle:\n\t\t// the dialect keyword source suggests the whole SQL-standard word list\n\t\t// (SYSTEM_USER and friends - not even SQLite), drowning the schema.\n\t\t// Here: columns first (defaultTable makes them top-level), then a\n\t\t// curated keyword/function list that is actually true for pooml.\n\t\t// logs_fts deliberately absent: the search bar is the FTS path.\n\t\tconst LOGS_COLUMNS = [\"id\", \"timestamp\", \"ingested_at\", \"level\", \"service\", \"host\", \"message\", \"parsed\", \"raw\"];\n\t\tconst schemaSource = schemaCompletionSource({\n\t\t\tdialect: SQLite,\n\t\t\tschema: { logs: LOGS_COLUMNS },\n\t\t\tdefaultTable: \"logs\",\n\t\t\tupperCaseKeywords: true,\n\t\t});\n\t\tconst KEYWORDS = (\"SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC \" +\n\t\t\t\"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST\")\n\t\t\t.split(\" \").map((k) => ({ label: k, type: \"keyword\", boost: -1 }));\n\t\tconst FUNCTIONS = (\"count sum avg min max unixepoch strftime datetime json_extract length coalesce round\")\n\t\t\t.split(\" \").map((f) => ({ label: f, type: \"function\", boost: -2 }));\n\t\tconst KEYWORD_OPTIONS = KEYWORDS.concat(FUNCTIONS);\n\t\tfunction keywordSource(ctx) {\n\t\t\tconst w = ctx.matchBefore(/[A-Za-z_]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };\n\t\t}\n\t\tconst sqlSupport = new LanguageSupport(SQLite.language, [\n\t\t\tSQLite.language.data.of({ autocomplete: schemaSource }),\n\t\t\tSQLite.language.data.of({ autocomplete: keywordSource }),\n\t\t]);\n\n\t\t// live squiggles from the lezer parse: generic but instant. The\n\t\t// authoritative check stays server-side (rqlite parser).\n\t\tconst syntaxLinter = linter((v) => {\n\t\t\tif (!v.state.doc.length) return [];\n\t\t\tconst diags = [];\n\t\t\tsyntaxTree(v.state).iterate({\n\t\t\t\tenter: (n) => {\n\t\t\t\t\tif (n.type.isError) {\n\t\t\t\t\t\tdiags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: \"error\", message: \"syntax error\" });\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t});\n\t\t\treturn diags;\n\t\t});\n\n\t\t// theme lives in a compartment so the nav toggle can swap it live;\n\t\t// light mode uses CodeMirror's default (light) look\n\t\tconst editorTheme = new Compartment();\n\t\tconst isLight = () => document.documentElement.getAttribute(\"data-theme\") === \"light\";\n\t\tconst view = new EditorView({\n\t\t\tdoc: host.dataset.q,\n\t\t\textensions: [\n\t\t\t\tbasicSetup,\n\t\t\t\teditorTheme.of(isLight() ? [] : oneDark),\n\t\t\t\tplaceholder(\"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\"),\n\t\t\t\tsqlSupport,\n\t\t\t\tsyntaxLinter,\n\t\t\t],\n\t\t\tparent: host,\n\t\t});\n\n\t\t// server-rejected SQL comes back with an exact position; underline it\n\t\tdocument.body.addEventListener(\"sqlError\", (e) => {\n\t\t\tconst d = e.detail;\n\t\t\tlet from = 0;\n\t\t\ttry {\n\t\t\t\tconst l = view.state.doc.line(d.line);\n\t\t\t\tfrom = Math.min(l.from + Math.max(d.col - 1, 0), l.to);\n\t\t\t} catch { /* stale position; underline from the start */ }\n\t\t\tview.dispatch(setDiagnostics(view.state, [{ from, to: from, severity: \"error\", message: d.message }]));\n\t\t});\n\n\t\tconst form = document.getElementById(\"query-form\");\n\t\tform.addEventListener(\"htmx:configRequest\", (e) => {\n\t\t\te.detail.parameters.q = view.state.doc.toString();\n\t\t});\n\t\thost.addEventListener(\"keydown\", (e) => {\n\t\t\tif ((e.metaKey || e.ctrlKey) && e.key === \"Enter\") {\n\t\t\t\te.preventDefault();\n\t\t\t\tform.requestSubmit();\n\t\t\t}\n\t\t}, true);\n\t\tdocument.body.addEventListener(\"setQuery\", (e) => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });\n\t\t\thost.classList.add(\"query-updated\");\n\t\t\tsetTimeout(() => host.classList.remove(\"query-updated\"), 800);\n\t\t});\n\n\t\t// compact local times in rows (full timestamp on hover); detail rows\n\t\t// marked data-ts-full keep the complete local timestamp\n\t\tfunction fmtTimes() {\n\t\t\tdocument.querySelectorAll(\"[data-ts]:not([data-ts-done])\").forEach((el) => {\n\t\t\t\tel.dataset.tsDone = \"1\";\n\t\t\t\tconst t = new Date(Number(el.dataset.ts));\n\t\t\t\tif (el.hasAttribute(\"data-ts-full\")) {\n\t\t\t\t\tel.textContent = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t} else {\n\t\t\t\t\tel.textContent = t.toLocaleTimeString(undefined, { hour12: false })\n\t\t\t\t\t\t+ \".\" + String(t.getMilliseconds()).padStart(3, \"0\");\n\t\t\t\t}\n\t\t\t\tel.title = t.toLocaleString(undefined, { hour12: false });\n\t\t\t});\n\t\t}\n\n\t\tconst pane = () => document.getElementById(\"log-scroll\");\n\t\tfunction anchorBottom() {\n\t\t\tconst p = pane();\n\t\t\tif (p && p.dataset.anchor === \"bottom\") p.scrollTop = p.scrollHeight;\n\t\t}\n\n\t\t// prepends shift content down; compensate manually so the viewport\n\t\t// stays put (native scroll anchoring is off - Safari doesn't have it)\n\t\tlet heightBefore = 0;\n\t\tdocument.body.addEventListener(\"htmx:beforeRequest\", (e) => {\n\t\t\tconst p = pane();\n\t\t\theightBefore = p && e.detail.elt.closest(\"#log-scroll\") ? p.scrollHeight : 0;\n\t\t});\n\t\tdocument.body.addEventListener(\"htmx:afterSettle\", (e) => {\n\t\t\tfmtTimes();\n\t\t\tapplyWrap();\n\t\t\tconst p = pane();\n\t\t\tif (!p) return;\n\t\t\tif (e.detail.target && e.detail.target.id === \"results\") {\n\t\t\t\tanchorBottom();\n\t\t\t\tif (liveWanted) startLive();\n\t\t\t} else if (heightBefore > 0) {\n\t\t\t\tp.scrollTop += p.scrollHeight - heightBefore;\n\t\t\t\theightBefore = 0;\n\t\t\t}\n\t\t});\n\n\t\tconst wrapKey = \"pooml-wrap\";\n\t\tfunction applyWrap() {\n\t\t\tconst on = localStorage.getItem(wrapKey) !== \"0\"; // ON by default\n\t\t\tdocument.getElementById(\"results\").classList.toggle(\"wrap-lines\", on);\n\t\t\tconst cb = document.getElementById(\"wrap-toggle\");\n\t\t\tif (cb) cb.checked = on;\n\t\t}\n\t\tdocument.body.addEventListener(\"change\", (e) => {\n\t\t\tif (e.target && e.target.id === \"wrap-toggle\") {\n\t\t\t\tlocalStorage.setItem(wrapKey, e.target.checked ? \"1\" : \"0\");\n\t\t\t\tapplyWrap();\n\t\t\t}\n\t\t});\n\n\t\tnew MutationObserver(() => {\n\t\t\tview.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });\n\t\t}).observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\n\t\tfmtTimes();\n\t\tapplyWrap();\n\t\tanchorBottom();\n\n\t\tconst DEFAULT_Q = \"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\";\n\t\tdocument.getElementById(\"reset-query\").addEventListener(\"click\", () => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: DEFAULT_Q } });\n\t\t\tform.elements.fts.value = \"\";\n\t\t\tconst andRadio = form.querySelector('input[name=\"op\"][value=\"and\"]');\n\t\t\tif (andRadio) andRadio.checked = true;\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\t// --- live tail (SSE via EventSource; see CONTEXT.md > Streaming) ---\n\t\tconst liveToggle = document.getElementById(\"live-toggle\");\n\t\tconst resumeBtn = document.getElementById(\"resume-live\");\n\t\tlet es = null;\n\t\tlet liveWanted = false;\n\n\t\tfunction startLive() {\n\t\t\tstopLive();\n\t\t\tconst params = new URLSearchParams({ q: view.state.doc.toString() });\n\t\t\tconst fts = form.elements.fts.value.trim();\n\t\t\tif (fts) {\n\t\t\t\tparams.set(\"fts\", fts);\n\t\t\t\tparams.set(\"op\", new FormData(form).get(\"op\") || \"and\");\n\t\t\t}\n\t\t\tes = new EventSource(\"/logs/stream?\" + params.toString());\n\t\t\tes.addEventListener(\"log\", (e) => {\n\t\t\t\tconst tbody = document.getElementById(\"log-rows\");\n\t\t\t\tif (!tbody) return;\n\t\t\t\ttbody.insertAdjacentHTML(\"beforeend\", e.data);\n\t\t\t\twhile (tbody.children.length > 5000) tbody.removeChild(tbody.firstElementChild);\n\t\t\t\tfmtTimes();\n\t\t\t\tanchorBottom();\n\t\t\t});\n\t\t\tes.addEventListener(\"refresh\", (e) => {\n\t\t\t\tdocument.getElementById(\"results\").innerHTML = e.data;\n\t\t\t\tfmtTimes();\n\t\t\t\tapplyWrap();\n\t\t\t});\n\t\t\tes.addEventListener(\"streamerror\", (e) => {\n\t\t\t\tstopLive();\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tliveWanted = false;\n\t\t\t\tconsole.warn(\"live tail: \" + e.data);\n\t\t\t});\n\t\t}\n\t\tfunction stopLive() {\n\t\t\tif (es) { es.close(); es = null; }\n\t\t}\n\t\tfunction showResume(on) {\n\t\t\tresumeBtn.classList.toggle(\"hidden\", !on);\n\t\t}\n\n\t\tif (new URLSearchParams(location.search).get(\"live\") === \"1\") {\n\t\t\tliveToggle.checked = true;\n\t\t\tliveWanted = true;\n\t\t\tstartLive();\n\t\t}\n\n\t\tliveToggle.addEventListener(\"change\", () => {\n\t\t\tliveWanted = liveToggle.checked;\n\t\t\tshowResume(false);\n\t\t\tif (liveWanted) { startLive(); anchorBottom(); } else { stopLive(); }\n\t\t});\n\n\t\t// scroll-up stops the stream outright - toggle off, honest state;\n\t\t// the floating button is a shortcut to re-enable from down there\n\t\tdocument.getElementById(\"results\").addEventListener(\"scroll\", (e) => {\n\t\t\tconst p = e.target;\n\t\t\tif (!liveWanted || !es || !p.dataset || p.dataset.anchor !== \"bottom\") return;\n\t\t\tconst nearBottom = p.scrollHeight - p.scrollTop - p.clientHeight < 40;\n\t\t\tif (!nearBottom) {\n\t\t\t\tstopLive();\n\t\t\t\tliveWanted = false;\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tshowResume(true);\n\t\t\t}\n\t\t}, true);\n\n\t\tresumeBtn.addEventListener(\"click\", () => {\n\t\t\tshowResume(false);\n\t\t\tliveWanted = true;\n\t\t\tliveToggle.checked = true;\n\t\t\t// fresh snapshot covers the gap, then afterSettle reconnects\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\tdocument.getElementById(\"results\").addEventListener(\"click\", (e) => {\n\t\t\tconst closer = e.target.closest(\".js-close-detail\");\n\t\t\tif (closer) { closer.closest(\"tr\").remove(); return; }\n\t\t\tif (e.target.closest(\"button, a\")) return;\n\t\t\tconst tr = e.target.closest(\"tr.log-row\");\n\t\t\tif (!tr || !tr.dataset.id || tr.dataset.id === \"0\") return;\n\t\t\tconst next = tr.nextElementSibling;\n\t\t\tif (next && next.classList.contains(\"detail-row\")) { next.remove(); return; }\n\t\t\thtmx.ajax(\"GET\", \"/logs/\" + tr.dataset.id, { target: tr, swap: \"afterend\" });\n\t\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<style>\n\t\t#sql-editor .cm-content { font-size: 15px; }\n\t\t#sql-editor .cm-gutters { font-size: 12px; }\n\t\t/* container reserves the mounted height so the page doesn't jump when\n\t\t   CodeMirror loads: 4rem total = cm-editor min + the 2x2px border */\n\t\t#sql-editor { min-height: 4rem; }\n\t\t#sql-editor .cm-editor { max-height: 10rem; min-height: calc(4rem - 4px); }\n\t\t/* clickable badges light up on hover so filtering reads as intended */\n\t\t.log-row button.badge:hover {\n\t\t\tfilter: brightness(1.2);\n\t\t\tbox-shadow: 0 0 0 1px currentColor;\n\t\t}\n\t\t/* wrap mode: #results survives fragment swaps, so the class sticks */\n\t\t#results.wrap-lines .msg-cell {\n\t\t\twhite-space: normal;\n\t\t\toverflow-wrap: anywhere;\n\t\t\tmax-width: none;\n\t\t\toverflow: visible;\n\t\t\ttext-overflow: clip;\n\t\t}\n\t\t/* same focus treatment as daisy inputs, so the editor reads as a field */\n\t\t/* cause-and-effect: pulses when a quick filter rewrites the query */\n\t\t#sql-editor.query-updated {\n\t\t\tborder-color: var(--color-primary);\n\t\t\tbox-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);\n\t\t}\n\t\t#sql-editor:focus-within {\n\t\t\toutline: 2px solid var(--color-primary);\n\t\t\toutline-offset: 2px;\n\t\t\tborder-color: var(--color-primary);\n\t\t}\n\t</style><script type=\"module\">\n\t\timport { EditorView, basicSetup } from \"codemirror\";\n\t\timport { placeholder, keymap } from \"@codemirror/view\";\n\t\timport { Compartment, Prec } from \"@codemirror/state\";\n\t\timport { acceptCompletion } from \"@codemirror/autocomplete\";\n\t\timport { SQLite, schemaCompletionSource } from \"@codemirror/lang-sql\";\n\t\timport { LanguageSupport, syntaxTree } from \"@codemirror/language\";\n\t\timport { linter, setDiagnostics } from \"@codemirror/lint\";\n\t\timport { oneDark } from \"@codemirror/theme-one-dark\";\n\n\t\tconst host = document.getElementById(\"sql-editor\");\n\n\t\t// Completions are composed by hand instead of using sql()'s bundle:\n\t\t// the dialect keyword source suggests the whole SQL-standard word list\n\t\t// (SYSTEM_USER and friends - not even SQLite), drowning the schema.\n\t\t// Here: columns first (defaultTable makes them top-level), then a\n\t\t// curated keyword/function list that is actually true for pooml.\n\t\t// logs_fts deliberately absent: the search bar is the FTS path.\n\t\tconst LOGS_COLUMNS = [\"id\", \"timestamp\", \"ingested_at\", \"level\", \"service\", \"host\", \"message\", \"parsed\", \"raw\"];\n\t\tconst schemaSource = schemaCompletionSource({\n\t\t\tdialect: SQLite,\n\t\t\tschema: { logs: LOGS_COLUMNS },\n\t\t\tdefaultTable: \"logs\",\n\t\t\tupperCaseKeywords: true,\n\t\t});\n\t\tconst KEYWORDS = (\"SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC \" +\n\t\t\t\"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST\")\n\t\t\t.split(\" \").map((k) => ({ label: k, type: \"keyword\", boost: -1 }));\n\t\tconst FUNCTIONS = (\"count sum avg min max unixepoch strftime datetime json_extract length coalesce round\")\n\t\t\t.split(\" \").map((f) => ({ label: f, type: \"function\", boost: -2 }));\n\t\tconst KEYWORD_OPTIONS = KEYWORDS.concat(FUNCTIONS);\n\t\tfunction keywordSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"general\") return null;\n\t\t\tconst w = ctx.matchBefore(/[A-Za-z_]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };\n\t\t}\n\t\t// completion context gating: after FROM/JOIN only table names make\n\t\t// sense; after a dot the schema source's column completion owns it\n\t\tconst TABLES = [{ label: \"logs\", type: \"type\" }];\n\t\tconst tablePosRe = /\\b(from|join)\\s+[\\w\"]*$/i;\n\t\tconst dotPosRe = /\\.\\w*$/;\n\t\tfunction complCtx(ctx) {\n\t\t\tconst before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);\n\t\t\tif (tablePosRe.test(before)) return \"table\";\n\t\t\tif (dotPosRe.test(before)) return \"dot\";\n\t\t\treturn \"general\";\n\t\t}\n\t\tfunction tableSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"table\") return null;\n\t\t\tconst w = ctx.matchBefore(/[\\w\"]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\\w\"]*$/ };\n\t\t}\n\t\tconst gatedSchema = (ctx) => complCtx(ctx) === \"table\" ? null : schemaSource(ctx);\n\t\tconst sqlSupport = new LanguageSupport(SQLite.language, [\n\t\t\tSQLite.language.data.of({ autocomplete: tableSource }),\n\t\t\tSQLite.language.data.of({ autocomplete: gatedSchema }),\n\t\t\tSQLite.language.data.of({ autocomplete: keywordSource }),\n\t\t]);\n\n\t\t// live squiggles from the lezer parse: generic but instant. The\n\t\t// authoritative check stays server-side (rqlite parser).\n\t\tconst syntaxLinter = linter((v) => {\n\t\t\tif (!v.state.doc.length) return [];\n\t\t\tconst diags = [];\n\t\t\tsyntaxTree(v.state).iterate({\n\t\t\t\tenter: (n) => {\n\t\t\t\t\tif (n.type.isError) {\n\t\t\t\t\t\tdiags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: \"error\", message: \"syntax error\" });\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t});\n\t\t\treturn diags;\n\t\t});\n\n\t\t// theme lives in a compartment so the nav toggle can swap it live;\n\t\t// light mode uses CodeMirror's default (light) look\n\t\tconst editorTheme = new Compartment();\n\t\tconst isLight = () => document.documentElement.getAttribute(\"data-theme\") === \"light\";\n\t\tconst view = new EditorView({\n\t\t\tdoc: host.dataset.q,\n\t\t\textensions: [\n\t\t\t\tPrec.highest(keymap.of([\n\t\t\t\t\t{ key: \"Tab\", run: acceptCompletion },\n\t\t\t\t\t{ key: \"Enter\", run: acceptCompletion },\n\t\t\t\t])),\n\t\t\t\tbasicSetup,\n\t\t\t\teditorTheme.of(isLight() ? [] : oneDark),\n\t\t\t\tplaceholder(\"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\"),\n\t\t\t\tsqlSupport,\n\t\t\t\tsyntaxLinter,\n\t\t\t],\n\t\t\tparent: host,\n\t\t});\n\n\t\t// server-rejected SQL comes back with an exact position; underline it\n\t\tdocument.body.addEventListener(\"sqlError\", (e) => {\n\t\t\tconst d = e.detail;\n\t\t\tlet from = 0;\n\t\t\ttry {\n\t\t\t\tconst l = view.state.doc.line(d.line);\n\t\t\t\tfrom = Math.min(l.from + Math.max(d.col - 1, 0), l.to);\n\t\t\t} catch { /* stale position; underline from the start */ }\n\t\t\tview.dispatch(setDiagnostics(view.state, [{ from, to: from, severity: \"error\", message: d.message }]));\n\t\t});\n\n\t\tconst form = document.getElementById(\"query-form\");\n\t\tform.addEventListener(\"htmx:configRequest\", (e) => {\n\t\t\te.detail.parameters.q = view.state.doc.toString();\n\t\t});\n\t\thost.addEventListener(\"keydown\", (e) => {\n\t\t\tif ((e.metaKey || e.ctrlKey) && e.key === \"Enter\") {\n\t\t\t\te.preventDefault();\n\t\t\t\tform.requestSubmit();\n\t\t\t}\n\t\t}, true);\n\t\tdocument.body.addEventListener(\"setQuery\", (e) => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });\n\t\t\thost.classList.add(\"query-updated\");\n\t\t\tsetTimeout(() => host.classList.remove(\"query-updated\"), 800);\n\t\t});\n\n\t\t// compact local times in rows (full timestamp on hover); detail rows\n\t\t// marked data-ts-full keep the complete local timestamp\n\t\tfunction fmtTimes() {\n\t\t\tdocument.querySelectorAll(\"[data-ts]:not([data-ts-done])\").forEach((el) => {\n\t\t\t\tel.dataset.tsDone = \"1\";\n\t\t\t\tconst t = new Date(Number(el.dataset.ts));\n\t\t\t\tif (el.hasAttribute(\"data-ts-full\")) {\n\t\t\t\t\tel.textContent = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t} else {\n\t\t\t\t\tel.textContent = t.toLocaleTimeString(undefined, { hour12: false })\n\t\t\t\t\t\t+ \".\" + String(t.getMilliseconds()).padStart(3, \"0\");\n\t\t\t\t}\n\t\t\t\tel.title = t.toLocaleString(undefined, { hour12: false });\n\t\t\t});\n\t\t}\n\n\t\tconst pane = () => document.getElementById(\"log-scroll\");\n\t\tfunction anchorBottom() {\n\t\t\tconst p = pane();\n\t\t\tif (p && p.dataset.anchor === \"bottom\") p.scrollTop = p.scrollHeight;\n\t\t}\n\n\t\t// prepends shift content down; compensate manually so the viewport\n\t\t// stays put (native scroll anchoring is off - Safari doesn't have it)\n\t\tlet heightBefore = 0;\n\t\tdocument.body.addEventListener(\"htmx:beforeRequest\", (e) => {\n\t\t\tconst p = pane();\n\t\t\theightBefore = p && e.detail.elt.closest(\"#log-scroll\") ? p.scrollHeight : 0;\n\t\t});\n\t\tdocument.body.addEventListener(\"htmx:afterSettle\", (e) => {\n\t\t\tfmtTimes();\n\t\t\tapplyWrap();\n\t\t\tconst p = pane();\n\t\t\tif (!p) return;\n\t\t\tif (e.detail.target && e.detail.target.id === \"results\") {\n\t\t\t\tanchorBottom();\n\t\t\t\tif (liveWanted) startLive();\n\t\t\t} else if (heightBefore > 0) {\n\t\t\t\tp.scrollTop += p.scrollHeight - heightBefore;\n\t\t\t\theightBefore = 0;\n\t\t\t}\n\t\t});\n\n\t\tconst wrapKey = \"pooml-wrap\";\n\t\tfunction applyWrap() {\n\t\t\tconst on = localStorage.getItem(wrapKey) !== \"0\"; // ON by default\n\t\t\tdocument.getElementById(\"results\").classList.toggle(\"wrap-lines\", on);\n\t\t\tconst cb = document.getElementById(\"wrap-toggle\");\n\t\t\tif (cb) cb.checked = on;\n\t\t}\n\t\tdocument.body.addEventListener(\"change\", (e) => {\n\t\t\tif (e.target && e.target.id === \"wrap-toggle\") {\n\t\t\t\tlocalStorage.setItem(wrapKey, e.target.checked ? \"1\" : \"0\");\n\t\t\t\tapplyWrap();\n\t\t\t}\n\t\t});\n\n\t\tnew MutationObserver(() => {\n\t\t\tview.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });\n\t\t}).observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\n\t\tfmtTimes();\n\t\tapplyWrap();\n\t\tanchorBottom();\n\n\t\tconst DEFAULT_Q = \"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\";\n\t\tdocument.getElementById(\"sql-toggle\").addEventListener(\"click\", () => {\n\t\t\tconst block = document.getElementById(\"sql-block\");\n\t\t\tblock.classList.toggle(\"hidden\");\n\t\t\tblock.classList.toggle(\"flex\");\n\t\t});\n\n\t\tdocument.getElementById(\"reset-query\").addEventListener(\"click\", () => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: DEFAULT_Q } });\n\t\t\tform.elements.fts.value = \"\";\n\t\t\tconst andRadio = form.querySelector('input[name=\"op\"][value=\"and\"]');\n\t\t\tif (andRadio) andRadio.checked = true;\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\t// --- live tail (SSE via EventSource; see CONTEXT.md > Streaming) ---\n\t\tconst liveToggle = document.getElementById(\"live-toggle\");\n\t\tconst resumeBtn = document.getElementById(\"resume-live\");\n\t\tlet es = null;\n\t\tlet liveWanted = false;\n\n\t\tfunction startLive() {\n\t\t\tstopLive();\n\t\t\tconst params = new URLSearchParams({ q: view.state.doc.toString() });\n\t\t\tconst fts = form.elements.fts.value.trim();\n\t\t\tif (fts) {\n\t\t\t\tparams.set(\"fts\", fts);\n\t\t\t\tparams.set(\"op\", new FormData(form).get(\"op\") || \"and\");\n\t\t\t}\n\t\t\tes = new EventSource(\"/logs/stream?\" + params.toString());\n\t\t\tes.addEventListener(\"log\", (e) => {\n\t\t\t\tconst tbody = document.getElementById(\"log-rows\");\n\t\t\t\tif (!tbody) return;\n\t\t\t\ttbody.insertAdjacentHTML(\"beforeend\", e.data);\n\t\t\t\twhile (tbody.children.length > 5000) tbody.removeChild(tbody.firstElementChild);\n\t\t\t\tfmtTimes();\n\t\t\t\tanchorBottom();\n\t\t\t});\n\t\t\tes.addEventListener(\"refresh\", (e) => {\n\t\t\t\tdocument.getElementById(\"results\").innerHTML = e.data;\n\t\t\t\tfmtTimes();\n\t\t\t\tapplyWrap();\n\t\t\t});\n\t\t\tes.addEventListener(\"streamerror\", (e) => {\n\t\t\t\tstopLive();\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tliveWanted = false;\n\t\t\t\tconsole.warn(\"live tail: \" + e.data);\n\t\t\t});\n\t\t}\n\t\tfunction stopLive() {\n\t\t\tif (es) { es.close(); es = null; }\n\t\t}\n\t\tfunction showResume(on) {\n\t\t\tresumeBtn.classList.toggle(\"hidden\", !on);\n\t\t}\n\n\t\tif (new URLSearchParams(location.search).get(\"live\") === \"1\") {\n\t\t\tliveToggle.checked = true;\n\t\t\tliveWanted = true;\n\t\t\tstartLive();\n\t\t}\n\n\t\tliveToggle.addEventListener(\"change\", () => {\n\t\t\tliveWanted = liveToggle.checked;\n\t\t\tshowResume(false);\n\t\t\tif (liveWanted) { startLive(); anchorBottom(); } else { stopLive(); }\n\t\t});\n\n\t\t// scroll-up stops the stream outright - toggle off, honest state;\n\t\t// the floating button is a shortcut to re-enable from down there\n\t\tdocument.getElementById(\"results\").addEventListener(\"scroll\", (e) => {\n\t\t\tconst p = e.target;\n\t\t\tif (!liveWanted || !es || !p.dataset || p.dataset.anchor !== \"bottom\") return;\n\t\t\tconst nearBottom = p.scrollHeight - p.scrollTop - p.clientHeight < 40;\n\t\t\tif (!nearBottom) {\n\t\t\t\tstopLive();\n\t\t\t\tliveWanted = false;\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tshowResume(true);\n\t\t\t}\n\t\t}, true);\n\n\t\tresumeBtn.addEventListener(\"click\", () => {\n\t\t\tshowResume(false);\n\t\t\tliveWanted = true;\n\t\t\tliveToggle.checked = true;\n\t\t\t// fresh snapshot covers the gap, then afterSettle reconnects\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\tdocument.getElementById(\"results\").addEventListener(\"click\", (e) => {\n\t\t\tconst closer = e.target.closest(\".js-close-detail\");\n\t\t\tif (closer) { closer.closest(\"tr\").remove(); return; }\n\t\t\tif (e.target.closest(\"button, a\")) return;\n\t\t\tconst tr = e.target.closest(\"tr.log-row\");\n\t\t\tif (!tr || !tr.dataset.id || tr.dataset.id === \"0\") return;\n\t\t\tconst next = tr.nextElementSibling;\n\t\t\tif (next && next.classList.contains(\"detail-row\")) { next.remove(); return; }\n\t\t\thtmx.ajax(\"GET\", \"/logs/\" + tr.dataset.id, { target: tr, swap: \"afterend\" });\n\t\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

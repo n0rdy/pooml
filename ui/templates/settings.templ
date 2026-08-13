@@ -7,15 +7,117 @@ import (
 	"github.com/n0rdy/pooml/services"
 )
 
-templ SettingsPage(keys []services.ApiKey, newKey string, errMsg string, csrfToken string) {
+type SettingsView struct {
+	Keys   []services.ApiKey
+	NewKey string
+	ErrMsg string
+
+	PushoverConfigured bool
+	CampfireBaseURL    string
+	CampfireKeySet     bool
+}
+
+templ SettingsPage(v SettingsView, csrfToken string) {
 	@Shell("settings · pooml", "settings", csrfToken) {
 		<div class="max-w-3xl mx-auto flex flex-col gap-6">
-			@ApiKeysSection(keys, newKey, errMsg, csrfToken)
-			@comingLater("Pushover", "Alert notifications land in M8.")
+			@ApiKeysSection(v.Keys, v.NewKey, v.ErrMsg, csrfToken)
+			@PushoverSection(v.PushoverConfigured, csrfToken)
+			@CampfireSection(v.CampfireBaseURL, v.CampfireKeySet, csrfToken)
 			@comingLater("Scrape targets", "Prometheus scraping lands in M9.")
 			@comingLater("Retention & backup", "Cleanup schedules and S3 backup land in M10.")
 		</div>
 	}
+}
+
+templ configuredBadge(ok bool) {
+	if ok {
+		<span class="badge badge-sm badge-soft badge-success">configured</span>
+	} else {
+		<span class="badge badge-sm badge-ghost">not configured</span>
+	}
+}
+
+templ ChannelTestResult(errMsg string) {
+	if errMsg == "" {
+		<span class="text-success text-sm">Sent. Check the other end.</span>
+	} else {
+		<span class="text-error text-sm">{ errMsg }</span>
+	}
+}
+
+templ PushoverSection(configured bool, csrfToken string) {
+	<section class="card bg-base-100 shadow">
+		<div class="card-body py-4 gap-3">
+			<h2 class="card-title text-base">
+				Pushover
+				@configuredBadge(configured)
+			</h2>
+			<p class="text-xs opacity-60 -mt-2">
+				<a href="https://pushover.net" target="_blank" rel="noopener" class="link link-hover">Pushover</a>
+				is a simple push-notification app for your phone: one-time purchase, no subscription, made for exactly
+				this kind of alerting. Credentials are encrypted at rest; blank fields keep current values.
+			</p>
+			<form method="post" action="/settings/pushover" class="flex gap-3 items-end flex-wrap">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">App token</span>
+					<input type="password" name="app_token" placeholder={ secretPlaceholder(configured) } class="input input-bordered input-sm"/>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">User key</span>
+					<input type="password" name="user_key" placeholder={ secretPlaceholder(configured) } class="input input-bordered input-sm"/>
+				</label>
+				<button type="submit" class="btn btn-primary btn-sm">Save</button>
+			</form>
+			<div class="flex gap-3 items-center border-t border-base-content/10 pt-3">
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					hx-post="/settings/pushover/test"
+					hx-target="#pushover-test-result"
+					hx-swap="innerHTML"
+				>Send test</button>
+				<span id="pushover-test-result"></span>
+			</div>
+		</div>
+	</section>
+}
+
+templ CampfireSection(baseURL string, keySet bool, csrfToken string) {
+	<section class="card bg-base-100 shadow">
+		<div class="card-body py-4 gap-3">
+			<h2 class="card-title text-base">
+				Campfire
+				@configuredBadge(baseURL != "" && keySet)
+			</h2>
+			<p class="text-xs opacity-60 -mt-2">
+				<a href="https://once.com/campfire" target="_blank" rel="noopener" class="link link-hover">Once Campfire</a>
+				is 37signals' self-hosted chat: buy once, run it on your own box - a natural fit next to pooml.
+				Alerts post to a room via a bot. The bot key is encrypted at rest.
+			</p>
+			<form method="post" action="/settings/campfire" class="flex gap-3 items-end flex-wrap">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<label class="flex flex-col gap-1 flex-1 min-w-48">
+					<span class="text-xs opacity-80">Base URL</span>
+					<input type="url" name="base_url" value={ baseURL } placeholder="https://chat.example.com" class="input input-bordered input-sm w-full"/>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">Bot key</span>
+					<input type="password" name="bot_key" placeholder={ secretPlaceholder(keySet) } class="input input-bordered input-sm"/>
+				</label>
+				<button type="submit" class="btn btn-primary btn-sm">Save</button>
+			</form>
+			<form class="flex gap-3 items-end border-t border-base-content/10 pt-3" hx-post="/settings/campfire/test" hx-target="#campfire-test-result" hx-swap="innerHTML">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">Test room id</span>
+					<input type="number" name="room_id" class="input input-bordered input-sm w-28"/>
+				</label>
+				<button type="submit" class="btn btn-ghost btn-sm">Send test</button>
+				<span id="campfire-test-result" class="self-center"></span>
+			</form>
+		</div>
+	</section>
 }
 
 // ApiKeysSection is also served as an HTMX fragment after a revoke.
@@ -69,8 +171,8 @@ templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfT
 			}
 			<form method="post" action="/settings/api-keys" class="flex gap-2 items-end mt-2">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
-				<label class="form-control flex-1">
-					<span class="label-text text-sm pb-1">Label</span>
+				<label class="flex flex-col gap-1 flex-1">
+					<span class="text-xs opacity-80">Label</span>
 					<input
 						type="text"
 						name="label"
@@ -93,6 +195,13 @@ templ comingLater(title string, note string) {
 			<p class="text-sm">{ note }</p>
 		</div>
 	</section>
+}
+
+func secretPlaceholder(configured bool) string {
+	if configured {
+		return "configured - enter to replace"
+	}
+	return ""
 }
 
 func formatMs(ms int64) string {

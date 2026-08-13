@@ -59,7 +59,7 @@ func HomePage(csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"btn btn-error btn-wide mt-2 text-lg\">Triage</a></div></div><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"card bg-base-100 border border-base-content/15 md:col-span-2\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Volume - last hour</h3><div hx-get=\"/home/volume\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Errors - last 24h</h3><div hx-get=\"/home/errors\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Services</h3><div hx-get=\"/home/services\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"btn btn-error btn-wide mt-2 text-lg\">Triage</a></div></div><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"card bg-base-100 border border-base-content/15 md:col-span-2 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Volume - last hour</h3><div hx-get=\"/home/volume\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 border border-base-content/15 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Errors - last 24h</h3><div hx-get=\"/home/errors\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 border border-base-content/15 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Services</h3><div hx-get=\"/home/services\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -207,14 +207,14 @@ func HomeErrors(rows []HomeErrorRow) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate min-w-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/home.templ`, Line: 74, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/home.templ`, Line: 74, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -292,14 +292,14 @@ func HomeServices(rows []HomeServiceRow) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate min-w-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/home.templ`, Line: 91, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/home.templ`, Line: 91, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {

@@ -16,7 +16,7 @@ templ HomePage(csrfToken string) {
 				</div>
 			</div>
 			<div class="grid md:grid-cols-2 gap-6">
-				<div class="card bg-base-100 border border-base-content/15 md:col-span-2">
+				<div class="card bg-base-100 border border-base-content/15 md:col-span-2 min-w-0">
 					<div class="card-body py-4">
 						<h3 class="card-title text-base">Volume - last hour</h3>
 						<div hx-get="/home/volume" hx-trigger="load, every 30s" hx-swap="innerHTML">
@@ -24,7 +24,7 @@ templ HomePage(csrfToken string) {
 						</div>
 					</div>
 				</div>
-				<div class="card bg-base-100 border border-base-content/15">
+				<div class="card bg-base-100 border border-base-content/15 min-w-0">
 					<div class="card-body py-4">
 						<h3 class="card-title text-base">Errors - last 24h</h3>
 						<div hx-get="/home/errors" hx-trigger="load, every 30s" hx-swap="innerHTML">
@@ -32,7 +32,7 @@ templ HomePage(csrfToken string) {
 						</div>
 					</div>
 				</div>
-				<div class="card bg-base-100 border border-base-content/15">
+				<div class="card bg-base-100 border border-base-content/15 min-w-0">
 					<div class="card-body py-4">
 						<h3 class="card-title text-base">Services</h3>
 						<div hx-get="/home/services" hx-trigger="load, every 30s" hx-swap="innerHTML">
@@ -71,7 +71,7 @@ templ HomeErrors(rows []HomeErrorRow) {
 			for _, r := range rows {
 				<li>
 					<a href={ templ.SafeURL(serviceErrorsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1">
-						<span class="font-mono text-sm truncate">{ r.Service }</span>
+						<span class="font-mono text-sm truncate min-w-0">{ r.Service }</span>
 						<span class="badge badge-sm badge-soft badge-error font-mono">{ strconv.FormatInt(r.Count, 10) }</span>
 					</a>
 				</li>
@@ -88,7 +88,7 @@ templ HomeServices(rows []HomeServiceRow) {
 			for _, r := range rows {
 				<li>
 					<a href={ templ.SafeURL(serviceLogsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1">
-						<span class="font-mono text-sm truncate">{ r.Service }</span>
+						<span class="font-mono text-sm truncate min-w-0">{ r.Service }</span>
 						<span class="text-xs opacity-60 whitespace-nowrap" data-reltime={ msString(r.LastSeenMs) }>{ utcTime(r.LastSeenMs) }</span>
 					</a>
 				</li>

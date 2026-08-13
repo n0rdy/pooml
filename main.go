@@ -33,7 +33,7 @@ func main() {
 	setupLogging(env)
 
 	uiSecret := getRequiredSecret("POOML_UI_SECRET")
-	_ = getRequiredSecret("POOML_ENCRYPTION_KEY") // FIXME: pass to encryption service when meta.db secrets are wired
+	encryptionKey := getRequiredSecret("POOML_ENCRYPTION_KEY")
 	dbDir := getRequiredDBDir()
 	apiAddr, uiAddr := getServerAddrs()
 	trustProxyHeaders := getTrustProxyHeaders()
@@ -67,9 +67,18 @@ func main() {
 	sessionsService := services.NewSessionsService()
 	throttlingService := services.NewThrottlingService()
 	apiKeysService := services.NewApiKeysService(pools.Meta)
+	encryptionService, err := services.NewEncryptionService(encryptionKey)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to init encryption")
+	}
+	settingsService := services.NewSettingsService(pools.Meta, encryptionService)
+	alertsService := services.NewAlertsService(pools.Meta)
+	notifier := services.NewNotificationService(settingsService)
+	evaluator := services.NewEvaluator(alertsService, pools.LogsRead, notifier)
 
 	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
 	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
+	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
 
 	// Log ingestion pipeline (broadcaster is shared with the SSE handlers in M6)
 	broadcaster := ingestion.NewBroadcaster()
@@ -83,7 +92,20 @@ func main() {
 
 	// Routers
 	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, env, trustProxyHeaders)
-	uiRouter := ui.NewRouter(sessionsService, throttlingService, apiKeysService, pools, broadcaster, sseCtx, uiSecret, env, trustProxyHeaders)
+	uiRouter := ui.NewRouter(ui.Deps{
+		Sessions:          sessionsService,
+		Throttling:        throttlingService,
+		ApiKeys:           apiKeysService,
+		Settings:          settingsService,
+		Alerts:            alertsService,
+		Notifier:          notifier,
+		Pools:             pools,
+		Broadcaster:       broadcaster,
+		StreamCtx:         sseCtx,
+		AuthSecret:        uiSecret,
+		Env:               env,
+		TrustProxyHeaders: trustProxyHeaders,
+	})
 
 	apiServer := newAPIServer(apiAddr, apiRouter.NewRouter())
 	uiServer := newUIServer(uiAddr, uiRouter.NewRouter())

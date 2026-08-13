@@ -72,7 +72,7 @@ func (ur *Router) streamLogs(w http.ResponseWriter, req *http.Request) {
 // Streamed rows have no id yet (broadcast happens before persistence), so
 // they render without data-id and the client skips detail expansion on them.
 func (ur *Router) streamBroadcast(req *http.Request, sw *sseWriter, q string) {
-	ch, unsub := ur.broadcaster.Subscribe()
+	ch, unsub := ur.Broadcaster.Subscribe()
 	defer unsub()
 
 	flushTicker := time.NewTicker(streamFlushInterval)
@@ -84,7 +84,7 @@ func (ur *Router) streamBroadcast(req *http.Request, sw *sseWriter, q string) {
 		select {
 		case <-req.Context().Done():
 			return
-		case <-ur.streamCtx.Done():
+		case <-ur.StreamCtx.Done():
 			return
 		case l, ok := <-ch:
 			if !ok {
@@ -130,7 +130,7 @@ func (ur *Router) streamPolling(req *http.Request, sw *sseWriter, lr logsRequest
 	sqlText := v.SQL()
 
 	var lastID int64
-	if err := ur.pools.LogsRead.QueryRowContext(req.Context(),
+	if err := ur.Pools.LogsRead.QueryRowContext(req.Context(),
 		"SELECT COALESCE(MAX(id), 0) FROM logs").Scan(&lastID); err != nil {
 		log.Error().Err(err).Msg("stream anchor")
 		return
@@ -145,13 +145,13 @@ func (ur *Router) streamPolling(req *http.Request, sw *sseWriter, lr logsRequest
 		select {
 		case <-req.Context().Done():
 			return
-		case <-ur.streamCtx.Done():
+		case <-ur.StreamCtx.Done():
 			return
 		case <-heartbeat.C:
 			sw.comment("ping")
 			sw.flush()
 		case <-poll.C:
-			res, err := query.Execute(req.Context(), ur.pools.LogsRead, sqlText, append(args, lastID)...)
+			res, err := query.Execute(req.Context(), ur.Pools.LogsRead, sqlText, append(args, lastID)...)
 			if err != nil {
 				log.Error().Err(err).Msg("stream poll")
 				continue
@@ -201,13 +201,13 @@ func (ur *Router) streamRefresh(req *http.Request, sw *sseWriter, lr logsRequest
 		select {
 		case <-req.Context().Done():
 			return
-		case <-ur.streamCtx.Done():
+		case <-ur.StreamCtx.Done():
 			return
 		case <-heartbeat.C:
 			sw.comment("ping")
 			sw.flush()
 		case <-refresh.C:
-			res, err := query.Execute(req.Context(), ur.pools.LogsRead, sqlText, args...)
+			res, err := query.Execute(req.Context(), ur.Pools.LogsRead, sqlText, args...)
 			if err != nil {
 				log.Error().Err(err).Msg("stream refresh")
 				continue

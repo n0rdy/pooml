@@ -106,7 +106,7 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 		isPageFetch = true
 	}
 
-	res, err := query.Execute(req.Context(), ur.pools.LogsRead, v.SQL(), args...)
+	res, err := query.Execute(req.Context(), ur.Pools.LogsRead, v.SQL(), args...)
 	if err != nil {
 		view.Error = "Query failed: " + err.Error()
 		ur.renderLogs(w, req, view, false)
@@ -244,7 +244,7 @@ func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) {
 
 	var d templates.LogDetail
 	var level, message, parsed any
-	err = ur.pools.LogsRead.QueryRowContext(req.Context(),
+	err = ur.Pools.LogsRead.QueryRowContext(req.Context(),
 		"SELECT id, timestamp, ingested_at, level, service, host, message, parsed, raw FROM logs WHERE id = ?", id).
 		Scan(&d.ID, &d.Ts, &d.IngestedAt, &level, &d.Service, &d.Host, &message, &parsed, &d.Raw)
 	if err != nil {
@@ -276,7 +276,7 @@ func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 			args = append(args, query.FTSMatch(lr.FTS))
 		}
 	}
-	res, err := query.Execute(req.Context(), ur.pools.LogsRead, v.SQL(), args...)
+	res, err := query.Execute(req.Context(), ur.Pools.LogsRead, v.SQL(), args...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

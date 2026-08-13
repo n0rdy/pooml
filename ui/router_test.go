@@ -44,9 +44,25 @@ func newClient(t *testing.T) *client {
 	pipeline.Start()
 	t.Cleanup(pipeline.Shutdown)
 
-	router := ui.NewRouter(services.NewSessionsService(), services.NewThrottlingService(),
-		services.NewApiKeysService(pools.Meta), pools, broadcaster, context.Background(),
-		testSecret, "local", false)
+	enc, err := services.NewEncryptionService("ui-test-encryption-key-0123456789012")
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings := services.NewSettingsService(pools.Meta, enc)
+	router := ui.NewRouter(ui.Deps{
+		Sessions:          services.NewSessionsService(),
+		Throttling:        services.NewThrottlingService(),
+		ApiKeys:           services.NewApiKeysService(pools.Meta),
+		Settings:          settings,
+		Alerts:            services.NewAlertsService(pools.Meta),
+		Notifier:          services.NewNotificationService(settings),
+		Pools:             pools,
+		Broadcaster:       broadcaster,
+		StreamCtx:         context.Background(),
+		AuthSecret:        testSecret,
+		Env:               "local",
+		TrustProxyHeaders: false,
+	})
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)
 

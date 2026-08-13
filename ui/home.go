@@ -24,7 +24,7 @@ func (ur *Router) homePageVolumeSegment(w http.ResponseWriter, req *http.Request
 	nowMs := time.Now().UnixMilli()
 	fromMs := nowMs - 60*60*1000
 
-	rows, err := ur.pools.LogsRead.QueryContext(ctx,
+	rows, err := ur.Pools.LogsRead.QueryContext(ctx,
 		"SELECT (timestamp / ?) * ? AS bucket, COUNT(*) FROM logs WHERE timestamp > ? GROUP BY bucket",
 		volumeBucketMs, volumeBucketMs, fromMs)
 	if err != nil {
@@ -63,7 +63,7 @@ func (ur *Router) homePageErrorsSegment(w http.ResponseWriter, req *http.Request
 	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
 	defer cancel()
 
-	rows, err := ur.pools.LogsRead.QueryContext(ctx,
+	rows, err := ur.Pools.LogsRead.QueryContext(ctx,
 		"SELECT service, COUNT(*) AS cnt FROM logs WHERE level >= ? AND timestamp > ? GROUP BY service ORDER BY cnt DESC LIMIT 10",
 		common.LevelError, time.Now().UnixMilli()-24*60*60*1000)
 	if err != nil {
@@ -92,7 +92,7 @@ func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Reque
 	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
 	defer cancel()
 
-	rows, err := ur.pools.LogsRead.QueryContext(ctx,
+	rows, err := ur.Pools.LogsRead.QueryContext(ctx,
 		"SELECT service, MAX(timestamp), COUNT(*) FROM logs GROUP BY service ORDER BY 2 DESC LIMIT 25")
 	if err != nil {
 		ur.homeFragmentError(w, req, err)

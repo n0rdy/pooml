@@ -24,64 +24,53 @@ const (
 	sessionCookieMaxAge = 7 * 24 * 60 * 60 // seconds; matches the sessions service expiry
 )
 
-type Router struct {
-	sessionsService   *services.SessionsService
-	throttlingService *services.ThrottlingService
-	apiKeysService    *services.ApiKeysService
-	pools             *db.Pools
-	broadcaster       *ingestion.Broadcaster
-	// streamCtx closes open SSE connections; main cancels it via the server's
-	// RegisterOnShutdown so stage 1 isn't held hostage by live tails. appCtx
-	// (stage 4) would fire too late: Server.Shutdown waits on handlers first.
-	streamCtx         context.Context
-	authSecret        string
-	env               string
-	trustProxyHeaders bool
+// Deps is everything the UI router needs; a struct because the positional
+// constructor stopped scaling around the sixth parameter.
+type Deps struct {
+	Sessions    *services.SessionsService
+	Throttling  *services.ThrottlingService
+	ApiKeys     *services.ApiKeysService
+	Settings    *services.SettingsService
+	Alerts      *services.AlertsService
+	Notifier    *services.NotificationService
+	Pools       *db.Pools
+	Broadcaster *ingestion.Broadcaster
+	// StreamCtx closes open SSE connections; main cancels it via the UI
+	// server's RegisterOnShutdown. appCtx (stage 4) would fire too late:
+	// Server.Shutdown waits on handlers first.
+	StreamCtx         context.Context
+	AuthSecret        string
+	Env               string
+	TrustProxyHeaders bool
 }
 
-func NewRouter(
-	sessionsService *services.SessionsService,
-	throttlingService *services.ThrottlingService,
-	apiKeysService *services.ApiKeysService,
-	pools *db.Pools,
-	broadcaster *ingestion.Broadcaster,
-	streamCtx context.Context,
-	authSecret string,
-	env string,
-	trustProxyHeaders bool,
-) *Router {
-	return &Router{
-		sessionsService:   sessionsService,
-		throttlingService: throttlingService,
-		apiKeysService:    apiKeysService,
-		pools:             pools,
-		broadcaster:       broadcaster,
-		streamCtx:         streamCtx,
-		authSecret:        authSecret,
-		env:               env,
-		trustProxyHeaders: trustProxyHeaders,
-	}
+type Router struct {
+	Deps
+}
+
+func NewRouter(d Deps) *Router {
+	return &Router{Deps: d}
 }
 
 func (ur *Router) NewRouter() *chi.Mux {
 	router := chi.NewRouter()
 
-	router.Use(securityHeaders(ur.env))
-	router.Use(csrfPrevention(ur.csrfErrorHandler, ur.env))
+	router.Use(securityHeaders(ur.Env))
+	router.Use(csrfPrevention(ur.csrfErrorHandler, ur.Env))
 
 	// unprotected login routes:
 	router.Get("/login", ur.loginPage)
-	router.With(loginThrottle(ur.throttlingService, ur.trustProxyHeaders)).Post("/login", ur.processLogin)
+	router.With(loginThrottle(ur.Throttling, ur.TrustProxyHeaders)).Post("/login", ur.processLogin)
 
 	// protected routes:
-	router.With(sessionAuth(ur.sessionsService)).
+	router.With(sessionAuth(ur.Sessions)).
 		Get("/", ur.homePage)
 
-	router.With(sessionAuth(ur.sessionsService)).
+	router.With(sessionAuth(ur.Sessions)).
 		Post("/logout", ur.processLogout)
 
 	router.Route("/home", func(r chi.Router) {
-		r.Use(sessionAuth(ur.sessionsService)) // session auth for all home routes
+		r.Use(sessionAuth(ur.Sessions)) // session auth for all home routes
 
 		r.Get("/volume", ur.homePageVolumeSegment)
 		r.Get("/errors", ur.homePageErrorsSegment)
@@ -89,7 +78,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 	})
 
 	router.Route("/logs", func(r chi.Router) {
-		r.Use(sessionAuth(ur.sessionsService)) // session auth for all logs routes
+		r.Use(sessionAuth(ur.Sessions)) // session auth for all logs routes
 
 		r.Get("/", ur.logsPage)
 		r.Get("/stream", ur.streamLogs)
@@ -98,7 +87,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 	})
 
 	router.Route("/alerts", func(r chi.Router) {
-		r.Use(sessionAuth(ur.sessionsService)) // session auth for all alerts routes
+		r.Use(sessionAuth(ur.Sessions)) // session auth for all alerts routes
 
 		r.Get("/", ur.alertsPage)
 		r.Post("/", ur.createAlert)
@@ -109,13 +98,17 @@ func (ur *Router) NewRouter() *chi.Mux {
 	})
 
 	router.Route("/settings", func(r chi.Router) {
-		r.Use(sessionAuth(ur.sessionsService)) // session auth for all settings routes
+		r.Use(sessionAuth(ur.Sessions)) // session auth for all settings routes
 
 		r.Get("/", ur.settingsPage)
 		r.Put("/retention", ur.updateRetentionSettings)
 		r.Put("/backup", ur.updateBackupSettings)
 		r.Post("/api-keys", ur.createApiKey)
 		r.Delete("/api-keys/{id}", ur.deleteApiKey)
+		r.Post("/pushover", ur.savePushover)
+		r.Post("/pushover/test", ur.testPushover)
+		r.Post("/campfire", ur.saveCampfire)
+		r.Post("/campfire/test", ur.testCampfire)
 	})
 
 	return router
@@ -133,7 +126,7 @@ func (ur *Router) render(w http.ResponseWriter, req *http.Request, status int, c
 
 func (ur *Router) isAuthed(req *http.Request) bool {
 	cookie, err := req.Cookie(sessionCookieName)
-	return err == nil && ur.sessionsService.IsSessionValid(cookie.Value)
+	return err == nil && ur.Sessions.IsSessionValid(cookie.Value)
 }
 
 func (ur *Router) setSessionCookie(w http.ResponseWriter, value string, maxAge int) {
@@ -143,7 +136,7 @@ func (ur *Router) setSessionCookie(w http.ResponseWriter, value string, maxAge i
 		Path:     "/",
 		MaxAge:   maxAge,
 		HttpOnly: true,
-		Secure:   ur.env == common.ProEnv,
+		Secure:   ur.Env == common.ProEnv,
 		SameSite: http.SameSiteLaxMode,
 	})
 }
@@ -169,21 +162,21 @@ func (ur *Router) processLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	secret := req.PostFormValue("secret")
-	if subtle.ConstantTimeCompare([]byte(secret), []byte(ur.authSecret)) != 1 {
-		ur.throttlingService.RecordFailure(utils.ClientIP(req, ur.trustProxyHeaders))
+	if subtle.ConstantTimeCompare([]byte(secret), []byte(ur.AuthSecret)) != 1 {
+		ur.Throttling.RecordFailure(utils.ClientIP(req, ur.TrustProxyHeaders))
 		ur.render(w, req, http.StatusUnauthorized,
 			templates.LoginPage("error", "That's not it. Deep breath, try again.", nosurf.Token(req)))
 		return
 	}
 
-	sessionID, _ := ur.sessionsService.CreateSession()
+	sessionID, _ := ur.Sessions.CreateSession()
 	ur.setSessionCookie(w, sessionID, sessionCookieMaxAge)
 	http.Redirect(w, req, "/", http.StatusSeeOther)
 }
 
 func (ur *Router) processLogout(w http.ResponseWriter, req *http.Request) {
 	if cookie, err := req.Cookie(sessionCookieName); err == nil {
-		ur.sessionsService.InvalidateSession(cookie.Value)
+		ur.Sessions.InvalidateSession(cookie.Value)
 	}
 	ur.setSessionCookie(w, "", -1)
 	http.Redirect(w, req, "/login", http.StatusSeeOther)
@@ -203,13 +196,7 @@ func (ur *Router) homePage(w http.ResponseWriter, req *http.Request) {
 // Home fragments live in ui/home.go; logs handlers in ui/logs.go and
 // ui/stream.go.
 
-// Alerts
-func (ur *Router) alertsPage(w http.ResponseWriter, req *http.Request)    { notImplemented(w) }
-func (ur *Router) createAlert(w http.ResponseWriter, req *http.Request)   { notImplemented(w) }
-func (ur *Router) editAlertPage(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
-func (ur *Router) updateAlert(w http.ResponseWriter, req *http.Request)   { notImplemented(w) }
-func (ur *Router) deleteAlert(w http.ResponseWriter, req *http.Request)   { notImplemented(w) }
-func (ur *Router) dryRunAlert(w http.ResponseWriter, req *http.Request)   { notImplemented(w) }
+// Alert handlers live in ui/alerts.go.
 
 // Settings
 func (ur *Router) updateRetentionSettings(w http.ResponseWriter, req *http.Request) {
@@ -219,14 +206,15 @@ func (ur *Router) updateBackupSettings(w http.ResponseWriter, req *http.Request)
 	notImplemented(w)
 }
 
+// Settings handlers (page + api keys here; channels in ui/settings.go).
+
 func (ur *Router) settingsPage(w http.ResponseWriter, req *http.Request) {
-	keys, err := ur.apiKeysService.List(req.Context())
+	v, err := ur.settingsView(req, "", "")
 	if err != nil {
-		log.Error().Err(err).Msg("list api keys")
 		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
 		return
 	}
-	ur.render(w, req, http.StatusOK, templates.SettingsPage(keys, "", "", nosurf.Token(req)))
+	ur.render(w, req, http.StatusOK, templates.SettingsPage(v, nosurf.Token(req)))
 }
 
 func (ur *Router) createApiKey(w http.ResponseWriter, req *http.Request) {
@@ -234,19 +222,18 @@ func (ur *Router) createApiKey(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/settings", http.StatusSeeOther)
 		return
 	}
-	newKey, createErr := ur.apiKeysService.Create(req.Context(), req.PostFormValue("label"))
+	newKey, createErr := ur.ApiKeys.Create(req.Context(), req.PostFormValue("label"))
 
-	keys, err := ur.apiKeysService.List(req.Context())
-	if err != nil {
-		log.Error().Err(err).Msg("list api keys")
-		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
-		return
-	}
 	errMsg, status := "", http.StatusOK
 	if createErr != nil {
 		errMsg, status = createErr.Error(), http.StatusBadRequest
 	}
-	ur.render(w, req, status, templates.SettingsPage(keys, newKey, errMsg, nosurf.Token(req)))
+	v, err := ur.settingsView(req, newKey, errMsg)
+	if err != nil {
+		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
+		return
+	}
+	ur.render(w, req, status, templates.SettingsPage(v, nosurf.Token(req)))
 }
 
 func (ur *Router) deleteApiKey(w http.ResponseWriter, req *http.Request) {
@@ -255,14 +242,13 @@ func (ur *Router) deleteApiKey(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	if err := ur.apiKeysService.Revoke(req.Context(), id); err != nil {
+	if err := ur.ApiKeys.Revoke(req.Context(), id); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("revoke api key")
 		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
 		return
 	}
-	keys, err := ur.apiKeysService.List(req.Context())
+	keys, err := ur.ApiKeys.List(req.Context())
 	if err != nil {
-		log.Error().Err(err).Msg("list api keys")
 		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
 		return
 	}

@@ -20,9 +20,14 @@ templ LogsPage(v LogsView, csrfToken string) {
 						name="fts"
 						value={ v.FTS }
 						placeholder="Search everything (FTS5 syntax welcome)"
-						class="input input-bordered flex-1 font-mono"
+						class="input input-bordered input-sm sm:input-md flex-1 min-w-0 font-mono"
 					/>
-					<div class="join" title="How the search combines with the SQL below">
+					<label class="flex items-center gap-1 cursor-pointer text-sm shrink-0" title="Live tail">
+						<input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-success"/>
+						Live
+					</label>
+					<button type="button" id="sql-toggle" class="btn btn-sm sm:hidden">SQL</button>
+					<div class="join hidden sm:flex" title="How the search combines with the SQL below">
 						if v.Op == "or" {
 							<input class="join-item btn btn-xs" type="radio" name="op" value="and" aria-label="AND"/>
 							<input class="join-item btn btn-xs" type="radio" name="op" value="or" aria-label="OR" checked/>
@@ -32,9 +37,10 @@ templ LogsPage(v LogsView, csrfToken string) {
 						}
 					</div>
 				</div>
+				<div id="sql-block" class="hidden sm:flex flex-col gap-2">
 				<div class="flex items-center justify-between px-1">
 					<span class="text-xs font-semibold opacity-80">SQL query</span>
-					<span class="text-xs opacity-60">Cmd/Ctrl + Enter runs</span>
+					<span class="text-xs opacity-60 hidden sm:inline">Cmd/Ctrl + Enter runs</span>
 				</div>
 				<div
 					id="sql-editor"
@@ -45,10 +51,7 @@ templ LogsPage(v LogsView, csrfToken string) {
 				<div class="flex items-center gap-2">
 					<button type="submit" class="btn btn-primary btn-sm">Run</button>
 					<button type="button" id="reset-query" class="btn btn-ghost btn-sm" title="Back to the default query, filters cleared">Reset</button>
-					<label class="flex items-center gap-2 cursor-pointer ml-2 text-sm">
-						<input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-success"/>
-						Live
-					</label>
+				</div>
 				</div>
 			</form>
 			<div id="results" class="flex-1 min-h-0 flex flex-col relative">
@@ -108,7 +111,7 @@ templ logViewer(v LogsView) {
 				<tr class="text-xs text-center">
 					<th class="w-32">time</th>
 					<th class="w-16">level</th>
-					<th class="w-28">service</th>
+					<th class="w-28 hidden sm:table-cell">service</th>
 					<th>message</th>
 				</tr>
 			</thead>
@@ -171,7 +174,7 @@ templ logRowTr(r LogRow, q string) {
 				<span class={ levelClass(r.Level) }>-</span>
 			}
 		</td>
-		<td class="text-center">
+		<td class="text-center hidden sm:table-cell">
 			<button
 				class={ serviceBadgeClass(r.Service) }
 				data-tip={ serviceTip(r.Service) }
@@ -276,8 +279,9 @@ templ logsScript() {
 	</style>
 	<script type="module">
 		import { EditorView, basicSetup } from "codemirror";
-		import { placeholder } from "@codemirror/view";
-		import { Compartment } from "@codemirror/state";
+		import { placeholder, keymap } from "@codemirror/view";
+		import { Compartment, Prec } from "@codemirror/state";
+		import { acceptCompletion } from "@codemirror/autocomplete";
 		import { SQLite, schemaCompletionSource } from "@codemirror/lang-sql";
 		import { LanguageSupport, syntaxTree } from "@codemirror/language";
 		import { linter, setDiagnostics } from "@codemirror/lint";
@@ -305,12 +309,32 @@ templ logsScript() {
 			.split(" ").map((f) => ({ label: f, type: "function", boost: -2 }));
 		const KEYWORD_OPTIONS = KEYWORDS.concat(FUNCTIONS);
 		function keywordSource(ctx) {
+			if (complCtx(ctx) !== "general") return null;
 			const w = ctx.matchBefore(/[A-Za-z_]+/);
 			if (!w && !ctx.explicit) return null;
 			return { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };
 		}
+		// completion context gating: after FROM/JOIN only table names make
+		// sense; after a dot the schema source's column completion owns it
+		const TABLES = [{ label: "logs", type: "type" }];
+		const tablePosRe = /\b(from|join)\s+[\w"]*$/i;
+		const dotPosRe = /\.\w*$/;
+		function complCtx(ctx) {
+			const before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);
+			if (tablePosRe.test(before)) return "table";
+			if (dotPosRe.test(before)) return "dot";
+			return "general";
+		}
+		function tableSource(ctx) {
+			if (complCtx(ctx) !== "table") return null;
+			const w = ctx.matchBefore(/[\w"]+/);
+			if (!w && !ctx.explicit) return null;
+			return { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\w"]*$/ };
+		}
+		const gatedSchema = (ctx) => complCtx(ctx) === "table" ? null : schemaSource(ctx);
 		const sqlSupport = new LanguageSupport(SQLite.language, [
-			SQLite.language.data.of({ autocomplete: schemaSource }),
+			SQLite.language.data.of({ autocomplete: tableSource }),
+			SQLite.language.data.of({ autocomplete: gatedSchema }),
 			SQLite.language.data.of({ autocomplete: keywordSource }),
 		]);
 
@@ -336,6 +360,10 @@ templ logsScript() {
 		const view = new EditorView({
 			doc: host.dataset.q,
 			extensions: [
+				Prec.highest(keymap.of([
+					{ key: "Tab", run: acceptCompletion },
+					{ key: "Enter", run: acceptCompletion },
+				])),
 				basicSetup,
 				editorTheme.of(isLight() ? [] : oneDark),
 				placeholder("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"),
@@ -438,6 +466,12 @@ templ logsScript() {
 		anchorBottom();
 
 		const DEFAULT_Q = "SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100";
+		document.getElementById("sql-toggle").addEventListener("click", () => {
+			const block = document.getElementById("sql-block");
+			block.classList.toggle("hidden");
+			block.classList.toggle("flex");
+		});
+
 		document.getElementById("reset-query").addEventListener("click", () => {
 			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: DEFAULT_Q } });
 			form.elements.fts.value = "";

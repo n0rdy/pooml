@@ -1,0 +1,447 @@
+package templates
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/n0rdy/pooml/services"
+)
+
+type AlertsView struct {
+	Alerts []services.Alert
+	ErrMsg string
+
+	PushoverConfigured bool
+	CampfireConfigured bool
+}
+
+templ AlertsPage(v AlertsView, csrfToken string) {
+	@Shell("alerts · pooml", "alerts", csrfToken) {
+		<div class="max-w-5xl mx-auto flex flex-col gap-6">
+			@alertCreateCard(v, csrfToken)
+			@AlertsRegion(v)
+		</div>
+		@homeScript()
+		@alertsScript()
+	}
+}
+
+// AlertsRegion is the swap target for edit/delete/test flows.
+templ AlertsRegion(v AlertsView) {
+	<div id="alerts-region" class="flex flex-col gap-3">
+		<div id="dry-run"></div>
+		if len(v.Alerts) == 0 {
+			<p class="text-sm opacity-60 italic">No alerts yet. Define one above - a query that returns rows is a firing alert.</p>
+		} else {
+			<div class="overflow-x-auto border border-base-content/15 rounded-box bg-base-100">
+				<table class="table">
+					<thead>
+						<tr class="text-xs text-center">
+							<th class="text-left">alert</th>
+							<th>every</th>
+							<th>target</th>
+							<th>status</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, a := range v.Alerts {
+							@alertRow(a)
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+}
+
+templ alertRow(a services.Alert) {
+	<tr>
+		<td>
+			<div class="font-semibold">{ a.Name }</div>
+			<div class="font-mono text-xs opacity-60 max-w-md truncate" title={ a.Query }>{ a.Query }</div>
+		</td>
+		<td class="text-center whitespace-nowrap text-sm">{ humanMs(a.CheckIntervalMs) }</td>
+		<td class="text-center"><span class="badge badge-sm badge-outline font-mono">{ targetSummary(a.Target) }</span></td>
+		<td class="text-center">
+			@alertStatus(a)
+		</td>
+		<td class="text-right whitespace-nowrap">
+			<button
+				class="btn btn-ghost btn-xs"
+				hx-post={ fmt.Sprintf("/alerts/%d/test", a.ID) }
+				hx-target="#dry-run"
+				hx-swap="innerHTML"
+			>Test</button>
+			<button
+				class="btn btn-ghost btn-xs"
+				hx-get={ fmt.Sprintf("/alerts/%d/edit", a.ID) }
+				hx-target="closest tr"
+				hx-swap="outerHTML"
+			>Edit</button>
+			<button
+				class="btn btn-ghost btn-xs text-error"
+				hx-delete={ fmt.Sprintf("/alerts/%d", a.ID) }
+				hx-target="#alerts-region"
+				hx-swap="outerHTML"
+				hx-confirm={ fmt.Sprintf("Delete alert %q?", a.Name) }
+			>Delete</button>
+		</td>
+	</tr>
+}
+
+templ alertStatus(a services.Alert) {
+	if !a.Enabled {
+		<span class="badge badge-sm badge-ghost">disabled</span>
+	} else if a.CurrentlyFiring {
+		<span class="badge badge-sm badge-error font-semibold">FIRING</span>
+	} else {
+		<span class="badge badge-sm badge-soft badge-success">quiet</span>
+	}
+	if a.LastError.Valid {
+		<div class="text-xs text-error max-w-40 truncate" title={ a.LastError.String }>{ a.LastError.String }</div>
+	}
+	if a.LastCheckedAt.Valid {
+		<div class="text-xs opacity-50" data-reltime={ msString(a.LastCheckedAt.Int64) }>{ utcTime(a.LastCheckedAt.Int64) }</div>
+	}
+}
+
+templ alertCreateCard(v AlertsView, csrfToken string) {
+	<div class="card bg-base-100 border border-base-content/15">
+		<div class="card-body py-4">
+			<h3 class="card-title text-base">New alert</h3>
+			<p class="text-xs opacity-60 -mt-1">If the query returns rows, the alert fires. Level-triggered, with a cooldown between notifications.</p>
+			if v.ErrMsg != "" {
+				<div role="alert" class="alert alert-error text-sm">{ v.ErrMsg }</div>
+			}
+			@alertForm("POST", "/alerts", services.Alert{CheckIntervalMs: 60000, CooldownMs: 900000, Enabled: true, Target: defaultTarget(v.PushoverConfigured, v.CampfireConfigured)}, v.PushoverConfigured, v.CampfireConfigured, csrfToken)
+		</div>
+	</div>
+}
+
+// alertForm serves create (POST /alerts, plain submit) and edit (hx-put).
+templ alertForm(method string, action string, a services.Alert, poConfigured bool, cfConfigured bool, csrfToken string) {
+	if method == "POST" {
+		<form method="post" action={ templ.SafeURL(action) } class="flex flex-col gap-3">
+			@alertFormFields(a, poConfigured, cfConfigured, csrfToken)
+			<div><button type="submit" class="btn btn-primary btn-sm">Create alert</button></div>
+		</form>
+	} else {
+		<form hx-put={ action } hx-target="#alerts-region" hx-swap="outerHTML" class="flex flex-col gap-3">
+			@alertFormFields(a, poConfigured, cfConfigured, csrfToken)
+			<div class="flex gap-2">
+				<button type="submit" class="btn btn-primary btn-sm">Save</button>
+				<button type="button" class="btn btn-ghost btn-sm" hx-get="/alerts" hx-target="#alerts-region" hx-swap="outerHTML">Cancel</button>
+			</div>
+		</form>
+	}
+}
+
+templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, csrfToken string) {
+	<input type="hidden" name="csrf_token" value={ csrfToken }/>
+	<div class="grid gap-3 md:grid-cols-3">
+		<label class="flex flex-col gap-1">
+			<span class="text-xs opacity-80">Name</span>
+			<input type="text" name="name" value={ a.Name } class="input input-bordered input-sm" maxlength="100" required/>
+		</label>
+		<label class="flex flex-col gap-1">
+			<span class="text-xs opacity-80">Check every (seconds, min 30)</span>
+			<input type="number" name="interval_s" value={ strconv.FormatInt(a.CheckIntervalMs/1000, 10) } min="30" class="input input-bordered input-sm" required/>
+		</label>
+		<label class="flex flex-col gap-1">
+			<span class="text-xs opacity-80">Cooldown between notifications (minutes)</span>
+			<input type="number" name="cooldown_m" value={ strconv.FormatInt(a.CooldownMs/60000, 10) } min="0" class="input input-bordered input-sm" required/>
+		</label>
+	</div>
+	<div class="flex flex-col gap-1">
+		<span class="flex items-center justify-between">
+			<span class="text-xs opacity-80">Query (fires when it returns rows)</span>
+			<button type="button" class="open-in-logs link link-primary text-xs" title="Run this query on the logs page (new tab)">open in logs ↗</button>
+		</span>
+		<textarea name="query" class="hidden">{ a.Query }</textarea>
+		<div class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors" style="min-height: 3.5rem"></div>
+	</div>
+	if !poConfigured && !cfConfigured && targetType(a.Target) == "" {
+		<div role="alert" class="alert text-sm">
+			No notification channel configured yet. <a href="/settings" class="link link-primary">Set up Pushover or Campfire in Settings</a> first.
+		</div>
+	}
+	<div class="grid gap-3 md:grid-cols-3 items-start">
+		<label class="flex flex-col gap-1">
+			<span class="text-xs opacity-80">Notify via</span>
+			<select name="target_type" class="select select-bordered select-sm">
+				if poConfigured || targetType(a.Target) == "pushover" {
+					<option value="pushover" selected?={ targetType(a.Target) == "pushover" }>{ channelLabel("Pushover", poConfigured) }</option>
+				}
+				if cfConfigured || targetType(a.Target) == "campfire" {
+					<option value="campfire" selected?={ targetType(a.Target) == "campfire" }>{ channelLabel("Campfire", cfConfigured) }</option>
+				}
+			</select>
+		</label>
+		<div class={ "target-campfire", templ.KV("hidden", targetType(a.Target) != "campfire") }>
+			<label class="flex flex-col gap-1">
+				<span class="text-xs opacity-80">Room id</span>
+				<input type="number" name="cf_room_id" value={ roomIDValue(a.Target) } class="input input-bordered input-sm w-32"/>
+			</label>
+		</div>
+		<div class={ "target-pushover md:col-span-2 grid grid-cols-3 gap-2", templ.KV("hidden", targetType(a.Target) != "pushover") }>
+			<label class="flex flex-col gap-1">
+				<span class="text-xs opacity-80">Device (optional)</span>
+				<input type="text" name="po_device" value={ targetOf(a.Target).Device } class="input input-bordered input-sm"/>
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-xs opacity-80">Priority (-2..2)</span>
+				<input type="number" name="po_priority" value={ strconv.Itoa(targetOf(a.Target).Priority) } min="-2" max="2" class="input input-bordered input-sm"/>
+			</label>
+			<label class="flex flex-col gap-1">
+				<span class="text-xs opacity-80">Sound (optional)</span>
+				<input type="text" name="po_sound" value={ targetOf(a.Target).Sound } class="input input-bordered input-sm"/>
+			</label>
+		</div>
+	</div>
+	<label class="flex items-center gap-2 cursor-pointer text-sm">
+		<input type="checkbox" name="enabled" checked?={ a.Enabled } class="toggle toggle-sm toggle-success"/>
+		Enabled
+	</label>
+}
+
+// alertsScript mounts CodeMirror on every alert query editor (create form +
+// HTMX-loaded edit rows), syncs docs back to the hidden textarea at submit,
+// and handles channel-field visibility and open-in-logs. Extension setup is
+// knowingly duplicated from the logs page; extract when a third SQL editor
+// appears (likely M9 metrics explorer).
+templ alertsScript() {
+	<style>
+		.sql-editor-host .cm-content { font-size: 14px; }
+		.sql-editor-host .cm-editor { max-height: 8rem; min-height: calc(3.5rem - 4px); }
+		.sql-editor-host:focus-within {
+			outline: 2px solid var(--color-primary);
+			outline-offset: 2px;
+			border-color: var(--color-primary);
+		}
+	</style>
+	<script type="module">
+		import { EditorView, basicSetup } from "codemirror";
+		import { placeholder, keymap } from "@codemirror/view";
+		import { Compartment, Prec } from "@codemirror/state";
+		import { acceptCompletion } from "@codemirror/autocomplete";
+		import { SQLite, schemaCompletionSource } from "@codemirror/lang-sql";
+		import { LanguageSupport, syntaxTree } from "@codemirror/language";
+		import { linter } from "@codemirror/lint";
+		import { oneDark } from "@codemirror/theme-one-dark";
+
+		const schemaSource = schemaCompletionSource({
+			dialect: SQLite,
+			schema: { logs: ["id", "timestamp", "ingested_at", "level", "service", "host", "message", "parsed", "raw"] },
+			defaultTable: "logs",
+			upperCaseKeywords: true,
+		});
+		const KEYWORD_OPTIONS = ("SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC " +
+			"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST")
+			.split(" ").map((k) => ({ label: k, type: "keyword", boost: -1 }))
+			.concat(("count sum avg min max unixepoch strftime datetime json_extract length coalesce round")
+				.split(" ").map((f) => ({ label: f, type: "function", boost: -2 })));
+		function keywordSource(ctx) {
+			if (complCtx(ctx) !== "general") return null;
+			const w = ctx.matchBefore(/[A-Za-z_]+/);
+			if (!w && !ctx.explicit) return null;
+			return { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };
+		}
+		// completion context gating: after FROM/JOIN only table names make
+		// sense; after a dot the schema source's column completion owns it
+		const TABLES = [{ label: "logs", type: "type" }];
+		const tablePosRe = /\b(from|join)\s+[\w"]*$/i;
+		const dotPosRe = /\.\w*$/;
+		function complCtx(ctx) {
+			const before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);
+			if (tablePosRe.test(before)) return "table";
+			if (dotPosRe.test(before)) return "dot";
+			return "general";
+		}
+		function tableSource(ctx) {
+			if (complCtx(ctx) !== "table") return null;
+			const w = ctx.matchBefore(/[\w"]+/);
+			if (!w && !ctx.explicit) return null;
+			return { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\w"]*$/ };
+		}
+		const gatedSchema = (ctx) => complCtx(ctx) === "table" ? null : schemaSource(ctx);
+		const sqlSupport = new LanguageSupport(SQLite.language, [
+			SQLite.language.data.of({ autocomplete: tableSource }),
+			SQLite.language.data.of({ autocomplete: gatedSchema }),
+			SQLite.language.data.of({ autocomplete: keywordSource }),
+		]);
+		const syntaxLinter = linter((v) => {
+			if (!v.state.doc.length) return [];
+			const diags = [];
+			syntaxTree(v.state).iterate({
+				enter: (n) => {
+					if (n.type.isError) diags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: "error", message: "syntax error" });
+				},
+			});
+			return diags;
+		});
+
+		const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
+		const editors = new WeakMap();
+		const instances = [];
+
+		function mountAll() {
+			document.querySelectorAll(".sql-editor-host:not([data-cm])").forEach((host) => {
+				host.dataset.cm = "1";
+				const src = host.closest("form").querySelector("textarea[name=query]");
+				const themeComp = new Compartment();
+				const view = new EditorView({
+					doc: src ? src.value : "",
+					extensions: [
+						Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
+						basicSetup,
+						themeComp.of(isLight() ? [] : oneDark),
+						placeholder("SELECT * FROM logs WHERE level >= 4 AND timestamp > unixepoch() * 1000 - 300000"),
+						sqlSupport,
+						syntaxLinter,
+					],
+					parent: host,
+				});
+				editors.set(host, view);
+				instances.push({ view, themeComp });
+			});
+		}
+
+		function syncedQuery(form) {
+			const host = form.querySelector(".sql-editor-host");
+			const src = form.querySelector("textarea[name=query]");
+			const view = host && editors.get(host);
+			if (view && src) src.value = view.state.doc.toString();
+			return src ? src.value.trim() : "";
+		}
+
+		// capture phase: runs before htmx collects form parameters
+		document.addEventListener("submit", (e) => {
+			if (e.target && e.target.querySelector) syncedQuery(e.target);
+		}, true);
+
+		document.addEventListener("change", (e) => {
+			if (!e.target || e.target.name !== "target_type") return;
+			const form = e.target.closest("form");
+			form.querySelectorAll(".target-pushover").forEach((el) => el.classList.toggle("hidden", e.target.value !== "pushover"));
+			form.querySelectorAll(".target-campfire").forEach((el) => el.classList.toggle("hidden", e.target.value !== "campfire"));
+		});
+		document.addEventListener("click", (e) => {
+			const btn = e.target.closest(".open-in-logs");
+			if (!btn) return;
+			const q = syncedQuery(btn.closest("form"));
+			if (q) window.open("/logs?q=" + encodeURIComponent(q), "_blank");
+		});
+
+		new MutationObserver(() => {
+			instances.forEach((i) => {
+				if (!i.view.dom.isConnected) return;
+				i.view.dispatch({ effects: i.themeComp.reconfigure(isLight() ? [] : oneDark) });
+			});
+		}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+		mountAll();
+		document.body.addEventListener("htmx:afterSettle", mountAll);
+	</script>
+}
+
+// AlertEditRow replaces the alert's table row with an inline edit form.
+templ AlertEditRow(a services.Alert, poConfigured bool, cfConfigured bool, csrfToken string) {
+	<tr>
+		<td colspan="5" class="bg-base-200/50 p-3">
+			@alertForm("PUT", fmt.Sprintf("/alerts/%d", a.ID), a, poConfigured, cfConfigured, csrfToken)
+		</td>
+	</tr>
+}
+
+// DryRunResult shows what an alert's query matches right now. No
+// notification is sent - see CONTEXT.md > Test Alert (Dry Run).
+templ DryRunResult(name string, columns []string, cells [][]string, errMsg string) {
+	<div class="alert text-sm flex flex-col items-start gap-1">
+		if errMsg != "" {
+			<span class="text-error">Dry run of { name } failed: { errMsg }</span>
+		} else if len(cells) == 0 {
+			<span><b>{ name }</b>: 0 rows - would not fire. All quiet.</span>
+		} else {
+			<span><b>{ name }</b>: { strconv.Itoa(len(cells)) } row(s) - this WOULD fire (no notification sent).</span>
+			<div class="overflow-x-auto w-full max-h-48">
+				<table class="table table-xs font-mono">
+					<thead><tr>
+						for _, c := range columns {
+							<th>{ c }</th>
+						}
+					</tr></thead>
+					<tbody>
+						for _, row := range cells {
+							<tr>
+								for _, cell := range row {
+									<td class="max-w-60 truncate" title={ cell }>{ cell }</td>
+								}
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+}
+
+func humanMs(ms int64) string {
+	switch {
+	case ms%3600000 == 0:
+		return fmt.Sprintf("%dh", ms/3600000)
+	case ms%60000 == 0:
+		return fmt.Sprintf("%dm", ms/60000)
+	default:
+		return fmt.Sprintf("%ds", ms/1000)
+	}
+}
+
+func targetOf(raw string) services.Target {
+	t, _ := services.ParseTarget(raw)
+	return t
+}
+
+func targetType(raw string) string { return targetOf(raw).Type }
+
+func roomIDValue(raw string) string {
+	if id := targetOf(raw).RoomID; id > 0 {
+		return strconv.FormatInt(id, 10)
+	}
+	return ""
+}
+
+func defaultTarget(po, cf bool) string {
+	if !po && cf {
+		return `{"type":"campfire"}`
+	}
+	if po {
+		return `{"type":"pushover"}`
+	}
+	return ""
+}
+
+func channelLabel(name string, configured bool) string {
+	if configured {
+		return name
+	}
+	return name + " (not configured)"
+}
+
+func targetSummary(raw string) string {
+	t, err := services.ParseTarget(raw)
+	if err != nil {
+		return "invalid"
+	}
+	if t.Type == "campfire" {
+		return fmt.Sprintf("campfire · room %d", t.RoomID)
+	}
+	s := "pushover"
+	if t.Device != "" {
+		s += " · " + t.Device
+	}
+	if t.Priority != 0 {
+		s += fmt.Sprintf(" · p%+d", t.Priority)
+	}
+	return s
+}
