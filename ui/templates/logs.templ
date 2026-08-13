@@ -1,0 +1,267 @@
+package templates
+
+templ LogsPage(v LogsView, csrfToken string) {
+	@Shell("logs · pooml", "logs", csrfToken) {
+		<div class="flex flex-col gap-3 max-w-6xl mx-auto">
+			<form
+				id="query-form"
+				hx-get="/logs"
+				hx-target="#results"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+				class="flex flex-col gap-2"
+			>
+				<div class="flex gap-2 items-center">
+					<input
+						type="search"
+						name="fts"
+						value={ v.FTS }
+						placeholder="Search everything (FTS5 syntax welcome)"
+						class="input input-bordered input-sm flex-1 font-mono"
+					/>
+					<div class="join" title="How the search combines with the SQL below">
+						if v.Op == "or" {
+							<input class="join-item btn btn-xs" type="radio" name="op" value="and" aria-label="AND"/>
+							<input class="join-item btn btn-xs" type="radio" name="op" value="or" aria-label="OR" checked/>
+						} else {
+							<input class="join-item btn btn-xs" type="radio" name="op" value="and" aria-label="AND" checked/>
+							<input class="join-item btn btn-xs" type="radio" name="op" value="or" aria-label="OR"/>
+						}
+					</div>
+				</div>
+				<div id="sql-editor" data-q={ v.Q } class="border border-base-300 rounded-field bg-base-100 text-sm"></div>
+				<div class="flex items-center gap-2">
+					<button type="submit" class="btn btn-primary btn-sm">Run</button>
+					<span class="text-xs opacity-50">or Cmd/Ctrl + Enter</span>
+				</div>
+			</form>
+			<div id="results">
+				@LogsResults(v)
+			</div>
+		</div>
+		@logsScript()
+	}
+}
+
+// LogsResults is the fragment swapped into #results on every query run.
+templ LogsResults(v LogsView) {
+	if v.Error != "" {
+		<div role="alert" class="alert alert-error text-sm">{ v.Error }</div>
+	} else if v.IsViewer {
+		@logViewer(v)
+	} else {
+		@genericTable(v)
+	}
+}
+
+templ logViewer(v LogsView) {
+	<div class="flex items-center justify-between">
+		<span class="text-xs opacity-50">
+			{ rowsLabel(len(v.Rows), v.Truncated) }
+		</span>
+		<span class="flex gap-2 text-xs">
+			<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover opacity-70">CSV</a>
+			<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover opacity-70">JSON</a>
+		</span>
+	</div>
+	<div class="overflow-x-auto border border-base-300 rounded-box bg-base-100">
+		<table class="table table-xs font-mono">
+			<thead>
+				<tr class="text-xs opacity-60">
+					<th class="w-44">time</th>
+					<th class="w-16">level</th>
+					<th class="w-32">service</th>
+					<th class="w-28">host</th>
+					<th>message</th>
+				</tr>
+			</thead>
+			<tbody id="log-rows">
+				@pageSentinel(v)
+				for _, r := range v.Rows {
+					@logRowTr(r, v.Q)
+				}
+				if len(v.Rows) == 0 {
+					<tr><td colspan="5" class="text-center py-8 opacity-50 italic">Nothing matches. All quiet, or too quiet?</td></tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+// LogRowsPage answers a pagination fetch: a fresh sentinel plus one page of
+// older rows, replacing the old sentinel row in place (prepend-above effect).
+templ LogRowsPage(v LogsView) {
+	@pageSentinel(v)
+	for _, r := range v.Rows {
+		@logRowTr(r, v.Q)
+	}
+}
+
+templ pageSentinel(v LogsView) {
+	if v.HasMore {
+		<tr
+			hx-get={ pageURL(v, v.NextBefore) }
+			hx-trigger="revealed"
+			hx-swap="outerHTML"
+		>
+			<td colspan="5" class="text-center py-2 opacity-40 text-xs">
+				<span class="loading loading-dots loading-xs"></span> reaching further back
+			</td>
+		</tr>
+	} else if v.AtStart {
+		<tr><td colspan="5" class="text-center py-2 opacity-30 text-xs">beginning of history</td></tr>
+	}
+}
+
+templ logRowTr(r LogRow, q string) {
+	<tr class="log-row hover:bg-base-200 cursor-pointer" data-id={ rowID(r.ID) }>
+		<td class="whitespace-nowrap opacity-70"><span data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span></td>
+		<td>
+			if r.Level != nil {
+				<button
+					class={ levelClass(r.Level) }
+					hx-get={ filterURL(q, "level", levelValue(r.Level)) }
+					hx-target="#results"
+					hx-swap="innerHTML"
+					title="Filter to this level"
+				>{ levelName(r.Level) }</button>
+			} else {
+				<span class={ levelClass(r.Level) }>-</span>
+			}
+		</td>
+		<td>
+			<button
+				class="badge badge-xs badge-ghost font-mono cursor-pointer"
+				hx-get={ filterURL(q, "service", r.Service) }
+				hx-target="#results"
+				hx-swap="innerHTML"
+				title="Filter to this service"
+			>{ r.Service }</button>
+		</td>
+		<td>
+			<button
+				class="badge badge-xs badge-ghost font-mono cursor-pointer opacity-70"
+				hx-get={ filterURL(q, "host", r.Host) }
+				hx-target="#results"
+				hx-swap="innerHTML"
+				title="Filter to this host"
+			>{ r.Host }</button>
+		</td>
+		<td class="max-w-xl truncate" title={ r.Message }>{ r.Message }</td>
+	</tr>
+}
+
+// LogDetailRow expands beneath a clicked row; closed client-side.
+templ LogDetailRow(d LogDetail) {
+	<tr class="detail-row bg-base-300/40">
+		<td colspan="5" class="p-3">
+			<div class="flex flex-col gap-2 text-xs font-mono">
+				<div class="flex gap-4 opacity-70">
+					<span>id { rowID(d.ID) }</span>
+					<span>event <span data-ts={ msString(d.Ts) }>{ utcTime(d.Ts) }</span></span>
+					<span>ingested <span data-ts={ msString(d.IngestedAt) }>{ utcTime(d.IngestedAt) }</span></span>
+					<span>{ d.Service + " on " + d.Host }</span>
+					<span class="js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100">✕ close</span>
+				</div>
+				<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2">{ d.Raw }</pre>
+				if d.Parsed != "" {
+					<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80">{ d.Parsed }</pre>
+				}
+			</div>
+		</td>
+	</tr>
+}
+
+templ genericTable(v LogsView) {
+	<div class="flex items-center justify-between">
+		<span class="text-xs opacity-50">{ rowsLabel(len(v.Cells), v.Truncated) }</span>
+		<span class="flex gap-2 text-xs">
+			<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover opacity-70">CSV</a>
+			<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover opacity-70">JSON</a>
+		</span>
+	</div>
+	<div class="overflow-x-auto border border-base-300 rounded-box bg-base-100">
+		<table class="table table-xs font-mono">
+			<thead>
+				<tr class="text-xs opacity-60">
+					for _, c := range v.Columns {
+						<th>{ c }</th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range v.Cells {
+					<tr>
+						for _, cell := range row {
+							<td class="max-w-md truncate" title={ cell }>{ cell }</td>
+						}
+					</tr>
+				}
+				if len(v.Cells) == 0 {
+					<tr><td colspan="99" class="text-center py-8 opacity-50 italic">Zero rows. The query ran fine; there's just nothing there.</td></tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+// logsScript wires CodeMirror and the page behaviors. Static content only:
+// dynamic state travels via data attributes and HX-Trigger events.
+// CodeMirror versions are pinned; see CONTEXT.md > Static Assets.
+templ logsScript() {
+	<script type="module">
+		import { EditorView, basicSetup } from "https://cdn.jsdelivr.net/npm/codemirror@6.0.2/+esm";
+		import { sql, SQLite } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-sql@6.10.0/+esm";
+
+		const host = document.getElementById("sql-editor");
+		const view = new EditorView({
+			doc: host.dataset.q,
+			extensions: [
+				basicSetup,
+				sql({
+					dialect: SQLite,
+					upperCaseKeywords: true,
+					schema: {
+						logs: ["id", "timestamp", "ingested_at", "level", "service", "host", "message", "parsed", "raw"],
+						logs_fts: ["raw", "rowid"],
+					},
+				}),
+			],
+			parent: host,
+		});
+
+		const form = document.getElementById("query-form");
+		form.addEventListener("htmx:configRequest", (e) => {
+			e.detail.parameters.q = view.state.doc.toString();
+		});
+		host.addEventListener("keydown", (e) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+				e.preventDefault();
+				form.requestSubmit();
+			}
+		}, true);
+		document.body.addEventListener("setQuery", (e) => {
+			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });
+		});
+
+		function fmtTimes() {
+			document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
+				el.dataset.tsDone = "1";
+				el.textContent = new Date(Number(el.dataset.ts)).toLocaleString();
+			});
+		}
+		fmtTimes();
+		document.body.addEventListener("htmx:afterSettle", fmtTimes);
+
+		document.getElementById("results").addEventListener("click", (e) => {
+			const closer = e.target.closest(".js-close-detail");
+			if (closer) { closer.closest("tr").remove(); return; }
+			if (e.target.closest("button, a")) return;
+			const tr = e.target.closest("tr.log-row");
+			if (!tr) return;
+			const next = tr.nextElementSibling;
+			if (next && next.classList.contains("detail-row")) { next.remove(); return; }
+			htmx.ajax("GET", "/logs/" + tr.dataset.id, { target: tr, swap: "afterend" });
+		});
+	</script>
+}

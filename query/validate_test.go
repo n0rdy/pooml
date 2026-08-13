@@ -129,7 +129,7 @@ func TestCombineFTS(t *testing.T) {
 		if err := v.CombineFTS("and"); err != nil {
 			t.Fatal(err)
 		}
-		want := `SELECT * FROM logs JOIN logs_fts ON logs.id = logs_fts."rowid" WHERE logs_fts.raw MATCH ? AND (level >= 4) ORDER BY timestamp DESC LIMIT 100`
+		want := `SELECT logs.* FROM logs JOIN logs_fts ON logs.id = logs_fts."rowid" WHERE logs_fts.raw MATCH ? AND (level >= 4) ORDER BY timestamp DESC LIMIT 100`
 		if v.SQL() != want {
 			t.Errorf("SQL() = %q\nwant     %q", v.SQL(), want)
 		}

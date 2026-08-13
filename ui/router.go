@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/n0rdy/pooml/common"
+	"github.com/n0rdy/pooml/db"
 	"github.com/n0rdy/pooml/services"
 	"github.com/n0rdy/pooml/ui/templates"
 	"github.com/n0rdy/pooml/utils"
@@ -25,6 +26,7 @@ type Router struct {
 	sessionsService   *services.SessionsService
 	throttlingService *services.ThrottlingService
 	apiKeysService    *services.ApiKeysService
+	pools             *db.Pools
 	authSecret        string
 	env               string
 	trustProxyHeaders bool
@@ -34,6 +36,7 @@ func NewRouter(
 	sessionsService *services.SessionsService,
 	throttlingService *services.ThrottlingService,
 	apiKeysService *services.ApiKeysService,
+	pools *db.Pools,
 	authSecret string,
 	env string,
 	trustProxyHeaders bool,
@@ -42,6 +45,7 @@ func NewRouter(
 		sessionsService:   sessionsService,
 		throttlingService: throttlingService,
 		apiKeysService:    apiKeysService,
+		pools:             pools,
 		authSecret:        authSecret,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
@@ -78,7 +82,8 @@ func (ur *Router) NewRouter() *chi.Mux {
 
 		r.Get("/", ur.logsPage)
 		r.Get("/stream", ur.streamLogs)
-		r.Get("/{id}", ur.logDetailsPage)
+		r.Get("/export", ur.exportLogs)
+		r.Get("/{id:[0-9]+}", ur.logDetailsPage)
 	})
 
 	router.Route("/alerts", func(r chi.Router) {
@@ -190,10 +195,8 @@ func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Reque
 	notImplemented(w)
 }
 
-// Logs
-func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request)       { notImplemented(w) }
-func (ur *Router) streamLogs(w http.ResponseWriter, req *http.Request)     { notImplemented(w) }
-func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
+// Logs: logsPage, exportLogs, logDetailsPage live in ui/logs.go.
+func (ur *Router) streamLogs(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
 
 // Alerts
 func (ur *Router) alertsPage(w http.ResponseWriter, req *http.Request)    { notImplemented(w) }

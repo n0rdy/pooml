@@ -20,9 +20,10 @@ const testSecret = "ui-test-secret-0123456789-0123456789"
 var csrfRe = regexp.MustCompile(`name="csrf_token" value="([^"]+)"`)
 
 type client struct {
-	t   *testing.T
-	c   *http.Client
-	srv *httptest.Server
+	t     *testing.T
+	c     *http.Client
+	srv   *httptest.Server
+	pools *db.Pools
 }
 
 func newClient(t *testing.T) *client {
@@ -36,7 +37,7 @@ func newClient(t *testing.T) *client {
 	t.Cleanup(pools.Close)
 
 	router := ui.NewRouter(services.NewSessionsService(), services.NewThrottlingService(),
-		services.NewApiKeysService(pools.Meta), testSecret, "local", false)
+		services.NewApiKeysService(pools.Meta), pools, testSecret, "local", false)
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)
 
@@ -44,7 +45,7 @@ func newClient(t *testing.T) *client {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &client{t: t, srv: srv, c: &http.Client{
+	return &client{t: t, srv: srv, pools: pools, c: &http.Client{
 		Jar: jar,
 		// don't follow redirects: assertions need the raw status + Location
 		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },

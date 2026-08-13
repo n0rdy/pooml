@@ -36,6 +36,12 @@ func (v *Validated) CombineFTS(op string) error {
 		join := mustParse(`SELECT * FROM logs JOIN logs_fts ON logs.id = logs_fts."rowid"`).Source.(*sqlp.JoinClause)
 		join.X = v.stmt.Source
 		v.stmt.Source = join
+
+		// bare * would now expand logs_fts's columns too, adding a duplicate
+		// raw column and breaking log-viewer shape detection downstream
+		if len(v.stmt.Columns) == 1 && v.stmt.Columns[0].Star.IsValid() {
+			v.stmt.Columns = mustParse("SELECT logs.* FROM logs").Columns
+		}
 	}
 
 	match := mustParse("SELECT * FROM logs_fts WHERE logs_fts.raw MATCH ?").WhereExpr

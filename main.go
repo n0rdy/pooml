@@ -78,7 +78,7 @@ func main() {
 
 	// Routers
 	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, env, trustProxyHeaders)
-	uiRouter := ui.NewRouter(sessionsService, throttlingService, apiKeysService, uiSecret, env, trustProxyHeaders)
+	uiRouter := ui.NewRouter(sessionsService, throttlingService, apiKeysService, pools, uiSecret, env, trustProxyHeaders)
 
 	apiServer := newAPIServer(apiAddr, apiRouter.NewRouter())
 	uiServer := newUIServer(uiAddr, uiRouter.NewRouter())
