@@ -1,0 +1,38 @@
+package templates
+
+// LoginPage is the first place the "don't panic" mood shows: calm, warm, one
+// clear action. kind carries the message flavor: "" (none), "error" (wrong
+// secret), "throttled" (locked out), "info" (stale session, logged out).
+templ LoginPage(kind string, message string, csrfToken string) {
+	@Base("pooml · don't panic") {
+		<main class="min-h-screen flex items-center justify-center p-4">
+			<div class="card bg-base-100 w-full max-w-sm shadow-xl">
+				<div class="card-body">
+					<h1 class="text-4xl font-bold tracking-tight">pooml</h1>
+					<p class="text-sm opacity-60 -mt-1">don't panic.</p>
+					switch kind {
+						case "error":
+							<div role="alert" class="alert alert-error mt-3 text-sm">{ message }</div>
+						case "throttled":
+							<div role="alert" class="alert alert-warning mt-3 text-sm">{ message }</div>
+						case "info":
+							<div role="alert" class="alert alert-info mt-3 text-sm">{ message }</div>
+					}
+					<form method="post" action="/login" class="mt-4 flex flex-col gap-3">
+						<input type="hidden" name="csrf_token" value={ csrfToken }/>
+						<input
+							type="password"
+							name="secret"
+							placeholder="Your secret"
+							class="input input-bordered w-full"
+							autocomplete="current-password"
+							required
+							autofocus
+						/>
+						<button type="submit" class="btn btn-primary w-full">Come on in</button>
+					</form>
+				</div>
+			</div>
+		</main>
+	}
+}

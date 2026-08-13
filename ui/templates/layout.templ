@@ -1,0 +1,115 @@
+package templates
+
+import "fmt"
+
+// Base is the HTML skeleton every page renders into. CDN dependencies are
+// version-pinned; see CONTEXT.md > Static Assets for why CodeMirror is absent
+// here (loaded per-page with /+esm) and why versions must never be bare majors.
+templ Base(title string) {
+	<!DOCTYPE html>
+	<html lang="en" data-theme="pooml">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ title }</title>
+			<link
+				href="https://cdn.jsdelivr.net/npm/daisyui@5.7.16/daisyui.css"
+				rel="stylesheet"
+				type="text/css"
+				integrity="sha256-GQTycwr2OIyUj+ok6c+6ligubbvkG7Vcl/zwXCLEO4g="
+				crossorigin="anonymous"
+			/>
+			<script
+				src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
+				integrity="sha256-pgx4VjCgYZaAjL555ve9tKvMj0QhpHtW8pM4/ISAXjs="
+				crossorigin="anonymous"
+			></script>
+			<script
+				src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
+				integrity="sha256-cepnGFv6jJjDnTFxfG/OXYUjcPzf0SnbRUN3TTFFwN4="
+				crossorigin="anonymous"
+			></script>
+			@themeStyle()
+		</head>
+		<body class="min-h-screen bg-base-200 text-base-content">
+			{ children... }
+		</body>
+	</html>
+}
+
+// The custom pooml theme: dark-first, warm undertone, one confident amber
+// accent. Deliberately not a stock DaisyUI theme. See CONTEXT.md > UI Design
+// Direction. Values are a starting point - tuned by eye, not by spec.
+templ themeStyle() {
+	<style>
+		[data-theme="pooml"] {
+			color-scheme: dark;
+			--color-base-100: oklch(23% 0.015 75);
+			--color-base-200: oklch(20% 0.014 75);
+			--color-base-300: oklch(16% 0.012 75);
+			--color-base-content: oklch(90% 0.02 85);
+			--color-primary: oklch(76% 0.14 75);
+			--color-primary-content: oklch(20% 0.06 75);
+			--color-secondary: oklch(65% 0.07 200);
+			--color-secondary-content: oklch(15% 0.02 200);
+			--color-accent: oklch(70% 0.12 40);
+			--color-accent-content: oklch(16% 0.04 40);
+			--color-neutral: oklch(28% 0.012 75);
+			--color-neutral-content: oklch(88% 0.02 85);
+			--color-info: oklch(72% 0.10 230);
+			--color-info-content: oklch(16% 0.03 230);
+			--color-success: oklch(72% 0.13 150);
+			--color-success-content: oklch(16% 0.04 150);
+			--color-warning: oklch(80% 0.13 85);
+			--color-warning-content: oklch(18% 0.05 85);
+			--color-error: oklch(66% 0.17 25);
+			--color-error-content: oklch(96% 0.02 25);
+			--radius-selector: 0.375rem;
+			--radius-field: 0.375rem;
+			--radius-box: 0.5rem;
+			--size-selector: 0.25rem;
+			--size-field: 0.25rem;
+			--border: 1px;
+			--depth: 0;
+			--noise: 0;
+		}
+	</style>
+}
+
+// Shell wraps authed pages with the nav bar.
+templ Shell(title string, active string, csrfToken string) {
+	@Base(title) {
+		<div class="navbar bg-base-100 border-b border-base-300 px-4 min-h-12">
+			<div class="flex-1 flex items-center gap-6">
+				<a href="/" class="text-lg font-bold tracking-tight">pooml</a>
+				<nav class="flex gap-1">
+					@navLink("/", "Home", active == "home")
+					@navLink("/logs", "Logs", active == "logs")
+					@navLink("/alerts", "Alerts", active == "alerts")
+					@navLink("/settings", "Settings", active == "settings")
+				</nav>
+			</div>
+			<form method="post" action="/logout">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<button type="submit" class="btn btn-ghost btn-sm opacity-70">Log out</button>
+			</form>
+		</div>
+		// hx-headers inherits: every HTMX request from inside main carries the
+		// CSRF token (nosurf checks X-CSRF-Token for non-form requests)
+		<main class="p-4" hx-headers={ csrfHxHeaders(csrfToken) }>
+			{ children... }
+		</main>
+	}
+}
+
+func csrfHxHeaders(token string) string {
+	return fmt.Sprintf(`{"X-CSRF-Token": %q}`, token)
+}
+
+templ navLink(href string, label string, active bool) {
+	if active {
+		<a href={ templ.SafeURL(href) } class="btn btn-sm btn-ghost btn-active">{ label }</a>
+	} else {
+		<a href={ templ.SafeURL(href) } class="btn btn-sm btn-ghost">{ label }</a>
+	}
+}

@@ -28,12 +28,6 @@ const (
 	minSecretLength = 32
 )
 
-// FIXME: stub - API endpoints are mounted with a hardcoded placeholder secret
-// until meta.db + api_keys table are wired and a DB-backed apiKeyService
-// replaces the per-request string compare in api/middleware.go.
-// MUST NOT be deployed in this state - auth is effectively unusable.
-const fixmeAPIAuthPlaceholder = "FIXME-replace-with-db-backed-api-keys"
-
 func main() {
 	env := getEnv()
 	setupLogging(env)
@@ -72,6 +66,7 @@ func main() {
 	monitoringService := services.NewMonitoringService(pools)
 	sessionsService := services.NewSessionsService()
 	throttlingService := services.NewThrottlingService()
+	apiKeysService := services.NewApiKeysService(pools.Meta)
 
 	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
 	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
@@ -82,8 +77,8 @@ func main() {
 	pipeline.Start()
 
 	// Routers
-	apiRouter := api.NewRouter(monitoringService, throttlingService, pipeline, fixmeAPIAuthPlaceholder, env, trustProxyHeaders)
-	uiRouter := ui.NewRouter(sessionsService, throttlingService, uiSecret, env, trustProxyHeaders)
+	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, env, trustProxyHeaders)
+	uiRouter := ui.NewRouter(sessionsService, throttlingService, apiKeysService, uiSecret, env, trustProxyHeaders)
 
 	apiServer := newAPIServer(apiAddr, apiRouter.NewRouter())
 	uiServer := newUIServer(uiAddr, uiRouter.NewRouter())

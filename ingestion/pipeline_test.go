@@ -1,6 +1,7 @@
 package ingestion_test
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"net/http/httptest"
@@ -14,7 +15,8 @@ import (
 	"github.com/n0rdy/pooml/services"
 )
 
-const testAPIKey = "integration-test-api-key-0123456789"
+// testAPIKey is minted per-setup via the real ApiKeysService.
+var testAPIKey string
 
 func setup(t *testing.T) (*db.Pools, *ingestion.Pipeline, *ingestion.Broadcaster, *httptest.Server) {
 	t.Helper()
@@ -30,10 +32,16 @@ func setup(t *testing.T) (*db.Pools, *ingestion.Pipeline, *ingestion.Broadcaster
 	pipeline := ingestion.NewPipeline(pools.LogsWrite, broadcaster)
 	pipeline.Start()
 
+	apiKeys := services.NewApiKeysService(pools.Meta)
+	testAPIKey, err = apiKeys.Create(context.Background(), "integration-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	router := api.NewRouter(
 		services.NewMonitoringService(pools),
 		services.NewThrottlingService(),
-		pipeline, testAPIKey, "local", false,
+		apiKeys, pipeline, "local", false,
 	)
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)

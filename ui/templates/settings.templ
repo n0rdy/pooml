@@ -1,0 +1,100 @@
+package templates
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/n0rdy/pooml/services"
+)
+
+templ SettingsPage(keys []services.ApiKey, newKey string, errMsg string, csrfToken string) {
+	@Shell("settings · pooml", "settings", csrfToken) {
+		<div class="max-w-3xl mx-auto flex flex-col gap-6">
+			@ApiKeysSection(keys, newKey, errMsg, csrfToken)
+			@comingLater("Pushover", "Alert notifications land in M8.")
+			@comingLater("Scrape targets", "Prometheus scraping lands in M9.")
+			@comingLater("Retention & backup", "Cleanup schedules and S3 backup land in M10.")
+		</div>
+	}
+}
+
+// ApiKeysSection is also served as an HTMX fragment after a revoke.
+templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfToken string) {
+	<section id="api-keys" class="card bg-base-100 shadow">
+		<div class="card-body">
+			<h2 class="card-title">API keys</h2>
+			<p class="text-sm opacity-60">
+				One key per sender (a FluentBit instance, an app pushing directly).
+				Sent as the <code class="font-mono">X-API-Key</code> header on <code class="font-mono">/api/v1/*</code>.
+			</p>
+			if errMsg != "" {
+				<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
+			}
+			if newKey != "" {
+				<div role="alert" class="alert alert-success flex flex-col items-start gap-1">
+					<span class="font-semibold">Here's your new key. Copy it now - it won't be shown again.</span>
+					<code class="font-mono text-sm break-all select-all">{ newKey }</code>
+				</div>
+			}
+			if len(keys) == 0 && newKey == "" {
+				<p class="text-sm opacity-60 italic">No keys yet. Mint one below and give it to FluentBit.</p>
+			}
+			if len(keys) > 0 {
+				<table class="table table-sm">
+					<thead>
+						<tr>
+							<th>Label</th>
+							<th>Created</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, k := range keys {
+							<tr>
+								<td>{ k.Label }</td>
+								<td class="opacity-60">{ formatMs(k.CreatedAt) }</td>
+								<td class="text-right">
+									<button
+										class="btn btn-ghost btn-xs text-error"
+										hx-delete={ fmt.Sprintf("/settings/api-keys/%d", k.ID) }
+										hx-target="#api-keys"
+										hx-swap="outerHTML"
+										hx-confirm={ fmt.Sprintf("Revoke %q? Anything still using it stops ingesting immediately.", k.Label) }
+									>Revoke</button>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			}
+			<form method="post" action="/settings/api-keys" class="flex gap-2 items-end mt-2">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<label class="form-control flex-1">
+					<span class="label-text text-sm pb-1">Label</span>
+					<input
+						type="text"
+						name="label"
+						placeholder="fluentbit-prod"
+						class="input input-bordered input-sm w-full"
+						maxlength="100"
+						required
+					/>
+				</label>
+				<button type="submit" class="btn btn-primary btn-sm">Mint key</button>
+			</form>
+		</div>
+	</section>
+}
+
+templ comingLater(title string, note string) {
+	<section class="card bg-base-100 shadow opacity-50">
+		<div class="card-body py-4">
+			<h2 class="card-title text-base">{ title }</h2>
+			<p class="text-sm">{ note }</p>
+		</div>
+	</section>
+}
+
+func formatMs(ms int64) string {
+	return time.UnixMilli(ms).UTC().Format("2006-01-02 15:04 UTC")
+}

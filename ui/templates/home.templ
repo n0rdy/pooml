@@ -1,0 +1,19 @@
+package templates
+
+// HomePage is a friendly shell until M7 builds the real dashboard
+// (triage button, volume/errors/services fragments).
+templ HomePage(csrfToken string) {
+	@Shell("pooml", "home", csrfToken) {
+		<div class="hero py-24">
+			<div class="hero-content text-center">
+				<div class="max-w-md">
+					<h2 class="text-2xl font-bold">All quiet.</h2>
+					<p class="py-3 opacity-70">
+						The dashboard isn't built yet, but the pipeline underneath is live.
+						Point FluentBit at <code class="font-mono text-sm">/api/v1/ingest</code> and your logs will flow.
+					</p>
+				</div>
+			</div>
+		</div>
+	}
+}

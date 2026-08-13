@@ -27,8 +27,8 @@ const (
 type Router struct {
 	monitoringService *services.MonitoringService
 	throttlingService *services.ThrottlingService
+	apiKeysService    *services.ApiKeysService
 	pipeline          *ingestion.Pipeline
-	authSecret        string
 	env               string
 	trustProxyHeaders bool
 }
@@ -36,16 +36,16 @@ type Router struct {
 func NewRouter(
 	monitoringService *services.MonitoringService,
 	throttlingService *services.ThrottlingService,
+	apiKeysService *services.ApiKeysService,
 	pipeline *ingestion.Pipeline,
-	authSecret string,
 	env string,
 	trustProxyHeaders bool,
 ) *Router {
 	return &Router{
 		monitoringService: monitoringService,
 		throttlingService: throttlingService,
+		apiKeysService:    apiKeysService,
 		pipeline:          pipeline,
-		authSecret:        authSecret,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
 	}
@@ -62,7 +62,7 @@ func (ar *Router) NewRouter() *chi.Mux {
 	router.Get("/healthcheck", ar.healthcheck)
 
 	router.Route("/api/v1", func(r chi.Router) {
-		r.Use(apiKeyTokenAuth(ar.authSecret, ar.throttlingService, ar.trustProxyHeaders))
+		r.Use(apiKeyTokenAuth(ar.apiKeysService, ar.throttlingService, ar.trustProxyHeaders))
 
 		r.Post("/ingest/{service}/{host}", ar.ingestLogs)
 	})

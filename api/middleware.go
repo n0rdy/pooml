@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -28,7 +29,12 @@ func init() {
 	}
 }
 
-func apiKeyTokenAuth(authSecret string, throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
+// apiKeyVerifier is implemented by services.ApiKeysService.
+type apiKeyVerifier interface {
+	Verify(ctx context.Context, key string) bool
+}
+
+func apiKeyTokenAuth(keys apiKeyVerifier, throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			ip := utils.ClientIP(req, trustProxyHeaders)
@@ -37,10 +43,10 @@ func apiKeyTokenAuth(authSecret string, throttlingService *services.ThrottlingSe
 				return
 			}
 
-			authHeader := req.Header.Get("X-API-Key")
-			if authHeader != authSecret {
+			key := req.Header.Get("X-API-Key")
+			if key == "" || !keys.Verify(req.Context(), key) {
 				throttlingService.RecordFailure(ip)
-				log.Error().Msg("Invalid API key")
+				log.Warn().Str("ip", ip).Msg("invalid API key")
 				sendUnauthorizedErrorResponse(w)
 				return
 			}

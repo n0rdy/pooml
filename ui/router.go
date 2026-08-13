@@ -3,6 +3,7 @@ package ui
 import (
 	"crypto/subtle"
 	"net/http"
+	"strconv"
 
 	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/services"
@@ -23,6 +24,7 @@ const (
 type Router struct {
 	sessionsService   *services.SessionsService
 	throttlingService *services.ThrottlingService
+	apiKeysService    *services.ApiKeysService
 	authSecret        string
 	env               string
 	trustProxyHeaders bool
@@ -31,6 +33,7 @@ type Router struct {
 func NewRouter(
 	sessionsService *services.SessionsService,
 	throttlingService *services.ThrottlingService,
+	apiKeysService *services.ApiKeysService,
 	authSecret string,
 	env string,
 	trustProxyHeaders bool,
@@ -38,6 +41,7 @@ func NewRouter(
 	return &Router{
 		sessionsService:   sessionsService,
 		throttlingService: throttlingService,
+		apiKeysService:    apiKeysService,
 		authSecret:        authSecret,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
@@ -200,15 +204,63 @@ func (ur *Router) deleteAlert(w http.ResponseWriter, req *http.Request)   { notI
 func (ur *Router) dryRunAlert(w http.ResponseWriter, req *http.Request)   { notImplemented(w) }
 
 // Settings
-func (ur *Router) settingsPage(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
 func (ur *Router) updateRetentionSettings(w http.ResponseWriter, req *http.Request) {
 	notImplemented(w)
 }
 func (ur *Router) updateBackupSettings(w http.ResponseWriter, req *http.Request) {
 	notImplemented(w)
 }
-func (ur *Router) createApiKey(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
-func (ur *Router) deleteApiKey(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
+
+func (ur *Router) settingsPage(w http.ResponseWriter, req *http.Request) {
+	keys, err := ur.apiKeysService.List(req.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("list api keys")
+		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
+		return
+	}
+	ur.render(w, req, http.StatusOK, templates.SettingsPage(keys, "", "", nosurf.Token(req)))
+}
+
+func (ur *Router) createApiKey(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		http.Redirect(w, req, "/settings", http.StatusSeeOther)
+		return
+	}
+	newKey, createErr := ur.apiKeysService.Create(req.Context(), req.PostFormValue("label"))
+
+	keys, err := ur.apiKeysService.List(req.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("list api keys")
+		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
+		return
+	}
+	errMsg, status := "", http.StatusOK
+	if createErr != nil {
+		errMsg, status = createErr.Error(), http.StatusBadRequest
+	}
+	ur.render(w, req, status, templates.SettingsPage(keys, newKey, errMsg, nosurf.Token(req)))
+}
+
+func (ur *Router) deleteApiKey(w http.ResponseWriter, req *http.Request) {
+	id, err := strconv.ParseInt(chi.URLParam(req, "id"), 10, 64)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err := ur.apiKeysService.Revoke(req.Context(), id); err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("revoke api key")
+		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
+		return
+	}
+	keys, err := ur.apiKeysService.List(req.Context())
+	if err != nil {
+		log.Error().Err(err).Msg("list api keys")
+		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
+		return
+	}
+	// HTMX swaps just the section
+	ur.render(w, req, http.StatusOK, templates.ApiKeysSection(keys, "", "", nosurf.Token(req)))
+}
 
 func notImplemented(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusNotImplemented)
