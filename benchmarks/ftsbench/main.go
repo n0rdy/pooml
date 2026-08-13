@@ -43,7 +43,7 @@ CREATE INDEX idx_host ON logs(host, timestamp DESC);
 `
 
 const schemaFTS = `
-CREATE VIRTUAL TABLE logs_fts USING fts5(raw, content=logs, content_rowid=id);
+CREATE VIRTUAL TABLE logs_fts USING fts5(raw, content=logs, content_rowid=id, tokenize='porter unicode61');
 CREATE TRIGGER logs_ai AFTER INSERT ON logs BEGIN
     INSERT INTO logs_fts(rowid, raw) VALUES (new.id, new.raw);
 END;

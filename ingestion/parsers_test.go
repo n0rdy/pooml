@@ -53,10 +53,11 @@ func TestParsePayloadSingleLines(t *testing.T) {
 			wantInPd:  []string{`"level":30`},
 		},
 		{
-			name:     "json unknown level stays nil",
-			line:     `{"level":"verbose","msg":"odd"}`,
-			wantMsg:  "odd",
-			wantInPd: []string{`"level":"verbose"`},
+			name:      "json unknown level falls back to info",
+			line:      `{"level":"verbose","msg":"odd"}`,
+			wantLevel: intPtr(common.LevelInfo),
+			wantMsg:   "odd",
+			wantInPd:  []string{`"level":"verbose"`},
 		},
 		{
 			name:      "clf 200 is info",
@@ -97,9 +98,10 @@ func TestParsePayloadSingleLines(t *testing.T) {
 			wantMsg:   "2026-08-12 10:00:00 WARN watch out",
 		},
 		{
-			name:    "plain no ts no level",
-			line:    `hello world`,
-			wantMsg: "hello world",
+			name:      "plain no ts no level falls back to info",
+			line:      `hello world`,
+			wantLevel: intPtr(common.LevelInfo),
+			wantMsg:   "hello world",
 		},
 	}
 

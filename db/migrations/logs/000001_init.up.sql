@@ -4,7 +4,7 @@ CREATE TABLE logs (
     id INTEGER PRIMARY KEY,           -- auto-increment, used for streaming cursors and pagination
     timestamp INTEGER NOT NULL,       -- client event time, milliseconds since Unix epoch (UTC)
     ingested_at INTEGER NOT NULL,     -- server receive time, milliseconds since Unix epoch (UTC)
-    level INTEGER,                    -- 0=trace, 1=debug, 2=info, 3=warn, 4=error, 5=fatal; NULL when parser couldn't extract
+    level INTEGER,                    -- 0=trace .. 5=fatal; parsers fall back to INFO (see 000003), so never NULL in practice
     service TEXT NOT NULL,
     host TEXT NOT NULL,
     message TEXT,                     -- extracted message, best-effort (NULL when parser couldn't extract)

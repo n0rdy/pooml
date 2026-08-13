@@ -244,6 +244,53 @@ func TestApplyQuickFilter(t *testing.T) {
 		}
 	})
 
+	t.Run("repeat click is idempotent", func(t *testing.T) {
+		v, _ := Validate("SELECT * FROM logs LIMIT 100")
+		for range 3 {
+			if err := v.ApplyQuickFilter("service", "payment-svc"); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if got := strings.Count(v.SQL(), "service ="); got != 1 {
+			t.Errorf("SQL() = %q, want exactly one service condition, got %d", v.SQL(), got)
+		}
+	})
+
+	t.Run("different value retargets instead of stacking", func(t *testing.T) {
+		v, _ := Validate("SELECT * FROM logs WHERE level >= 3 LIMIT 100")
+		if err := v.ApplyQuickFilter("service", "auth-svc"); err != nil {
+			t.Fatal(err)
+		}
+		if err := v.ApplyQuickFilter("service", "payment-svc"); err != nil {
+			t.Fatal(err)
+		}
+		want := `SELECT * FROM logs WHERE (level >= 3) AND service = 'payment-svc' LIMIT 100`
+		if v.SQL() != want {
+			t.Errorf("SQL() = %q\nwant     %q", v.SQL(), want)
+		}
+	})
+
+	t.Run("hand-written qualified equality is retargeted", func(t *testing.T) {
+		v, _ := Validate("SELECT * FROM logs WHERE logs.service = 'old' LIMIT 10")
+		if err := v.ApplyQuickFilter("service", "new"); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Count(v.SQL(), "'new'") != 1 || strings.Contains(v.SQL(), "'old'") {
+			t.Errorf("SQL() = %q", v.SQL())
+		}
+	})
+
+	t.Run("equality inside OR branch is left alone", func(t *testing.T) {
+		v, _ := Validate("SELECT * FROM logs WHERE service = 'a' OR level = 4 LIMIT 10")
+		if err := v.ApplyQuickFilter("service", "b"); err != nil {
+			t.Fatal(err)
+		}
+		// the OR semantics stay; the filter appends as a new conjunct
+		if !strings.Contains(v.SQL(), "service = 'a' OR level = 4") || !strings.Contains(v.SQL(), "service = 'b'") {
+			t.Errorf("SQL() = %q", v.SQL())
+		}
+	})
+
 	t.Run("compound refused", func(t *testing.T) {
 		v, err := Validate("SELECT raw FROM logs UNION SELECT raw FROM logs")
 		if err != nil {
@@ -256,27 +303,30 @@ func TestApplyQuickFilter(t *testing.T) {
 }
 
 func TestApplyPagination(t *testing.T) {
-	t.Run("cursor rewrite", func(t *testing.T) {
+	t.Run("composite cursor rewrite", func(t *testing.T) {
 		v, _ := Validate("SELECT * FROM logs WHERE service = 'x' ORDER BY timestamp DESC LIMIT 100")
-		if err := v.ApplyPagination(12345, 50); err != nil {
+		if err := v.ApplyPagination(999000, 12345, 50); err != nil {
 			t.Fatal(err)
 		}
-		want := `SELECT * FROM logs WHERE (service = 'x') AND id < 12345 ORDER BY id DESC LIMIT 50`
+		want := `SELECT * FROM logs WHERE (service = 'x') AND (timestamp < 999000 OR (timestamp = 999000 AND id < 12345)) ORDER BY timestamp DESC, id DESC LIMIT 50`
 		if v.SQL() != want {
 			t.Errorf("SQL() = %q\nwant     %q", v.SQL(), want)
+		}
+		if _, err := Validate(v.SQL()); err != nil {
+			t.Errorf("re-Validate: %v", err)
 		}
 	})
 
 	t.Run("aggregation refused", func(t *testing.T) {
 		v, _ := Validate("SELECT service, count(*) FROM logs GROUP BY service")
-		if err := v.ApplyPagination(10, 50); !errors.Is(err, ErrUnsupportedShape) {
+		if err := v.ApplyPagination(1, 10, 50); !errors.Is(err, ErrUnsupportedShape) {
 			t.Errorf("err = %v, want ErrUnsupportedShape", err)
 		}
 	})
 
 	t.Run("bad page size", func(t *testing.T) {
 		v, _ := Validate("SELECT * FROM logs LIMIT 10")
-		if err := v.ApplyPagination(10, 0); err == nil {
+		if err := v.ApplyPagination(1, 10, 0); err == nil {
 			t.Error("page size 0 accepted")
 		}
 	})

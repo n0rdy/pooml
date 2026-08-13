@@ -15,11 +15,12 @@ type LogsView struct {
 	Error string
 
 	// log-viewer shape
-	IsViewer   bool
-	Rows       []LogRow // ascending by id: newest at the bottom
-	HasMore    bool
-	AtStart    bool // pagination probe found nothing older
-	NextBefore int64
+	IsViewer     bool
+	Rows         []LogRow // ascending by id: newest at the bottom
+	HasMore      bool
+	AtStart      bool // pagination probe found nothing older
+	NextBeforeTs int64
+	NextBeforeID int64
 
 	// generic table shape
 	Columns []string
@@ -53,13 +54,15 @@ var levelNames = map[int]string{0: "TRACE", 1: "DEBUG", 2: "INFO", 3: "WARN", 4:
 
 // badge classes lean on the theme's semantic colors: the ANSI-ish register of
 // the log viewer, per CONTEXT.md > UI Design Direction
+// one visual family (badge-soft: tinted bg + border) so levels differ only
+// by color, per field feedback that mixed styles read as inconsistency
 var levelClasses = map[int]string{
-	0: "badge-ghost",
-	1: "badge-ghost",
-	2: "badge-info badge-outline",
-	3: "badge-warning",
-	4: "badge-error",
-	5: "badge-error font-bold",
+	0: "badge-soft",
+	1: "badge-soft",
+	2: "badge-soft badge-info",
+	3: "badge-soft badge-warning",
+	4: "badge-soft badge-error",
+	5: "badge-soft badge-error font-bold",
 }
 
 func levelName(l *int) string {
@@ -73,22 +76,26 @@ func levelName(l *int) string {
 }
 
 func levelClass(l *int) string {
-	base := "badge badge-xs font-mono cursor-pointer"
+	base := "badge badge-sm font-mono cursor-pointer"
 	if l == nil {
-		return base + " badge-ghost opacity-40"
+		return base + " badge-soft opacity-40"
 	}
 	if c, ok := levelClasses[*l]; ok {
 		return base + " " + c
 	}
-	return base + " badge-ghost"
+	return base + " badge-soft"
 }
 
 func filterURL(q, col, val string) string {
 	return "/logs?" + url.Values{"q": {q}, col: {val}}.Encode()
 }
 
-func pageURL(v LogsView, before int64) string {
-	vals := url.Values{"q": {v.Q}, "before": {strconv.FormatInt(before, 10)}}
+func pageURL(v LogsView) string {
+	vals := url.Values{
+		"q":         {v.Q},
+		"before_ts": {strconv.FormatInt(v.NextBeforeTs, 10)},
+		"before_id": {strconv.FormatInt(v.NextBeforeID, 10)},
+	}
 	if v.FTS != "" {
 		vals.Set("fts", v.FTS)
 		vals.Set("op", v.Op)
@@ -114,6 +121,24 @@ func utcTime(ms int64) string {
 func msString(ms int64) string { return strconv.FormatInt(ms, 10) }
 
 func rowID(id int64) string { return fmt.Sprintf("%d", id) }
+
+// ~14 chars is where the badge's max-w-28 starts ellipsizing; shorter names
+// get no tooltip because there is nothing to reveal. Hover text is identity
+// only - never action hints (those are affordance + feedback's job).
+func serviceBadgeClass(name string) string {
+	base := "badge badge-sm badge-outline font-mono cursor-pointer max-w-28 min-w-0"
+	if len(name) > 14 {
+		return base + " tooltip"
+	}
+	return base
+}
+
+func serviceTip(name string) string {
+	if len(name) > 14 {
+		return name
+	}
+	return ""
+}
 
 func levelValue(l *int) string {
 	if l == nil {

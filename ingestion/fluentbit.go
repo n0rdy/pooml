@@ -68,6 +68,7 @@ func parseFluentBit(service, host string, payload []byte, receivedAt int64) ([]c
 		}
 		l.Host = host
 		l.IngestedAt = receivedAt
+		fallbackLevel(&l)
 		out = append(out, l)
 	}
 	return out, true

@@ -19,7 +19,7 @@ import (
 func securityHeaders(env string) func(http.Handler) http.Handler {
 	csp := strings.Join([]string{
 		"default-src 'self'",
-		"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+		"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://esm.sh",
 		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
 		"img-src 'self' data:",
 		"font-src 'self' https://cdn.jsdelivr.net data:",

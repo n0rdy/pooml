@@ -1,15 +1,18 @@
 package templates
 
+// App-shell page: controls are fixed, #results fills the rest of the
+// viewport, and only the results pane (#log-scroll) scrolls - anchored to the
+// bottom so the newest logs are always on screen. See the M5 design talk.
 templ LogsPage(v LogsView, csrfToken string) {
 	@Shell("logs · pooml", "logs", csrfToken) {
-		<div class="flex flex-col gap-3 max-w-6xl mx-auto">
+		<div class="h-full flex flex-col gap-3 max-w-6xl mx-auto w-full">
 			<form
 				id="query-form"
 				hx-get="/logs"
 				hx-target="#results"
 				hx-swap="innerHTML"
 				hx-push-url="true"
-				class="flex flex-col gap-2"
+				class="flex flex-col gap-2 shrink-0"
 			>
 				<div class="flex gap-2 items-center">
 					<input
@@ -17,7 +20,7 @@ templ LogsPage(v LogsView, csrfToken string) {
 						name="fts"
 						value={ v.FTS }
 						placeholder="Search everything (FTS5 syntax welcome)"
-						class="input input-bordered input-sm flex-1 font-mono"
+						class="input input-bordered flex-1 font-mono"
 					/>
 					<div class="join" title="How the search combines with the SQL below">
 						if v.Op == "or" {
@@ -29,13 +32,22 @@ templ LogsPage(v LogsView, csrfToken string) {
 						}
 					</div>
 				</div>
-				<div id="sql-editor" data-q={ v.Q } class="border border-base-300 rounded-field bg-base-100 text-sm"></div>
+				<div class="flex items-center justify-between px-1">
+					<span class="text-xs font-semibold opacity-80">SQL query</span>
+					<span class="text-xs opacity-60">Cmd/Ctrl + Enter runs</span>
+				</div>
+				<div
+					id="sql-editor"
+					data-q={ v.Q }
+					style="min-height: 4rem"
+					class="border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors"
+				></div>
 				<div class="flex items-center gap-2">
 					<button type="submit" class="btn btn-primary btn-sm">Run</button>
-					<span class="text-xs opacity-50">or Cmd/Ctrl + Enter</span>
+					<button type="button" id="reset-query" class="btn btn-ghost btn-sm" title="Back to the default query, filters cleared">Reset</button>
 				</div>
 			</form>
-			<div id="results">
+			<div id="results" class="flex-1 min-h-0 flex flex-col">
 				@LogsResults(v)
 			</div>
 		</div>
@@ -46,7 +58,7 @@ templ LogsPage(v LogsView, csrfToken string) {
 // LogsResults is the fragment swapped into #results on every query run.
 templ LogsResults(v LogsView) {
 	if v.Error != "" {
-		<div role="alert" class="alert alert-error text-sm">{ v.Error }</div>
+		<div role="alert" class="alert alert-error text-sm shrink-0">{ v.Error }</div>
 	} else if v.IsViewer {
 		@logViewer(v)
 	} else {
@@ -54,24 +66,40 @@ templ LogsResults(v LogsView) {
 	}
 }
 
-templ logViewer(v LogsView) {
-	<div class="flex items-center justify-between">
-		<span class="text-xs opacity-50">
-			{ rowsLabel(len(v.Rows), v.Truncated) }
-		</span>
-		<span class="flex gap-2 text-xs">
-			<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover opacity-70">CSV</a>
-			<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover opacity-70">JSON</a>
-		</span>
+templ resultsToolbar(count int, truncated bool, v LogsView) {
+	<div class="flex items-center justify-between shrink-0 pb-1">
+		<span class="text-xs opacity-70">{ rowsLabel(count, truncated) }</span>
+		<label class="flex items-center gap-1 cursor-pointer text-xs" title="Wrap long lines instead of truncating">
+			<input type="checkbox" id="wrap-toggle" class="toggle toggle-xs"/>
+			wrap
+		</label>
 	</div>
-	<div class="overflow-x-auto border border-base-300 rounded-box bg-base-100">
-		<table class="table table-xs font-mono">
-			<thead>
-				<tr class="text-xs opacity-60">
-					<th class="w-44">time</th>
+}
+
+templ exportFooter(v LogsView) {
+	<div class="flex justify-end gap-3 text-xs shrink-0 pt-1">
+		<span class="opacity-60">export:</span>
+		<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover">CSV</a>
+		<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover">JSON</a>
+	</div>
+}
+
+templ logViewer(v LogsView) {
+	@resultsToolbar(len(v.Rows), v.Truncated, v)
+	// data-anchor: the page script keeps this pane pinned to the bottom on new
+	// results. [overflow-anchor:none]: manual scroll compensation on prepends,
+	// identical across browsers (Safari has no native scroll anchoring).
+	<div
+		id="log-scroll"
+		data-anchor="bottom"
+		class="flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100 [overflow-anchor:none]"
+	>
+		<table class="table font-mono">
+			<thead class="sticky top-0 bg-base-100 z-10">
+				<tr class="text-xs text-center">
+					<th class="w-32">time</th>
 					<th class="w-16">level</th>
-					<th class="w-32">service</th>
-					<th class="w-28">host</th>
+					<th class="w-28">service</th>
 					<th>message</th>
 				</tr>
 			</thead>
@@ -81,11 +109,12 @@ templ logViewer(v LogsView) {
 					@logRowTr(r, v.Q)
 				}
 				if len(v.Rows) == 0 {
-					<tr><td colspan="5" class="text-center py-8 opacity-50 italic">Nothing matches. All quiet, or too quiet?</td></tr>
+					<tr><td colspan="4" class="text-center py-8 opacity-50 italic">Nothing matches. All quiet, or too quiet?</td></tr>
 				}
 			</tbody>
 		</table>
 	</div>
+	@exportFooter(v)
 }
 
 // LogRowsPage answers a pagination fetch: a fresh sentinel plus one page of
@@ -99,23 +128,28 @@ templ LogRowsPage(v LogsView) {
 
 templ pageSentinel(v LogsView) {
 	if v.HasMore {
+		// intersect with an explicit root, NOT `revealed`: revealed measures
+		// against the window viewport and fires for clipped elements inside
+		// overflow containers, which would eagerly chain-load all history
 		<tr
-			hx-get={ pageURL(v, v.NextBefore) }
-			hx-trigger="revealed"
+			hx-get={ pageURL(v) }
+			hx-trigger="intersect root:#log-scroll"
 			hx-swap="outerHTML"
 		>
-			<td colspan="5" class="text-center py-2 opacity-40 text-xs">
+			<td colspan="4" class="text-center py-2 opacity-40 text-xs">
 				<span class="loading loading-dots loading-xs"></span> reaching further back
 			</td>
 		</tr>
 	} else if v.AtStart {
-		<tr><td colspan="5" class="text-center py-2 opacity-30 text-xs">beginning of history</td></tr>
+		<tr><td colspan="4" class="text-center py-2 opacity-30 text-xs">beginning of history</td></tr>
 	}
 }
 
 templ logRowTr(r LogRow, q string) {
+	// color budget: hue is reserved for levels (semantic); service is a
+	// monochrome outline tag - clickability comes from shape + hover, not color
 	<tr class="log-row hover:bg-base-200 cursor-pointer" data-id={ rowID(r.ID) }>
-		<td class="whitespace-nowrap opacity-70"><span data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span></td>
+		<td class="whitespace-nowrap opacity-80"><span data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span></td>
 		<td>
 			if r.Level != nil {
 				<button
@@ -123,7 +157,6 @@ templ logRowTr(r LogRow, q string) {
 					hx-get={ filterURL(q, "level", levelValue(r.Level)) }
 					hx-target="#results"
 					hx-swap="innerHTML"
-					title="Filter to this level"
 				>{ levelName(r.Level) }</button>
 			} else {
 				<span class={ levelClass(r.Level) }>-</span>
@@ -131,35 +164,26 @@ templ logRowTr(r LogRow, q string) {
 		</td>
 		<td>
 			<button
-				class="badge badge-xs badge-ghost font-mono cursor-pointer"
+				class={ serviceBadgeClass(r.Service) }
+				data-tip={ serviceTip(r.Service) }
 				hx-get={ filterURL(q, "service", r.Service) }
 				hx-target="#results"
 				hx-swap="innerHTML"
-				title="Filter to this service"
-			>{ r.Service }</button>
+			><span class="truncate">{ r.Service }</span></button>
 		</td>
-		<td>
-			<button
-				class="badge badge-xs badge-ghost font-mono cursor-pointer opacity-70"
-				hx-get={ filterURL(q, "host", r.Host) }
-				hx-target="#results"
-				hx-swap="innerHTML"
-				title="Filter to this host"
-			>{ r.Host }</button>
-		</td>
-		<td class="max-w-xl truncate" title={ r.Message }>{ r.Message }</td>
+		<td class="msg-cell max-w-xl truncate" title={ r.Message }>{ r.Message }</td>
 	</tr>
 }
 
 // LogDetailRow expands beneath a clicked row; closed client-side.
 templ LogDetailRow(d LogDetail) {
 	<tr class="detail-row bg-base-300/40">
-		<td colspan="5" class="p-3">
+		<td colspan="4" class="p-3">
 			<div class="flex flex-col gap-2 text-xs font-mono">
-				<div class="flex gap-4 opacity-70">
+				<div class="flex gap-4 opacity-80">
 					<span>id { rowID(d.ID) }</span>
-					<span>event <span data-ts={ msString(d.Ts) }>{ utcTime(d.Ts) }</span></span>
-					<span>ingested <span data-ts={ msString(d.IngestedAt) }>{ utcTime(d.IngestedAt) }</span></span>
+					<span>event <span data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
+					<span>ingested <span data-ts={ msString(d.IngestedAt) } data-ts-full>{ utcTime(d.IngestedAt) }</span></span>
 					<span>{ d.Service + " on " + d.Host }</span>
 					<span class="js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100">✕ close</span>
 				</div>
@@ -173,17 +197,11 @@ templ LogDetailRow(d LogDetail) {
 }
 
 templ genericTable(v LogsView) {
-	<div class="flex items-center justify-between">
-		<span class="text-xs opacity-50">{ rowsLabel(len(v.Cells), v.Truncated) }</span>
-		<span class="flex gap-2 text-xs">
-			<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover opacity-70">CSV</a>
-			<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover opacity-70">JSON</a>
-		</span>
-	</div>
-	<div class="overflow-x-auto border border-base-300 rounded-box bg-base-100">
-		<table class="table table-xs font-mono">
-			<thead>
-				<tr class="text-xs opacity-60">
+	@resultsToolbar(len(v.Cells), v.Truncated, v)
+	<div id="log-scroll" class="flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100">
+		<table class="table font-mono">
+			<thead class="sticky top-0 bg-base-100 z-10">
+				<tr class="text-xs text-center">
 					for _, c := range v.Columns {
 						<th>{ c }</th>
 					}
@@ -193,7 +211,7 @@ templ genericTable(v LogsView) {
 				for _, row := range v.Cells {
 					<tr>
 						for _, cell := range row {
-							<td class="max-w-md truncate" title={ cell }>{ cell }</td>
+							<td class="msg-cell max-w-md truncate" title={ cell }>{ cell }</td>
 						}
 					</tr>
 				}
@@ -203,31 +221,125 @@ templ genericTable(v LogsView) {
 			</tbody>
 		</table>
 	</div>
+	@exportFooter(v)
 }
 
 // logsScript wires CodeMirror and the page behaviors. Static content only:
 // dynamic state travels via data attributes and HX-Trigger events.
-// CodeMirror versions are pinned; see CONTEXT.md > Static Assets.
+// CodeMirror versions are pinned in the layout's import map.
 templ logsScript() {
+	<style>
+		#sql-editor .cm-content { font-size: 15px; }
+		#sql-editor .cm-gutters { font-size: 12px; }
+		/* container reserves the mounted height so the page doesn't jump when
+		   CodeMirror loads: 4rem total = cm-editor min + the 2x2px border */
+		#sql-editor { min-height: 4rem; }
+		#sql-editor .cm-editor { max-height: 10rem; min-height: calc(4rem - 4px); }
+		/* clickable badges light up on hover so filtering reads as intended */
+		.log-row button.badge:hover {
+			filter: brightness(1.2);
+			box-shadow: 0 0 0 1px currentColor;
+		}
+		/* wrap mode: #results survives fragment swaps, so the class sticks */
+		#results.wrap-lines .msg-cell {
+			white-space: normal;
+			overflow-wrap: anywhere;
+			max-width: none;
+			overflow: visible;
+			text-overflow: clip;
+		}
+		/* same focus treatment as daisy inputs, so the editor reads as a field */
+		/* cause-and-effect: pulses when a quick filter rewrites the query */
+		#sql-editor.query-updated {
+			border-color: var(--color-primary);
+			box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);
+		}
+		#sql-editor:focus-within {
+			outline: 2px solid var(--color-primary);
+			outline-offset: 2px;
+			border-color: var(--color-primary);
+		}
+	</style>
 	<script type="module">
-		import { EditorView, basicSetup } from "https://cdn.jsdelivr.net/npm/codemirror@6.0.2/+esm";
-		import { sql, SQLite } from "https://cdn.jsdelivr.net/npm/@codemirror/lang-sql@6.10.0/+esm";
+		import { EditorView, basicSetup } from "codemirror";
+		import { placeholder } from "@codemirror/view";
+		import { Compartment } from "@codemirror/state";
+		import { SQLite, schemaCompletionSource } from "@codemirror/lang-sql";
+		import { LanguageSupport, syntaxTree } from "@codemirror/language";
+		import { linter, setDiagnostics } from "@codemirror/lint";
+		import { oneDark } from "@codemirror/theme-one-dark";
 
 		const host = document.getElementById("sql-editor");
+
+		// Completions are composed by hand instead of using sql()'s bundle:
+		// the dialect keyword source suggests the whole SQL-standard word list
+		// (SYSTEM_USER and friends - not even SQLite), drowning the schema.
+		// Here: columns first (defaultTable makes them top-level), then a
+		// curated keyword/function list that is actually true for pooml.
+		// logs_fts deliberately absent: the search bar is the FTS path.
+		const LOGS_COLUMNS = ["id", "timestamp", "ingested_at", "level", "service", "host", "message", "parsed", "raw"];
+		const schemaSource = schemaCompletionSource({
+			dialect: SQLite,
+			schema: { logs: LOGS_COLUMNS },
+			defaultTable: "logs",
+			upperCaseKeywords: true,
+		});
+		const KEYWORDS = ("SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC " +
+			"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST")
+			.split(" ").map((k) => ({ label: k, type: "keyword", boost: -1 }));
+		const FUNCTIONS = ("count sum avg min max unixepoch strftime datetime json_extract length coalesce round")
+			.split(" ").map((f) => ({ label: f, type: "function", boost: -2 }));
+		const KEYWORD_OPTIONS = KEYWORDS.concat(FUNCTIONS);
+		function keywordSource(ctx) {
+			const w = ctx.matchBefore(/[A-Za-z_]+/);
+			if (!w && !ctx.explicit) return null;
+			return { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };
+		}
+		const sqlSupport = new LanguageSupport(SQLite.language, [
+			SQLite.language.data.of({ autocomplete: schemaSource }),
+			SQLite.language.data.of({ autocomplete: keywordSource }),
+		]);
+
+		// live squiggles from the lezer parse: generic but instant. The
+		// authoritative check stays server-side (rqlite parser).
+		const syntaxLinter = linter((v) => {
+			if (!v.state.doc.length) return [];
+			const diags = [];
+			syntaxTree(v.state).iterate({
+				enter: (n) => {
+					if (n.type.isError) {
+						diags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: "error", message: "syntax error" });
+					}
+				},
+			});
+			return diags;
+		});
+
+		// theme lives in a compartment so the nav toggle can swap it live;
+		// light mode uses CodeMirror's default (light) look
+		const editorTheme = new Compartment();
+		const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
 		const view = new EditorView({
 			doc: host.dataset.q,
 			extensions: [
 				basicSetup,
-				sql({
-					dialect: SQLite,
-					upperCaseKeywords: true,
-					schema: {
-						logs: ["id", "timestamp", "ingested_at", "level", "service", "host", "message", "parsed", "raw"],
-						logs_fts: ["raw", "rowid"],
-					},
-				}),
+				editorTheme.of(isLight() ? [] : oneDark),
+				placeholder("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"),
+				sqlSupport,
+				syntaxLinter,
 			],
 			parent: host,
+		});
+
+		// server-rejected SQL comes back with an exact position; underline it
+		document.body.addEventListener("sqlError", (e) => {
+			const d = e.detail;
+			let from = 0;
+			try {
+				const l = view.state.doc.line(d.line);
+				from = Math.min(l.from + Math.max(d.col - 1, 0), l.to);
+			} catch { /* stale position; underline from the start */ }
+			view.dispatch(setDiagnostics(view.state, [{ from, to: from, severity: "error", message: d.message }]));
 		});
 
 		const form = document.getElementById("query-form");
@@ -242,16 +354,82 @@ templ logsScript() {
 		}, true);
 		document.body.addEventListener("setQuery", (e) => {
 			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });
+			host.classList.add("query-updated");
+			setTimeout(() => host.classList.remove("query-updated"), 800);
 		});
 
+		// compact local times in rows (full timestamp on hover); detail rows
+		// marked data-ts-full keep the complete local timestamp
 		function fmtTimes() {
 			document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
 				el.dataset.tsDone = "1";
-				el.textContent = new Date(Number(el.dataset.ts)).toLocaleString();
+				const t = new Date(Number(el.dataset.ts));
+				if (el.hasAttribute("data-ts-full")) {
+					el.textContent = t.toLocaleString(undefined, { hour12: false });
+				} else {
+					el.textContent = t.toLocaleTimeString(undefined, { hour12: false })
+						+ "." + String(t.getMilliseconds()).padStart(3, "0");
+				}
+				el.title = t.toLocaleString(undefined, { hour12: false });
 			});
 		}
+
+		const pane = () => document.getElementById("log-scroll");
+		function anchorBottom() {
+			const p = pane();
+			if (p && p.dataset.anchor === "bottom") p.scrollTop = p.scrollHeight;
+		}
+
+		// prepends shift content down; compensate manually so the viewport
+		// stays put (native scroll anchoring is off - Safari doesn't have it)
+		let heightBefore = 0;
+		document.body.addEventListener("htmx:beforeRequest", (e) => {
+			const p = pane();
+			heightBefore = p && e.detail.elt.closest("#log-scroll") ? p.scrollHeight : 0;
+		});
+		document.body.addEventListener("htmx:afterSettle", (e) => {
+			fmtTimes();
+			applyWrap();
+			const p = pane();
+			if (!p) return;
+			if (e.detail.target && e.detail.target.id === "results") {
+				anchorBottom();
+			} else if (heightBefore > 0) {
+				p.scrollTop += p.scrollHeight - heightBefore;
+				heightBefore = 0;
+			}
+		});
+
+		const wrapKey = "pooml-wrap";
+		function applyWrap() {
+			const on = localStorage.getItem(wrapKey) !== "0"; // ON by default
+			document.getElementById("results").classList.toggle("wrap-lines", on);
+			const cb = document.getElementById("wrap-toggle");
+			if (cb) cb.checked = on;
+		}
+		document.body.addEventListener("change", (e) => {
+			if (e.target && e.target.id === "wrap-toggle") {
+				localStorage.setItem(wrapKey, e.target.checked ? "1" : "0");
+				applyWrap();
+			}
+		});
+
+		new MutationObserver(() => {
+			view.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });
+		}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
 		fmtTimes();
-		document.body.addEventListener("htmx:afterSettle", fmtTimes);
+		applyWrap();
+		anchorBottom();
+
+		const DEFAULT_Q = "SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100";
+		document.getElementById("reset-query").addEventListener("click", () => {
+			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: DEFAULT_Q } });
+			form.elements.fts.value = "";
+			const andRadio = form.querySelector('input[name="op"][value="and"]');
+			if (andRadio) andRadio.checked = true;
+			form.requestSubmit();
+		});
 
 		document.getElementById("results").addEventListener("click", (e) => {
 			const closer = e.target.closest(".js-close-detail");

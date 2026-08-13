@@ -50,6 +50,20 @@ func TestMigrateAndPoolsRoundTrip(t *testing.T) {
 		t.Errorf("FTS MATCH hits = %d, want 1", cnt)
 	}
 
+	// porter tokenizer (migration 000002): singular finds plural
+	if _, err := pools.LogsWrite.Exec(
+		`INSERT INTO logs(timestamp, ingested_at, service, host, raw)
+		 VALUES (1, 1, 'shop', 'h', 'three orders shipped successfully')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := pools.LogsRead.QueryRow(
+		"SELECT count(*) FROM logs_fts WHERE logs_fts MATCH 'order'").Scan(&cnt); err != nil {
+		t.Fatal(err)
+	}
+	if cnt != 1 {
+		t.Errorf("porter stemming: MATCH 'order' hits = %d, want 1 (orders)", cnt)
+	}
+
 	// read-only enforcement is engine-level, not convention
 	if _, err := pools.LogsRead.Exec("DELETE FROM logs"); err == nil {
 		t.Error("write through the read-only pool succeeded; mode=ro not enforced")

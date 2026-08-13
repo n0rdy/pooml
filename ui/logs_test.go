@@ -3,9 +3,11 @@ package ui_test
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -58,8 +60,9 @@ func TestLogsPageFull(t *testing.T) {
 	}
 	for _, want := range []string{
 		`data-q="SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"`,
-		"codemirror@6.0.2/+esm",
-		"@codemirror/lang-sql@6.10.0/+esm",
+		"importmap",
+		"esm.sh/*codemirror@6.0.2",
+		`import { EditorView, basicSetup } from "codemirror"`,
 		"message 3",             // seeded rows rendered
 		"payment-svc",           // badge
 		"reaching further back", // sentinel: history probe not yet run
@@ -99,6 +102,17 @@ func TestLogsFragmentAndShapes(t *testing.T) {
 	if !strings.Contains(body, "alert-error") || !strings.Contains(body, "SELECT") {
 		t.Errorf("error fragment: %.200s", body)
 	}
+
+	// positioned parse errors are humanized and carry a sqlError trigger for
+	// the editor to underline
+	resp = cl.getWith("/logs?q="+url.QueryEscape("SELECT * FROM logs 100"), hx)
+	body = readBody(t, resp)
+	if !strings.Contains(body, "Line 1, col") || !strings.Contains(body, "should end here") {
+		t.Errorf("humanized error missing: %.200s", body)
+	}
+	if trig := resp.Header.Get("HX-Trigger"); !strings.Contains(trig, "sqlError") || !strings.Contains(trig, `"line":1`) {
+		t.Errorf("sqlError trigger = %q", trig)
+	}
 }
 
 func TestLogsQuickFilter(t *testing.T) {
@@ -121,6 +135,18 @@ func TestLogsQuickFilter(t *testing.T) {
 	}
 	if strings.Contains(body, "payment-svc</button>") {
 		t.Error("filtered results still contain the other service")
+	}
+
+	// clicking the same badge again over the merged q must not stack ANDs
+	merged := regexp.MustCompile(`"q":"([^"]+)"`).FindStringSubmatch(trigger)
+	if merged == nil {
+		t.Fatal("no q in HX-Trigger payload")
+	}
+	resp = cl.getWith("/logs?q="+url.QueryEscape(merged[1])+"&service=auth-svc", hx)
+	readBody(t, resp)
+	again := resp.Header.Get("HX-Trigger")
+	if strings.Count(again, "service = 'auth-svc'") != 1 {
+		t.Errorf("repeated filter stacked conditions: %q", again)
 	}
 
 	// filter on an aggregation drills in to raw logs
@@ -152,20 +178,26 @@ func TestLogsFTSAndPagination(t *testing.T) {
 	if !strings.Contains(body, "reaching further back") {
 		t.Error("sentinel missing on initial view")
 	}
-	resp = cl.getWith("/logs?before=1", hx)
+	// following the sentinel of the full view (all 70 rows shown) finds
+	// nothing older and renders the beginning marker
+	resp = cl.getWith(sentinelURL(t, body), hx)
 	body = readBody(t, resp)
 	if !strings.Contains(body, "beginning of history") {
 		t.Errorf("empty probe should render the beginning marker, got: %.200s", body)
 	}
 
-	// LIMIT 20 shows ids 51..70; before=51 pages in ids 1..50
+	// LIMIT 20 shows rows 51..70; the sentinel's composite cursor pages in
+	// the 50 rows before them
 	q := url.QueryEscape("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 20")
 	resp = cl.getWith("/logs?q="+q, hx)
 	body = readBody(t, resp)
 	if !strings.Contains(body, "reaching further back") {
 		t.Fatalf("sentinel missing with more history available")
 	}
-	resp = cl.getWith("/logs?q="+q+"&before=51", hx)
+	if !strings.Contains(body, "message 50") || strings.Contains(body, "message 49") {
+		t.Fatalf("LIMIT 20 window wrong")
+	}
+	resp = cl.getWith(sentinelURL(t, body), hx)
 	body = readBody(t, resp)
 	if !strings.Contains(body, "message 30") || strings.Contains(body, "message 50") {
 		t.Errorf("pagination window wrong")
@@ -209,6 +241,35 @@ func TestLogsDetailAndExport(t *testing.T) {
 	resp.Body.Close()
 	if len(rows) != 3 || rows[0]["service"] != "payment-svc" {
 		t.Errorf("json rows = %+v", rows)
+	}
+}
+
+var sentinelRe = regexp.MustCompile(`hx-get="([^"]*before_ts[^"]*)"`)
+
+// sentinelURL extracts the pagination cursor URL the server rendered.
+func sentinelURL(t *testing.T, body string) string {
+	t.Helper()
+	m := sentinelRe.FindStringSubmatch(body)
+	if m == nil {
+		t.Fatal("no pagination sentinel in body")
+	}
+	return html.UnescapeString(m[1])
+}
+
+// Back-button restores must get the full page: htmx's DOM-snapshot cache is
+// disabled (CodeMirror state restores wrong), so history misses re-fetch.
+func TestLogsHistoryRestoreGetsFullPage(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedLogs(cl, 2)
+
+	resp := cl.getWith("/logs", map[string]string{
+		"HX-Request":                 "true",
+		"HX-History-Restore-Request": "true",
+	})
+	body := readBody(t, resp)
+	if !strings.Contains(body, "sql-editor") {
+		t.Error("history restore should render the full page, got a fragment")
 	}
 }
 

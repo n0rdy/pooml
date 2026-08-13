@@ -55,9 +55,21 @@ func parsePayload(service, host string, payload []byte, receivedAt int64) []comm
 		if l.Timestamp == 0 {
 			l.Timestamp = receivedAt
 		}
+		fallbackLevel(&l)
 		out = append(out, l)
 	}
 	return out
+}
+
+// fallbackLevel defaults unextractable levels to INFO. Opinionated (decided
+// post-M5): NULL levels force `OR level IS NULL` conditioning on every
+// level filter downstream, which is easy to forget; a wrong-but-queryable
+// INFO beats an honest-but-invisible NULL.
+func fallbackLevel(l *common.StandardLog) {
+	if l.Level == nil {
+		info := common.LevelInfo
+		l.Level = &info
+	}
 }
 
 // parseLine never fails: the plain-text parser is a universal fallback.

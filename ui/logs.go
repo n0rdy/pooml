@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -59,7 +60,13 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 
 	v, err := query.Validate(lr.Q)
 	if err != nil {
-		view.Error = err.Error()
+		view.Error = humanizeSQLError(err)
+		if line, col, msg, ok := sqlErrorPosition(err); ok {
+			payload, _ := json.Marshal(map[string]any{
+				"sqlError": map[string]any{"line": line, "col": col, "message": msg},
+			})
+			w.Header().Set("HX-Trigger", string(payload))
+		}
 		ur.renderLogs(w, req, view, false)
 		return
 	}
@@ -85,13 +92,14 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 			ur.renderLogs(w, req, view, false)
 			return
 		}
-		args = append(args, lr.FTS)
+		args = append(args, query.FTSMatch(lr.FTS))
 	}
 
 	isPageFetch := false
-	if before := qp.Get("before"); before != "" {
-		beforeID, err := strconv.ParseInt(before, 10, 64)
-		if err != nil || v.ApplyPagination(beforeID, logsPageSize) != nil {
+	if beforeTs := qp.Get("before_ts"); beforeTs != "" {
+		ts, tsErr := strconv.ParseInt(beforeTs, 10, 64)
+		id, idErr := strconv.ParseInt(qp.Get("before_id"), 10, 64)
+		if tsErr != nil || idErr != nil || v.ApplyPagination(ts, id, logsPageSize) != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -121,7 +129,7 @@ func (ur *Router) renderLogs(w http.ResponseWriter, req *http.Request, view temp
 	switch {
 	case isPageFetch:
 		ur.render(w, req, http.StatusOK, templates.LogRowsPage(view))
-	case req.Header.Get("HX-Request") == "true":
+	case req.Header.Get("HX-Request") == "true" && req.Header.Get("HX-History-Restore-Request") != "true":
 		ur.render(w, req, http.StatusOK, templates.LogsResults(view))
 	default:
 		ur.render(w, req, http.StatusOK, templates.LogsPage(view, nosurf.Token(req)))
@@ -180,13 +188,21 @@ func fillResults(view *templates.LogsView, res *query.Result) {
 		}
 		view.Rows = append(view.Rows, lr)
 	}
-	sort.Slice(view.Rows, func(i, j int) bool { return view.Rows[i].ID < view.Rows[j].ID })
+	// event-time order, id as tiebreak: the viewer contract is chronological
+	// regardless of ingestion order (CLF embedded times, backfills)
+	sort.Slice(view.Rows, func(i, j int) bool {
+		if view.Rows[i].Ts != view.Rows[j].Ts {
+			return view.Rows[i].Ts < view.Rows[j].Ts
+		}
+		return view.Rows[i].ID < view.Rows[j].ID
+	})
 
 	if len(view.Rows) > 0 {
 		// always offer the sentinel; the probe that comes back empty renders
 		// the beginning-of-history marker instead. One extra request at the
 		// top of history beats guessing against the query's own LIMIT.
-		view.NextBefore = view.Rows[0].ID
+		view.NextBeforeTs = view.Rows[0].Ts
+		view.NextBeforeID = view.Rows[0].ID
 		view.HasMore = true
 	}
 }
@@ -230,7 +246,7 @@ func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 	var args []any
 	if lr.FTS != "" {
 		if err := v.CombineFTS(lr.Op); err == nil {
-			args = append(args, lr.FTS)
+			args = append(args, query.FTSMatch(lr.FTS))
 		}
 	}
 	res, err := query.Execute(req.Context(), ur.pools.LogsRead, v.SQL(), args...)
@@ -271,6 +287,36 @@ func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 	if err := cw.Error(); err != nil {
 		log.Error().Err(err).Msg("csv export")
 	}
+}
+
+// rqlite parse errors look like `invalid SQL: 3:27: expected semicolon or
+// EOF, found 100` - precise, but hostile as user-facing text.
+var sqlErrPosRe = regexp.MustCompile(`(\d+):(\d+): (.+)$`)
+
+var sqlErrTranslations = [][2]string{
+	{"expected semicolon or EOF, found", "the query should end here, but found"},
+	{"expected expression, found", "an expression is missing; found"},
+}
+
+func sqlErrorPosition(err error) (line, col int, msg string, ok bool) {
+	m := sqlErrPosRe.FindStringSubmatch(err.Error())
+	if m == nil {
+		return 0, 0, "", false
+	}
+	line, _ = strconv.Atoi(m[1])
+	col, _ = strconv.Atoi(m[2])
+	msg = m[3]
+	for _, tr := range sqlErrTranslations {
+		msg = strings.ReplaceAll(msg, tr[0], tr[1])
+	}
+	return line, col, msg, true
+}
+
+func humanizeSQLError(err error) string {
+	if line, col, msg, ok := sqlErrorPosition(err); ok {
+		return fmt.Sprintf("Line %d, col %d: %s", line, col, msg)
+	}
+	return err.Error()
 }
 
 func asInt64(v any) int64 {
