@@ -200,13 +200,8 @@ func (ur *Router) homePage(w http.ResponseWriter, req *http.Request) {
 // home fragments M7, alerts M8). All return 501 until wired.
 // ----------------------------------------------------------------------------
 
-func (ur *Router) homePageVolumeSegment(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
-func (ur *Router) homePageErrorsSegment(w http.ResponseWriter, req *http.Request) { notImplemented(w) }
-func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Request) {
-	notImplemented(w)
-}
-
-// Logs handlers live in ui/logs.go and ui/stream.go.
+// Home fragments live in ui/home.go; logs handlers in ui/logs.go and
+// ui/stream.go.
 
 // Alerts
 func (ur *Router) alertsPage(w http.ResponseWriter, req *http.Request)    { notImplemented(w) }

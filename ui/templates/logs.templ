@@ -159,7 +159,7 @@ templ logRowTr(r LogRow, q string) {
 	// monochrome outline tag - clickability comes from shape + hover, not color
 	<tr class="log-row hover:bg-base-200 cursor-pointer" data-id={ rowID(r.ID) }>
 		<td class="whitespace-nowrap opacity-80"><span data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span></td>
-		<td>
+		<td class="text-center">
 			if r.Level != nil {
 				<button
 					class={ levelClass(r.Level) }
@@ -171,7 +171,7 @@ templ logRowTr(r LogRow, q string) {
 				<span class={ levelClass(r.Level) }>-</span>
 			}
 		</td>
-		<td>
+		<td class="text-center">
 			<button
 				class={ serviceBadgeClass(r.Service) }
 				data-tip={ serviceTip(r.Service) }
@@ -486,6 +486,12 @@ templ logsScript() {
 		}
 		function showResume(on) {
 			resumeBtn.classList.toggle("hidden", !on);
+		}
+
+		if (new URLSearchParams(location.search).get("live") === "1") {
+			liveToggle.checked = true;
+			liveWanted = true;
+			startLive();
 		}
 
 		liveToggle.addEventListener("change", () => {

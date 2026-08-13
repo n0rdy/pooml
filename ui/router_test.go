@@ -139,7 +139,7 @@ func TestLoginFlow(t *testing.T) {
 		t.Fatalf("login = %d -> %q, want 303 -> /", resp.StatusCode, resp.Header.Get("Location"))
 	}
 	status, body = cl.get("/")
-	if status != http.StatusOK || !strings.Contains(body, "All quiet") {
+	if status != http.StatusOK || !strings.Contains(body, "Triage") {
 		t.Fatalf("home after login: %d", status)
 	}
 

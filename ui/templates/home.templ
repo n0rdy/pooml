@@ -1,19 +1,123 @@
 package templates
 
-// HomePage is a friendly shell until M7 builds the real dashboard
-// (triage button, volume/errors/services fragments).
+import "strconv"
+
+// HomePage: triage first (the reason this page exists), then three
+// auto-refreshing fragments. Volume renders as server-side CSS bars, not
+// Chart.js - no chart dependency until M9 dashboards force one.
 templ HomePage(csrfToken string) {
 	@Shell("pooml", "home", csrfToken) {
-		<div class="hero py-24">
-			<div class="hero-content text-center">
-				<div class="max-w-md">
-					<h2 class="text-2xl font-bold">All quiet.</h2>
-					<p class="py-3 opacity-70">
-						The dashboard isn't built yet, but the pipeline underneath is live.
-						Point FluentBit at <code class="font-mono text-sm">/api/v1/ingest</code> and your logs will flow.
-					</p>
+		<div class="max-w-5xl mx-auto flex flex-col gap-6">
+			<div class="card bg-base-100 border border-base-content/15">
+				<div class="card-body items-center text-center py-8">
+					<h2 class="text-xl font-bold">Something on fire?</h2>
+					<p class="text-sm opacity-70 -mt-1">Errors and fatals from the last hour, live tail already running.</p>
+					<a href={ templ.SafeURL(triageURL()) } class="btn btn-error btn-wide mt-2 text-lg">Triage</a>
+				</div>
+			</div>
+			<div class="grid md:grid-cols-2 gap-6">
+				<div class="card bg-base-100 border border-base-content/15 md:col-span-2">
+					<div class="card-body py-4">
+						<h3 class="card-title text-base">Volume - last hour</h3>
+						<div hx-get="/home/volume" hx-trigger="load, every 30s" hx-swap="innerHTML">
+							<span class="loading loading-dots loading-sm opacity-40"></span>
+						</div>
+					</div>
+				</div>
+				<div class="card bg-base-100 border border-base-content/15">
+					<div class="card-body py-4">
+						<h3 class="card-title text-base">Errors - last 24h</h3>
+						<div hx-get="/home/errors" hx-trigger="load, every 30s" hx-swap="innerHTML">
+							<span class="loading loading-dots loading-sm opacity-40"></span>
+						</div>
+					</div>
+				</div>
+				<div class="card bg-base-100 border border-base-content/15">
+					<div class="card-body py-4">
+						<h3 class="card-title text-base">Services</h3>
+						<div hx-get="/home/services" hx-trigger="load, every 30s" hx-swap="innerHTML">
+							<span class="loading loading-dots loading-sm opacity-40"></span>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
+		@homeScript()
 	}
+}
+
+templ HomeVolume(v HomeVolumeView) {
+	if v.Total == 0 {
+		<p class="text-sm opacity-60 italic py-6">Not a single log in the last hour. Peaceful, or unplugged?</p>
+	} else {
+		<div class="flex items-end gap-1 h-24 pt-2">
+			for _, p := range v.Points {
+				<div
+					class="flex-1 bg-primary/70 rounded-t min-w-1"
+					style={ barHeight(p.Count, v.Max) }
+					title={ barTitle(p) }
+				></div>
+			}
+		</div>
+		<p class="text-xs opacity-60 pt-1">{ strconv.FormatInt(v.Total, 10) } logs, 5-minute buckets</p>
+	}
+}
+
+templ HomeErrors(rows []HomeErrorRow) {
+	if len(rows) == 0 {
+		<p class="text-sm opacity-60 italic py-2">Zero errors in 24 hours. Either excellent, or nobody's home.</p>
+	} else {
+		<ul class="flex flex-col gap-1">
+			for _, r := range rows {
+				<li>
+					<a href={ templ.SafeURL(serviceErrorsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1">
+						<span class="font-mono text-sm truncate">{ r.Service }</span>
+						<span class="badge badge-sm badge-soft badge-error font-mono">{ strconv.FormatInt(r.Count, 10) }</span>
+					</a>
+				</li>
+			}
+		</ul>
+	}
+}
+
+templ HomeServices(rows []HomeServiceRow) {
+	if len(rows) == 0 {
+		<p class="text-sm opacity-60 italic py-2">No services yet. Point FluentBit at <code class="font-mono">/api/v1/ingest</code> and they'll show up here.</p>
+	} else {
+		<ul class="flex flex-col gap-1">
+			for _, r := range rows {
+				<li>
+					<a href={ templ.SafeURL(serviceLogsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1">
+						<span class="font-mono text-sm truncate">{ r.Service }</span>
+						<span class="text-xs opacity-60 whitespace-nowrap" data-reltime={ msString(r.LastSeenMs) }>{ utcTime(r.LastSeenMs) }</span>
+					</a>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// homeScript rewrites [data-reltime] to "3m ago" style, initially and after
+// every fragment refresh.
+templ homeScript() {
+	<script>
+		(() => {
+			function rel(ms) {
+				const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));
+				if (s < 10) return "just now";
+				if (s < 60) return s + "s ago";
+				if (s < 3600) return Math.floor(s / 60) + "m ago";
+				if (s < 86400) return Math.floor(s / 3600) + "h ago";
+				return Math.floor(s / 86400) + "d ago";
+			}
+			function fmt() {
+				document.querySelectorAll("[data-reltime]").forEach((el) => {
+					el.textContent = rel(Number(el.dataset.reltime));
+					el.title = new Date(Number(el.dataset.reltime)).toLocaleString();
+				});
+			}
+			fmt();
+			document.body.addEventListener("htmx:afterSettle", fmt);
+		})();
+	</script>
 }
