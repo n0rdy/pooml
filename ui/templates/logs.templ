@@ -45,7 +45,7 @@ templ LogsPage(v LogsView, csrfToken string) {
 				<div
 					id="sql-editor"
 					data-q={ v.Q }
-					style="min-height: 4rem"
+					style={ logsEditorReserve(v.Q) }
 					class="border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors"
 				></div>
 				<div class="flex items-center gap-2">
@@ -277,6 +277,54 @@ templ logsScript() {
 			border-color: var(--color-primary);
 		}
 	</style>
+	// Paint-affecting view setup runs as a CLASSIC script, synchronously
+	// during parse: time formatting, wrap mode, and bottom-anchoring must not
+	// wait for the CodeMirror module fetch below, or the table visibly
+	// reflows once the network catches up (the "jump on load", round two).
+	<script>
+		(() => {
+			// compact local times in rows (full timestamp on hover); detail
+			// rows marked data-ts-full keep the complete local timestamp
+			function fmtTimes() {
+				document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
+					el.dataset.tsDone = "1";
+					const t = new Date(Number(el.dataset.ts));
+					if (el.hasAttribute("data-ts-full")) {
+						el.textContent = t.toLocaleString(undefined, { hour12: false });
+					} else {
+						el.textContent = t.toLocaleTimeString(undefined, { hour12: false })
+							+ "." + String(t.getMilliseconds()).padStart(3, "0");
+					}
+					el.title = t.toLocaleString(undefined, { hour12: false });
+				});
+			}
+
+			const pane = () => document.getElementById("log-scroll");
+			function anchorBottom() {
+				const p = pane();
+				if (p && p.dataset.anchor === "bottom") p.scrollTop = p.scrollHeight;
+			}
+
+			const wrapKey = "pooml-wrap";
+			function applyWrap() {
+				const on = localStorage.getItem(wrapKey) !== "0"; // ON by default
+				document.getElementById("results").classList.toggle("wrap-lines", on);
+				const cb = document.getElementById("wrap-toggle");
+				if (cb) cb.checked = on;
+			}
+			document.body.addEventListener("change", (e) => {
+				if (e.target && e.target.id === "wrap-toggle") {
+					localStorage.setItem(wrapKey, e.target.checked ? "1" : "0");
+					applyWrap();
+				}
+			});
+
+			window.poomlView = { fmtTimes, applyWrap, anchorBottom, pane };
+			fmtTimes();
+			applyWrap();
+			anchorBottom();
+		})();
+	</script>
 	<script type="module">
 		import { EditorView, basicSetup } from "codemirror";
 		import { placeholder, keymap } from "@codemirror/view";
@@ -286,6 +334,8 @@ templ logsScript() {
 		import { LanguageSupport, syntaxTree } from "@codemirror/language";
 		import { linter, setDiagnostics } from "@codemirror/lint";
 		import { oneDark } from "@codemirror/theme-one-dark";
+
+		const { fmtTimes, applyWrap, anchorBottom, pane } = window.poomlView;
 
 		const host = document.getElementById("sql-editor");
 
@@ -400,28 +450,6 @@ templ logsScript() {
 			setTimeout(() => host.classList.remove("query-updated"), 800);
 		});
 
-		// compact local times in rows (full timestamp on hover); detail rows
-		// marked data-ts-full keep the complete local timestamp
-		function fmtTimes() {
-			document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
-				el.dataset.tsDone = "1";
-				const t = new Date(Number(el.dataset.ts));
-				if (el.hasAttribute("data-ts-full")) {
-					el.textContent = t.toLocaleString(undefined, { hour12: false });
-				} else {
-					el.textContent = t.toLocaleTimeString(undefined, { hour12: false })
-						+ "." + String(t.getMilliseconds()).padStart(3, "0");
-				}
-				el.title = t.toLocaleString(undefined, { hour12: false });
-			});
-		}
-
-		const pane = () => document.getElementById("log-scroll");
-		function anchorBottom() {
-			const p = pane();
-			if (p && p.dataset.anchor === "bottom") p.scrollTop = p.scrollHeight;
-		}
-
 		// prepends shift content down; compensate manually so the viewport
 		// stays put (native scroll anchoring is off - Safari doesn't have it)
 		let heightBefore = 0;
@@ -443,26 +471,12 @@ templ logsScript() {
 			}
 		});
 
-		const wrapKey = "pooml-wrap";
-		function applyWrap() {
-			const on = localStorage.getItem(wrapKey) !== "0"; // ON by default
-			document.getElementById("results").classList.toggle("wrap-lines", on);
-			const cb = document.getElementById("wrap-toggle");
-			if (cb) cb.checked = on;
-		}
-		document.body.addEventListener("change", (e) => {
-			if (e.target && e.target.id === "wrap-toggle") {
-				localStorage.setItem(wrapKey, e.target.checked ? "1" : "0");
-				applyWrap();
-			}
-		});
-
 		new MutationObserver(() => {
 			view.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });
 		}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-		fmtTimes();
-		applyWrap();
+		// re-anchor once the editor is mounted: the reserved min-height keeps
+		// this a no-op unless the line estimate was slightly off
 		anchorBottom();
 
 		const DEFAULT_Q = "SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100";

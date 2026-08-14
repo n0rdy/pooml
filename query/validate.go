@@ -29,9 +29,22 @@ var (
 )
 
 // metrics lives in metrics.db, attached read-only to every logs-read
-// connection (db/pool.go), so unqualified `metrics` resolves there and
-// cross-DB JOINs work in a single statement.
+// connection (db/pool.go), so unqualified `metrics` resolves there. Which
+// tables a given surface may query is a Scope decision, not engine-global:
+// signals are deliberately isolated in the UI (see CONTEXT.md > Querying).
 var allowedTables = map[string]bool{"logs": true, "logs_fts": true, "metrics": true}
+
+// Scope is the per-surface allow-list. Free-form cross-signal JOINs are a
+// foot-gun (no natural join key between logs and metrics), so only alerts
+// keep ScopeAll: their output is fires-or-not, never rendered.
+type Scope int
+
+const (
+	ScopeAll Scope = iota
+	ScopeLogs
+	ScopeMetrics
+	ScopeOneSignal // logs or metrics, not both in one query (dashboard panels)
+)
 
 var bannedFunctions = map[string]bool{"load_extension": true}
 
@@ -50,7 +63,12 @@ type Validated struct {
 
 func (v *Validated) SQL() string { return prettify(v.stmt.String()) }
 
+// Validate is the ScopeAll form, used by alerts.
 func Validate(q string) (*Validated, error) {
+	return ValidateIn(q, ScopeAll)
+}
+
+func ValidateIn(q string, scope Scope) (*Validated, error) {
 	stmts, err := sqlp.NewParser(strings.NewReader(q)).ParseStatements()
 	if err != nil {
 		// the parser treats bare rowid as a keyword; SQLite-style
@@ -76,13 +94,37 @@ func Validate(q string) (*Validated, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := sqlp.Walk(&checkVisitor{cteNames: cteNames}, sel); err != nil {
+	cv := &checkVisitor{cteNames: cteNames, referenced: map[string]bool{}}
+	if _, err := sqlp.Walk(cv, sel); err != nil {
+		return nil, err
+	}
+	if err := checkScope(scope, cv.referenced); err != nil {
 		return nil, err
 	}
 
 	v := &Validated{stmt: sel, Shape: detectShape(sel), Compound: sel.Compound != nil}
 	clampLimit(sel)
 	return v, nil
+}
+
+func checkScope(scope Scope, referenced map[string]bool) error {
+	logsUsed := referenced["logs"] || referenced["logs_fts"]
+	metricsUsed := referenced["metrics"]
+	switch scope {
+	case ScopeLogs:
+		if metricsUsed {
+			return errors.New("the metrics table is not available here: query it on the Metrics page")
+		}
+	case ScopeMetrics:
+		if logsUsed {
+			return errors.New("the logs tables are not available here: query them on the Logs page")
+		}
+	case ScopeOneSignal:
+		if logsUsed && metricsUsed {
+			return errors.New("a panel charts one signal: query logs or metrics, not both in one statement")
+		}
+	}
+	return nil
 }
 
 // The library's Walk does NOT descend into CTE bodies (WithClause) or
@@ -123,7 +165,8 @@ func (c *cteCollector) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
 func (c *cteCollector) VisitEnd(n sqlp.Node) (sqlp.Node, error) { return n, nil }
 
 type checkVisitor struct {
-	cteNames map[string]bool
+	cteNames   map[string]bool
+	referenced map[string]bool // real tables seen; feeds the Scope check
 }
 
 func (c *checkVisitor) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
@@ -145,6 +188,9 @@ func (c *checkVisitor) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
 		name := strings.ToLower(t.Name.Name)
 		if !allowedTables[name] && !c.cteNames[name] {
 			return nil, nil, fmt.Errorf("table %q is not allowed: only logs, logs_fts and metrics can be queried", t.Name.Name)
+		}
+		if allowedTables[name] && !c.cteNames[name] {
+			c.referenced[name] = true
 		}
 	case *sqlp.Call:
 		if bannedFunctions[strings.ToLower(t.Name.Name)] {

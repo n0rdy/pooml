@@ -92,7 +92,7 @@ func validatePanel(p *Panel) error {
 	if p.Title == "" || len(p.Title) > 100 {
 		return errors.New("title must be 1-100 characters")
 	}
-	if _, err := query.Validate(p.Query); err != nil {
+	if _, err := query.ValidateIn(p.Query, query.ScopeOneSignal); err != nil {
 		return fmt.Errorf("query: %w", err)
 	}
 	if !chartTypes[p.ChartType] {

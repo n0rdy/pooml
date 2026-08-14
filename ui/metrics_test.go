@@ -126,10 +126,10 @@ func TestMetricsExplorer(t *testing.T) {
 		t.Fatalf("custom query: %d", status)
 	}
 
-	// cross-DB join validates and executes (0 rows is fine)
-	status, _ = cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT l.raw, m.value FROM logs l JOIN metrics m ON l.service = m.service LIMIT 10"))
-	if status != http.StatusOK {
-		t.Fatalf("cross-DB join: %d", status)
+	// signals are isolated: logs (and thus cross-signal joins) are blocked here
+	status, body = cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT l.raw, m.value FROM logs l JOIN metrics m ON l.service = m.service LIMIT 10"))
+	if status != http.StatusBadRequest || !strings.Contains(body, "Logs page") {
+		t.Fatalf("cross-signal join must be blocked on the explorer: %d", status)
 	}
 
 	// broken SQL: friendly error, 400
@@ -162,6 +162,105 @@ func TestMetricsExplorer(t *testing.T) {
 	resp.Body.Close()
 	if !strings.Contains(string(jsonBody), `"name"`) {
 		t.Errorf("json export wrong: %.60s", jsonBody)
+	}
+}
+
+func TestSignalIsolation(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedMetrics(cl)
+
+	// logs page: metrics table blocked (rendered as the page's inline error)
+	_, body := cl.get("/logs?q=" + url.QueryEscape("SELECT * FROM metrics LIMIT 5"))
+	if !strings.Contains(body, "Metrics page") {
+		t.Fatal("metrics on the logs page must surface the isolation error")
+	}
+	if strings.Contains(body, "queue_depth") {
+		t.Fatal("blocked query still leaked metric data")
+	}
+	// logs export too
+	if status, _ := cl.get("/logs/export?q=" + url.QueryEscape("SELECT * FROM metrics LIMIT 5")); status != http.StatusBadRequest {
+		t.Fatalf("metrics on logs export must be blocked: %d", status)
+	}
+}
+
+func TestExplorerViewsAndEmptyStates(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+
+	// no metrics ingested at all: onboarding shows BOTH paths
+	status, body := cl.get("/metrics-explorer")
+	if status != http.StatusOK || !strings.Contains(body, "Two ways in") ||
+		!strings.Contains(body, "/api/v1/otlp/v1/metrics") || !strings.Contains(body, "Settings") {
+		t.Fatalf("onboarding empty state wrong: %d", status)
+	}
+
+	seedMetrics(cl)
+
+	// data exists but nothing matches: plain no-match message, no onboarding
+	status, body = cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT value FROM metrics WHERE name = 'nope'"))
+	if status != http.StatusOK || !strings.Contains(body, "No rows matched") || strings.Contains(body, "Two ways in") {
+		t.Fatalf("no-match empty state wrong: %d", status)
+	}
+
+	// time-series query auto-detects a line chart, rows available underneath
+	timeQ := url.QueryEscape("SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp")
+	status, body = cl.get("/metrics-explorer?q=" + timeQ)
+	if status != http.StatusOK || !strings.Contains(body, `"type":"line"`) || !strings.Contains(body, "labelsMs") ||
+		!strings.Contains(body, "data-chart=\"explorer\"") {
+		t.Fatalf("auto line chart missing: %d", status)
+	}
+	if !strings.Contains(body, ">7<") { // raw rows under the chart
+		t.Fatal("rows table under the chart missing")
+	}
+
+	// view override forces the table
+	status, body = cl.get("/metrics-explorer?view=table&q=" + timeQ)
+	if status != http.StatusOK || strings.Contains(body, "data-chart=\"explorer\"") {
+		t.Fatalf("table override still rendered a chart: %d", status)
+	}
+}
+
+func TestExplorerSaveAsPanel(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedMetrics(cl)
+
+	// no dashboards yet: the save row offers creating one instead
+	status, body := cl.get("/metrics-explorer")
+	if status != http.StatusOK || !strings.Contains(body, "Create a dashboard") {
+		t.Fatalf("save row without dashboards wrong: %d", status)
+	}
+	_, dashBody := cl.get("/dashboards")
+	token := csrfRe.FindStringSubmatch(dashBody)[1]
+	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"kept views"}})
+
+	// with a dashboard, saving works and redirects into it
+	resp := cl.postForm("/metrics-explorer/save-panel", url.Values{
+		"csrf_token":   {token},
+		"query":        {"SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp"},
+		"chart_type":   {"auto"},
+		"title":        {"queue depth"},
+		"dashboard_id": {"1"},
+	})
+	if resp.StatusCode != http.StatusSeeOther || resp.Header.Get("Location") != "/dashboards/1" {
+		t.Fatalf("save panel = %d -> %q", resp.StatusCode, resp.Header.Get("Location"))
+	}
+	status, frag := cl.get("/dashboards/1/panels/1")
+	if status != http.StatusOK || !strings.Contains(frag, `"type":"line"`) {
+		t.Fatalf("saved panel fragment: %d", status)
+	}
+
+	// mixed-signal panel queries are rejected
+	resp = cl.postForm("/metrics-explorer/save-panel", url.Values{
+		"csrf_token":   {token},
+		"query":        {"SELECT * FROM logs l JOIN metrics m ON l.service = m.service"},
+		"chart_type":   {"auto"},
+		"title":        {"nope"},
+		"dashboard_id": {"1"},
+	})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("mixed-signal save = %d, want 400", resp.StatusCode)
 	}
 }
 

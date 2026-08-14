@@ -6,15 +6,22 @@ import (
 	"github.com/n0rdy/pooml/services"
 )
 
-// PanelView is one shaped panel body. Kind: stat | chart | table | empty | error.
-type PanelView struct {
-	Panel   services.Panel
+// ShapedResult is a query result shaped for rendering, shared by dashboard
+// panels and the metrics explorer. Kind: stat | chart | table | empty | error.
+// Columns/Rows are always populated so charts can offer the raw rows too.
+type ShapedResult struct {
 	Kind    string
 	Stat    string
 	ErrMsg  string
 	Columns []string
 	Rows    [][]string
 	Chart   *ChartPayload
+	ChartID string // canvas/data element suffix; unique per rendered chart
+}
+
+type PanelView struct {
+	Panel services.Panel
+	ShapedResult
 }
 
 // ChartPayload is embedded as JSON next to the canvas; LabelsMs set means a
@@ -41,7 +48,10 @@ templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfTok
 						<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
 					}
 					if len(dashboards) == 0 {
-						<p class="text-sm opacity-60 italic">No dashboards yet. Name one below, then add panels: any SQL result becomes a chart.</p>
+						<p class="text-sm opacity-60 italic">
+							No dashboards yet. Name one below, then add panels - each panel charts one SQL query
+							over logs or metrics, and a dashboard can hold both kinds side by side.
+						</p>
 					} else {
 						<ul class="flex flex-col gap-1">
 							for _, d := range dashboards {
@@ -114,7 +124,11 @@ templ DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string
 templ PanelsRegion(dashboardID int64, panels []services.Panel, csrfToken string) {
 	<div id="panels-region" class="grid grid-cols-1 md:grid-cols-3 gap-4">
 		if len(panels) == 0 {
-			<p class="text-sm opacity-60 italic md:col-span-3">Empty so far. Add a panel below - try a stat first: <code class="font-mono">SELECT COUNT(*) FROM logs</code>.</p>
+			<p class="text-sm opacity-60 italic md:col-span-3">
+				Empty so far. Add a panel below - one signal per panel, both kinds welcome:
+				<code class="font-mono">SELECT COUNT(*) FROM logs WHERE level >= 4</code> (logs) or
+				<code class="font-mono">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp</code> (metrics).
+			</p>
 		}
 		for _, p := range panels {
 			@PanelCard(p, csrfToken)
@@ -156,42 +170,51 @@ templ PanelCard(p services.Panel, csrfToken string) {
 }
 
 templ PanelFragment(v PanelView) {
-	switch v.Kind {
+	@Shaped(v.ShapedResult)
+}
+
+// Shaped renders a ShapedResult body; shared by panels and the explorer.
+templ Shaped(s ShapedResult) {
+	switch s.Kind {
 		case "error":
-			<p class="text-error text-xs break-words py-2">{ v.ErrMsg }</p>
+			<p class="text-error text-xs break-words py-2">{ s.ErrMsg }</p>
 		case "empty":
 			<p class="text-sm opacity-60 italic py-2">No rows right now.</p>
 		case "stat":
 			<div class="flex items-center justify-center py-6">
-				<span class="text-4xl font-bold font-mono">{ v.Stat }</span>
+				<span class="text-4xl font-bold font-mono">{ s.Stat }</span>
 			</div>
 		case "table":
-			<div class="overflow-x-auto max-h-56">
-				<table class="table table-xs font-mono">
-					<thead>
-						<tr>
-							for _, c := range v.Columns {
-								<th>{ c }</th>
-							}
-						</tr>
-					</thead>
-					<tbody>
-						for _, row := range v.Rows {
-							<tr>
-								for _, cell := range row {
-									<td class="max-w-48 truncate" title={ cell }>{ cell }</td>
-								}
-							</tr>
-						}
-					</tbody>
-				</table>
-			</div>
+			@shapedTable(s, "max-h-56")
 		case "chart":
 			<div class="h-56 relative">
-				<canvas data-chart={ fmt.Sprintf("p%d", v.Panel.ID) }></canvas>
+				<canvas data-chart={ s.ChartID }></canvas>
 			</div>
-			@templ.JSONScript(fmt.Sprintf("chart-data-p%d", v.Panel.ID), v.Chart)
+			@templ.JSONScript("chart-data-"+s.ChartID, s.Chart)
 	}
+}
+
+templ shapedTable(s ShapedResult, heightClass string) {
+	<div class={ "overflow-x-auto", heightClass }>
+		<table class="table table-xs font-mono">
+			<thead>
+				<tr>
+					for _, c := range s.Columns {
+						<th>{ c }</th>
+					}
+				</tr>
+			</thead>
+			<tbody>
+				for _, row := range s.Rows {
+					<tr>
+						for _, cell := range row {
+							<td class="max-w-48 truncate" title={ cell }>{ cell }</td>
+						}
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
 }
 
 // PanelEditCard swaps a panel card for its inline edit form.
@@ -250,24 +273,28 @@ templ panelFormFields(p services.Panel, csrfToken string) {
 	</div>
 	<div class="flex flex-col gap-1">
 		<span class="flex items-center justify-between">
-			<span class="text-xs opacity-80">Query (first column = x axis, numeric columns = series)</span>
+			<span class="text-xs opacity-80">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span>
 			<button type="button" class="open-in-logs link link-primary text-xs" title="Run this query on the logs page (new tab)">open in logs ↗</button>
 		</span>
 		<textarea name="query" class="hidden">{ p.Query }</textarea>
 		<div
 			class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors"
-			style="min-height: 3.5rem"
+			style={ sqlEditorReserve(p.Query) }
 			data-placeholder="SELECT timestamp / 60000 * 60000 AS minute, AVG(value) FROM metrics WHERE name = 'queue_depth' GROUP BY minute ORDER BY minute LIMIT 500"
 		></div>
 	</div>
 }
 
-// dashboardScripts: Chart.js (pinned + SRI, same policy as every CDN asset)
-// plus the render loop. Charts re-render on fragment swaps and theme flips;
-// swapped-out canvases are destroyed to keep Chart.js's registry from leaking
-// on the 30s refresh cycle.
 templ dashboardScripts() {
 	@sqlEditorModule()
+	@chartScripts()
+}
+
+// chartScripts: Chart.js (pinned + SRI, same policy as every CDN asset) plus
+// the render loop, shared by dashboards and the metrics explorer. Charts
+// re-render on fragment swaps and theme flips; swapped-out canvases are
+// destroyed to keep Chart.js's registry from leaking on the 30s refresh cycle.
+templ chartScripts() {
 	<script
 		src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js"
 		integrity="sha256-7MPNHuuMNNIXjj9Z/WPsWj2ENYwRcwrwuZWNyIbXZSo="

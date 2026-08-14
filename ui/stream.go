@@ -40,7 +40,7 @@ func (ur *Router) streamLogs(w http.ResponseWriter, req *http.Request) {
 	}
 	lr := parseLogsRequest(req)
 
-	v, err := query.Validate(lr.Q)
+	v, err := query.ValidateIn(lr.Q, query.ScopeLogs)
 	if err != nil {
 		http.Error(w, humanizeSQLError(err), http.StatusBadRequest)
 		return

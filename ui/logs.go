@@ -58,7 +58,7 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 
 	view := templates.LogsView{Q: lr.Q, FTS: lr.FTS, Op: lr.Op}
 
-	v, err := query.Validate(lr.Q)
+	v, err := query.ValidateIn(lr.Q, query.ScopeLogs)
 	if err != nil {
 		view.Error = humanizeSQLError(err)
 		if line, col, msg, ok := sqlErrorPosition(err); ok {
@@ -265,7 +265,7 @@ func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) {
 func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 	lr := parseLogsRequest(req)
 
-	v, err := query.Validate(lr.Q)
+	v, err := query.ValidateIn(lr.Q, query.ScopeLogs)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

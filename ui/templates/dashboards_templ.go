@@ -14,15 +14,22 @@ import (
 	"github.com/n0rdy/pooml/services"
 )
 
-// PanelView is one shaped panel body. Kind: stat | chart | table | empty | error.
-type PanelView struct {
-	Panel   services.Panel
+// ShapedResult is a query result shaped for rendering, shared by dashboard
+// panels and the metrics explorer. Kind: stat | chart | table | empty | error.
+// Columns/Rows are always populated so charts can offer the raw rows too.
+type ShapedResult struct {
 	Kind    string
 	Stat    string
 	ErrMsg  string
 	Columns []string
 	Rows    [][]string
 	Chart   *ChartPayload
+	ChartID string // canvas/data element suffix; unique per rendered chart
+}
+
+type PanelView struct {
+	Panel services.Panel
+	ShapedResult
 }
 
 // ChartPayload is embedded as JSON next to the canvas; LabelsMs set means a
@@ -84,7 +91,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 41, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 48, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -96,7 +103,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 				}
 			}
 			if len(dashboards) == 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"text-sm opacity-60 italic\">No dashboards yet. Name one below, then add panels: any SQL result becomes a chart.</p>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"text-sm opacity-60 italic\">No dashboards yet. Name one below, then add panels - each panel charts one SQL query over logs or metrics, and a dashboard can hold both kinds side by side.</p>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -113,7 +120,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 					var templ_7745c5c3_Var4 templ.SafeURL
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 49, Col: 69}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 59, Col: 69}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -126,7 +133,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 					var templ_7745c5c3_Var5 string
 					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 50, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 60, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
@@ -144,7 +151,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 						var templ_7745c5c3_Var6 string
 						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(d.Description)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 52, Col: 76}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 62, Col: 76}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 						if templ_7745c5c3_Err != nil {
@@ -172,7 +179,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 60, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 70, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -232,7 +239,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 82, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 92, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -250,7 +257,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(d.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 84, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 94, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -268,7 +275,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d", d.ID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 91, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 101, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 			if templ_7745c5c3_Err != nil {
@@ -281,7 +288,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete dashboard %q and all its panels?", d.Name))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 92, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 102, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
@@ -299,7 +306,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 97, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 107, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -321,7 +328,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var15 templ.SafeURL
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/dashboards/%d/panels", d.ID)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 103, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 113, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -379,7 +386,7 @@ func PanelsRegion(dashboardID int64, panels []services.Panel, csrfToken string) 
 			return templ_7745c5c3_Err
 		}
 		if len(panels) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<p class=\"text-sm opacity-60 italic md:col-span-3\">Empty so far. Add a panel below - try a stat first: <code class=\"font-mono\">SELECT COUNT(*) FROM logs</code>.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<p class=\"text-sm opacity-60 italic md:col-span-3\">Empty so far. Add a panel below - one signal per panel, both kinds welcome: <code class=\"font-mono\">SELECT COUNT(*) FROM logs WHERE level >= 4</code> (logs) or <code class=\"font-mono\">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp</code> (metrics).</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -431,7 +438,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("panel-card-%d", p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 126, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 140, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -457,7 +464,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 129, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 143, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 		if templ_7745c5c3_Err != nil {
@@ -470,7 +477,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(p.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 129, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 143, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -483,7 +490,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?edit=1", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 133, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 147, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
 		if templ_7745c5c3_Err != nil {
@@ -496,7 +503,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 139, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 153, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
 		if templ_7745c5c3_Err != nil {
@@ -509,7 +516,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete panel %q?", p.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 142, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 156, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -522,7 +529,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 147, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 161, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
 		if templ_7745c5c3_Err != nil {
@@ -557,18 +564,48 @@ func PanelFragment(v PanelView) templ.Component {
 			templ_7745c5c3_Var27 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		switch v.Kind {
+		templ_7745c5c3_Err = Shaped(v.ShapedResult).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// Shaped renders a ShapedResult body; shared by panels and the explorer.
+func Shaped(s ShapedResult) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var28 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var28 == nil {
+			templ_7745c5c3_Var28 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		switch s.Kind {
 		case "error":
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<p class=\"text-error text-xs break-words py-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var28 string
-			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(v.ErrMsg)
+			var templ_7745c5c3_Var29 string
+			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(s.ErrMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 161, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 180, Col: 60}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -586,12 +623,12 @@ func PanelFragment(v PanelView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var29 string
-			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(v.Stat)
+			var templ_7745c5c3_Var30 string
+			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(s.Stat)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 166, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 185, Col: 55}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -600,101 +637,148 @@ func PanelFragment(v PanelView) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		case "table":
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<div class=\"overflow-x-auto max-h-56\"><table class=\"table table-xs font-mono\"><thead><tr>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			for _, c := range v.Columns {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<th>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var30 string
-				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(c)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 174, Col: 15}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</th>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</tr></thead> <tbody>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			for _, row := range v.Rows {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<tr>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				for _, cell := range row {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "<td class=\"max-w-48 truncate\" title=\"")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var31 string
-					templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 182, Col: 51}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "\">")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					var templ_7745c5c3_Var32 string
-					templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 182, Col: 60}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</td>")
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</tr>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "</tbody></table></div>")
+			templ_7745c5c3_Err = shapedTable(s, "max-h-56").Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		case "chart":
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<div class=\"h-56 relative\"><canvas data-chart=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<div class=\"h-56 relative\"><canvas data-chart=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var33 string
-			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("p%d", v.Panel.ID))
+			var templ_7745c5c3_Var31 string
+			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.ChartID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 191, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 191, Col: 34}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "\"></canvas></div>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templ.JSONScript(fmt.Sprintf("chart-data-p%d", v.Panel.ID), v.Chart).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\"></canvas></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = templ.JSONScript("chart-data-"+s.ChartID, s.Chart).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		return nil
+	})
+}
+
+func shapedTable(s ShapedResult, heightClass string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var32 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var32 == nil {
+			templ_7745c5c3_Var32 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		var templ_7745c5c3_Var33 = []any{"overflow-x-auto", heightClass}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var33...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<div class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var34 string
+		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var33).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\"><table class=\"table table-xs font-mono\"><thead><tr>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for _, c := range s.Columns {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<th>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var35 string
+			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(c)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 203, Col: 13}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</th>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "</tr></thead> <tbody>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for _, row := range s.Rows {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<tr>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			for _, cell := range row {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<td class=\"max-w-48 truncate\" title=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var36 string
+				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 49}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var37 string
+				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 58}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</td>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</tr>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</tbody></table></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
 		}
 		return nil
 	})
@@ -717,66 +801,66 @@ func PanelEditCard(p services.Panel, errMsg string, csrfToken string) templ.Comp
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var34 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var34 == nil {
-			templ_7745c5c3_Var34 = templ.NopComponent
+		templ_7745c5c3_Var38 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var38 == nil {
+			templ_7745c5c3_Var38 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var35 = []any{"panel-card card bg-base-100 border border-primary/40 md:col-span-3"}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var35...)
+		var templ_7745c5c3_Var39 = []any{"panel-card card bg-base-100 border border-primary/40 md:col-span-3"}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var39...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "<div class=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var36 string
-		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var35).String())
+		var templ_7745c5c3_Var40 string
+		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var39).String())
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 1, Col: 0}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "\"><div class=\"card-body py-4 gap-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "\"><div class=\"card-body py-4 gap-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if errMsg != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "<div role=\"alert\" class=\"alert alert-error text-sm\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<div role=\"alert\" class=\"alert alert-error text-sm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var37 string
-			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
+			var templ_7745c5c3_Var41 string
+			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 202, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 225, Col: 64}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "<form hx-put=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<form hx-put=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var38 string
-		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
+		var templ_7745c5c3_Var42 string
+		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 205, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 228, Col: 73}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var38)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "\" hx-target=\"closest .panel-card\" hx-swap=\"outerHTML\" class=\"flex flex-col gap-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "\" hx-target=\"closest .panel-card\" hx-swap=\"outerHTML\" class=\"flex flex-col gap-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -784,20 +868,20 @@ func PanelEditCard(p services.Panel, errMsg string, csrfToken string) templ.Comp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<div class=\"flex gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Save</button> <button type=\"button\" class=\"btn btn-ghost btn-sm\" hx-get=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "<div class=\"flex gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Save</button> <button type=\"button\" class=\"btn btn-ghost btn-sm\" hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var39 string
-		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?card=1", p.DashboardID, p.ID))
+		var templ_7745c5c3_Var43 string
+		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?card=1", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 216, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 239, Col: 82}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var39)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "\" hx-target=\"closest .panel-card\" hx-swap=\"outerHTML\">Cancel</button></div></form></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "\" hx-target=\"closest .panel-card\" hx-swap=\"outerHTML\">Cancel</button></div></form></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -821,121 +905,134 @@ func panelFormFields(p services.Panel, csrfToken string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var40 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var40 == nil {
-			templ_7745c5c3_Var40 = templ.NopComponent
+		templ_7745c5c3_Var44 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var44 == nil {
+			templ_7745c5c3_Var44 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<input type=\"hidden\" name=\"csrf_token\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "<input type=\"hidden\" name=\"csrf_token\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var41 string
-		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
+		var templ_7745c5c3_Var45 string
+		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 227, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 250, Col: 57}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var41)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "\"><div class=\"grid gap-3 md:grid-cols-3\"><label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Title</span> <input type=\"text\" name=\"title\" value=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var42 string
-		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Title)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 231, Col: 50}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "\"><div class=\"grid gap-3 md:grid-cols-3\"><label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Title</span> <input type=\"text\" name=\"title\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "\" class=\"input input-bordered input-sm\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Chart</span> <select name=\"chart_type\" class=\"select select-bordered select-sm\"><option value=\"\"")
+		var templ_7745c5c3_Var46 string
+		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Title)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 254, Col: 50}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var46)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "\" class=\"input input-bordered input-sm\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Chart</span> <select name=\"chart_type\" class=\"select select-bordered select-sm\"><option value=\"\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.ChartType == "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, ">auto-detect</option> <option value=\"line\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, ">auto-detect</option> <option value=\"line\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.ChartType == "line" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, ">line</option> <option value=\"bar\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, ">line</option> <option value=\"bar\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.ChartType == "bar" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, ">bar</option> <option value=\"stat\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, ">bar</option> <option value=\"stat\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.ChartType == "stat" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, ">stat</option></select></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Width (of 3 columns)</span> <select name=\"width\" class=\"select select-bordered select-sm\"><option value=\"1\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, ">stat</option></select></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Width (of 3 columns)</span> <select name=\"width\" class=\"select select-bordered select-sm\"><option value=\"1\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.Width == 1 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, ">1</option> <option value=\"2\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, ">1</option> <option value=\"2\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.Width == 2 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, ">2</option> <option value=\"3\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, ">2</option> <option value=\"3\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.Width == 3 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, " selected")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, " selected")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, ">3</option></select></label></div><div class=\"flex flex-col gap-1\"><span class=\"flex items-center justify-between\"><span class=\"text-xs opacity-80\">Query (first column = x axis, numeric columns = series)</span> <button type=\"button\" class=\"open-in-logs link link-primary text-xs\" title=\"Run this query on the logs page (new tab)\">open in logs ↗</button></span> <textarea name=\"query\" class=\"hidden\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, ">3</option></select></label></div><div class=\"flex flex-col gap-1\"><span class=\"flex items-center justify-between\"><span class=\"text-xs opacity-80\">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span> <button type=\"button\" class=\"open-in-logs link link-primary text-xs\" title=\"Run this query on the logs page (new tab)\">open in logs ↗</button></span> <textarea name=\"query\" class=\"hidden\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var43 string
-		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(p.Query)
+		var templ_7745c5c3_Var47 string
+		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(p.Query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 256, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 279, Col: 49}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "</textarea><div class=\"sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors\" style=\"min-height: 3.5rem\" data-placeholder=\"SELECT timestamp / 60000 * 60000 AS minute, AVG(value) FROM metrics WHERE name = 'queue_depth' GROUP BY minute ORDER BY minute LIMIT 500\"></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "</textarea><div class=\"sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors\" style=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var48 string
+		templ_7745c5c3_Var48, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(sqlEditorReserve(p.Query))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 282, Col: 36}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "\" data-placeholder=\"SELECT timestamp / 60000 * 60000 AS minute, AVG(value) FROM metrics WHERE name = 'queue_depth' GROUP BY minute ORDER BY minute LIMIT 500\"></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -943,10 +1040,6 @@ func panelFormFields(p services.Panel, csrfToken string) templ.Component {
 	})
 }
 
-// dashboardScripts: Chart.js (pinned + SRI, same policy as every CDN asset)
-// plus the render loop. Charts re-render on fragment swaps and theme flips;
-// swapped-out canvases are destroyed to keep Chart.js's registry from leaking
-// on the 30s refresh cycle.
 func dashboardScripts() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -963,16 +1056,49 @@ func dashboardScripts() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var44 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var44 == nil {
-			templ_7745c5c3_Var44 = templ.NopComponent
+		templ_7745c5c3_Var49 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var49 == nil {
+			templ_7745c5c3_Var49 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = sqlEditorModule().Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js\" integrity=\"sha256-7MPNHuuMNNIXjj9Z/WPsWj2ENYwRcwrwuZWNyIbXZSo=\" crossorigin=\"anonymous\"></script><script>\n\t\t(() => {\n\t\t\tconst PALETTE = [\"#3b82f6\", \"#f59e0b\", \"#10b981\", \"#ef4444\", \"#8b5cf6\", \"#14b8a6\"];\n\t\t\tconst GRID = \"rgba(128,128,128,0.15)\";\n\n\t\t\tfunction fmtLabel(ms, spanMs) {\n\t\t\t\tconst d = new Date(ms);\n\t\t\t\tif (spanMs > 86400000) return d.toLocaleString([], { month: \"short\", day: \"numeric\", hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t\treturn d.toLocaleTimeString([], { hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t}\n\n\t\t\tfunction renderAll(force) {\n\t\t\t\tconst fg = getComputedStyle(document.body).color;\n\t\t\t\tdocument.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst existing = Chart.getChart(c);\n\t\t\t\t\tif (existing) {\n\t\t\t\t\t\tif (!force) return;\n\t\t\t\t\t\texisting.destroy();\n\t\t\t\t\t}\n\t\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + c.dataset.chart);\n\t\t\t\t\tif (!dataEl) return;\n\t\t\t\t\tconst cfg = JSON.parse(dataEl.textContent);\n\t\t\t\t\tlet labels = cfg.labels || [];\n\t\t\t\t\tif (cfg.labelsMs) {\n\t\t\t\t\t\tconst span = cfg.labelsMs.length > 1 ? Math.abs(cfg.labelsMs[cfg.labelsMs.length - 1] - cfg.labelsMs[0]) : 0;\n\t\t\t\t\t\tlabels = cfg.labelsMs.map((ms) => fmtLabel(ms, span));\n\t\t\t\t\t}\n\t\t\t\t\tnew Chart(c, {\n\t\t\t\t\t\ttype: cfg.type,\n\t\t\t\t\t\tdata: {\n\t\t\t\t\t\t\tlabels,\n\t\t\t\t\t\t\tdatasets: cfg.datasets.map((d, i) => ({\n\t\t\t\t\t\t\t\t...d,\n\t\t\t\t\t\t\t\tborderColor: PALETTE[i % PALETTE.length],\n\t\t\t\t\t\t\t\tbackgroundColor: PALETTE[i % PALETTE.length] + (cfg.type === \"bar\" ? \"b3\" : \"33\"),\n\t\t\t\t\t\t\t\tborderWidth: 2,\n\t\t\t\t\t\t\t\tpointRadius: 0,\n\t\t\t\t\t\t\t\ttension: 0.2,\n\t\t\t\t\t\t\t})),\n\t\t\t\t\t\t},\n\t\t\t\t\t\toptions: {\n\t\t\t\t\t\t\tresponsive: true,\n\t\t\t\t\t\t\tmaintainAspectRatio: false,\n\t\t\t\t\t\t\tanimation: false,\n\t\t\t\t\t\t\tplugins: { legend: { display: cfg.datasets.length > 1, labels: { color: fg } } },\n\t\t\t\t\t\t\tscales: {\n\t\t\t\t\t\t\t\tx: { ticks: { color: fg, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: GRID } },\n\t\t\t\t\t\t\t\ty: { ticks: { color: fg }, grid: { color: GRID }, beginAtZero: true },\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t},\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t}\n\n\t\t\tdocument.body.addEventListener(\"htmx:beforeSwap\", (e) => {\n\t\t\t\tif (!e.detail.target || !e.detail.target.querySelectorAll) return;\n\t\t\t\te.detail.target.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst ch = Chart.getChart(c);\n\t\t\t\t\tif (ch) ch.destroy();\n\t\t\t\t});\n\t\t\t});\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", () => renderAll(false));\n\t\t\tnew MutationObserver(() => renderAll(true))\n\t\t\t\t.observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\t\t\trenderAll(false);\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = chartScripts().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// chartScripts: Chart.js (pinned + SRI, same policy as every CDN asset) plus
+// the render loop, shared by dashboards and the metrics explorer. Charts
+// re-render on fragment swaps and theme flips; swapped-out canvases are
+// destroyed to keep Chart.js's registry from leaking on the 30s refresh cycle.
+func chartScripts() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var50 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var50 == nil {
+			templ_7745c5c3_Var50 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js\" integrity=\"sha256-7MPNHuuMNNIXjj9Z/WPsWj2ENYwRcwrwuZWNyIbXZSo=\" crossorigin=\"anonymous\"></script><script>\n\t\t(() => {\n\t\t\tconst PALETTE = [\"#3b82f6\", \"#f59e0b\", \"#10b981\", \"#ef4444\", \"#8b5cf6\", \"#14b8a6\"];\n\t\t\tconst GRID = \"rgba(128,128,128,0.15)\";\n\n\t\t\tfunction fmtLabel(ms, spanMs) {\n\t\t\t\tconst d = new Date(ms);\n\t\t\t\tif (spanMs > 86400000) return d.toLocaleString([], { month: \"short\", day: \"numeric\", hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t\treturn d.toLocaleTimeString([], { hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t}\n\n\t\t\tfunction renderAll(force) {\n\t\t\t\tconst fg = getComputedStyle(document.body).color;\n\t\t\t\tdocument.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst existing = Chart.getChart(c);\n\t\t\t\t\tif (existing) {\n\t\t\t\t\t\tif (!force) return;\n\t\t\t\t\t\texisting.destroy();\n\t\t\t\t\t}\n\t\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + c.dataset.chart);\n\t\t\t\t\tif (!dataEl) return;\n\t\t\t\t\tconst cfg = JSON.parse(dataEl.textContent);\n\t\t\t\t\tlet labels = cfg.labels || [];\n\t\t\t\t\tif (cfg.labelsMs) {\n\t\t\t\t\t\tconst span = cfg.labelsMs.length > 1 ? Math.abs(cfg.labelsMs[cfg.labelsMs.length - 1] - cfg.labelsMs[0]) : 0;\n\t\t\t\t\t\tlabels = cfg.labelsMs.map((ms) => fmtLabel(ms, span));\n\t\t\t\t\t}\n\t\t\t\t\tnew Chart(c, {\n\t\t\t\t\t\ttype: cfg.type,\n\t\t\t\t\t\tdata: {\n\t\t\t\t\t\t\tlabels,\n\t\t\t\t\t\t\tdatasets: cfg.datasets.map((d, i) => ({\n\t\t\t\t\t\t\t\t...d,\n\t\t\t\t\t\t\t\tborderColor: PALETTE[i % PALETTE.length],\n\t\t\t\t\t\t\t\tbackgroundColor: PALETTE[i % PALETTE.length] + (cfg.type === \"bar\" ? \"b3\" : \"33\"),\n\t\t\t\t\t\t\t\tborderWidth: 2,\n\t\t\t\t\t\t\t\tpointRadius: 0,\n\t\t\t\t\t\t\t\ttension: 0.2,\n\t\t\t\t\t\t\t})),\n\t\t\t\t\t\t},\n\t\t\t\t\t\toptions: {\n\t\t\t\t\t\t\tresponsive: true,\n\t\t\t\t\t\t\tmaintainAspectRatio: false,\n\t\t\t\t\t\t\tanimation: false,\n\t\t\t\t\t\t\tplugins: { legend: { display: cfg.datasets.length > 1, labels: { color: fg } } },\n\t\t\t\t\t\t\tscales: {\n\t\t\t\t\t\t\t\tx: { ticks: { color: fg, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: GRID } },\n\t\t\t\t\t\t\t\ty: { ticks: { color: fg }, grid: { color: GRID }, beginAtZero: true },\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t},\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t}\n\n\t\t\tdocument.body.addEventListener(\"htmx:beforeSwap\", (e) => {\n\t\t\t\tif (!e.detail.target || !e.detail.target.querySelectorAll) return;\n\t\t\t\te.detail.target.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst ch = Chart.getChart(c);\n\t\t\t\t\tif (ch) ch.destroy();\n\t\t\t\t});\n\t\t\t});\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", () => renderAll(false));\n\t\t\tnew MutationObserver(() => renderAll(true))\n\t\t\t\t.observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\t\t\trenderAll(false);\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

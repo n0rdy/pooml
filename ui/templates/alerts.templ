@@ -159,7 +159,7 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, cs
 			<button type="button" class="open-in-logs link link-primary text-xs" title="Run this query on the logs page (new tab)">open in logs ↗</button>
 		</span>
 		<textarea name="query" class="hidden">{ a.Query }</textarea>
-		<div class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors" style="min-height: 3.5rem"></div>
+		<div class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors" style={ sqlEditorReserve(a.Query) }></div>
 	</div>
 	if !poConfigured && !cfConfigured && targetType(a.Target) == "" {
 		<div role="alert" class="alert text-sm">

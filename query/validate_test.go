@@ -130,6 +130,44 @@ func TestValidateRejects(t *testing.T) {
 	}
 }
 
+// Signals are isolated per surface; only ScopeAll (alerts) may mix them.
+func TestValidateScopes(t *testing.T) {
+	tests := []struct {
+		name    string
+		q       string
+		scope   Scope
+		wantErr string // "" = must pass
+	}{
+		{"logs page: logs ok", "SELECT * FROM logs LIMIT 5", ScopeLogs, ""},
+		{"logs page: fts ok", `SELECT * FROM logs WHERE id IN (SELECT "rowid" FROM logs_fts WHERE logs_fts MATCH 'x')`, ScopeLogs, ""},
+		{"logs page: metrics blocked", "SELECT * FROM metrics LIMIT 5", ScopeLogs, "Metrics page"},
+		{"logs page: join blocked", "SELECT * FROM logs l JOIN metrics m ON l.service = m.service", ScopeLogs, "Metrics page"},
+		{"logs page: metrics in subquery blocked", "SELECT * FROM logs WHERE service IN (SELECT service FROM metrics)", ScopeLogs, "Metrics page"},
+		{"explorer: metrics ok", "SELECT name, value FROM metrics LIMIT 5", ScopeMetrics, ""},
+		{"explorer: logs blocked", "SELECT * FROM logs LIMIT 5", ScopeMetrics, "Logs page"},
+		{"explorer: logs in CTE blocked", "WITH x AS (SELECT service FROM logs) SELECT * FROM metrics WHERE service IN (SELECT service FROM x)", ScopeMetrics, "Logs page"},
+		{"panel: logs alone ok", "SELECT service, COUNT(*) FROM logs GROUP BY service", ScopeOneSignal, ""},
+		{"panel: metrics alone ok", "SELECT timestamp, value FROM metrics ORDER BY timestamp", ScopeOneSignal, ""},
+		{"panel: mixing blocked", "SELECT * FROM logs l JOIN metrics m ON l.service = m.service", ScopeOneSignal, "one signal"},
+		{"alerts: mixing allowed", "SELECT 1 FROM metrics m WHERE m.value > 10 AND EXISTS (SELECT 1 FROM logs WHERE level >= 4)", ScopeAll, ""},
+		{"CTE named like a signal doesn't count as one", "WITH metrics AS (SELECT service FROM logs) SELECT * FROM metrics", ScopeLogs, ""},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := ValidateIn(tc.q, tc.scope)
+			if tc.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("want error containing %q, got %v", tc.wantErr, err)
+			}
+		})
+	}
+}
+
 func TestCombineFTS(t *testing.T) {
 	t.Run("default query gains join and match", func(t *testing.T) {
 		v, err := Validate("SELECT * FROM logs WHERE level >= 4 ORDER BY timestamp DESC LIMIT 100")

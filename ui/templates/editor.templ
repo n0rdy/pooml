@@ -1,5 +1,28 @@
 package templates
 
+import (
+	"fmt"
+	"strings"
+)
+
+// editorReserve pre-sizes an editor host to its query's line count so the
+// CodeMirror mount doesn't shift the layout below it - the M5-era jump fix,
+// generalized: a fixed base height only covers one-line queries, and M9's
+// open-in-logs flows made multi-line queries in the URL common.
+// The host publishes the height as --cm-reserve so the .cm-editor min-height
+// agrees with it exactly (over-estimates read as normal editor whitespace).
+func editorReserve(q string, basePx, linePx, maxPx int) templ.SafeCSS {
+	lines := strings.Count(strings.TrimRight(q, "\n"), "\n") + 1
+	h := min(basePx+(lines-1)*linePx, maxPx)
+	return templ.SafeCSS(fmt.Sprintf("min-height: %dpx; --cm-reserve: %dpx", h, h))
+}
+
+// shared hosts: 14px font (~20px lines), 3.5rem base, 8rem max-height
+func sqlEditorReserve(q string) templ.SafeCSS { return editorReserve(q, 56, 20, 128) }
+
+// logs editor: 15px font (~21px lines), 4rem base, 10rem max-height
+func logsEditorReserve(q string) templ.SafeCSS { return editorReserve(q, 64, 21, 160) }
+
 // sqlEditorModule is the shared CodeMirror mount used by every page except
 // /logs (whose editor is older and interwoven with FTS/diagnostics/history;
 // folding it onto this module is recorded debt). It mounts on every
@@ -8,7 +31,7 @@ package templates
 templ sqlEditorModule() {
 	<style>
 		.sql-editor-host .cm-content { font-size: 14px; }
-		.sql-editor-host .cm-editor { max-height: 8rem; min-height: calc(3.5rem - 4px); }
+		.sql-editor-host .cm-editor { max-height: 8rem; min-height: calc(var(--cm-reserve, 3.5rem) - 4px); }
 		.sql-editor-host:focus-within {
 			outline: 2px solid var(--color-primary);
 			outline-offset: 2px;

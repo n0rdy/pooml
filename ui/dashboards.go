@@ -176,37 +176,44 @@ func (ur *Router) panelFragment(w http.ResponseWriter, req *http.Request) {
 	}
 
 	view := templates.PanelView{Panel: p}
-	v, err := query.Validate(p.Query)
+	v, err := query.ValidateIn(p.Query, query.ScopeOneSignal)
 	if err != nil {
-		view.Kind, view.ErrMsg = "error", humanizeSQLError(err)
+		view.ShapedResult = templates.ShapedResult{Kind: "error", ErrMsg: humanizeSQLError(err)}
 	} else if res, execErr := query.Execute(req.Context(), ur.Pools.LogsRead, v.SQL()); execErr != nil {
-		view.Kind, view.ErrMsg = "error", execErr.Error()
+		view.ShapedResult = templates.ShapedResult{Kind: "error", ErrMsg: execErr.Error()}
 	} else {
-		shapePanel(&view, res)
+		view.ShapedResult = shapeResult(res, p.ChartType, fmt.Sprintf("p%d", p.ID))
 	}
 	ur.render(w, req, http.StatusOK, templates.PanelFragment(view))
 }
 
-// shapePanel turns a query result into a renderable panel: explicit
-// chart_type wins, otherwise the shape decides. See CONTEXT.md > Metrics >
+// shapeResult turns a query result into a renderable shape, shared by panels
+// and the metrics explorer: explicit chartType wins ("table" forces raw
+// rows), otherwise the result shape decides. Columns/Rows are always filled
+// so charts can offer the raw rows alongside. See CONTEXT.md > Metrics >
 // Dashboards for the conventions.
-func shapePanel(view *templates.PanelView, res *query.Result) {
+func shapeResult(res *query.Result, chartType, chartID string) templates.ShapedResult {
+	s := templates.ShapedResult{ChartID: chartID, Columns: res.Columns, Rows: cellsOf(res)}
 	if len(res.Rows) == 0 {
-		view.Kind = "empty"
-		return
+		s.Kind = "empty"
+		return s
+	}
+	if chartType == "table" {
+		s.Kind = "table"
+		return s
 	}
 
 	numericCols := numericColumns(res)
 
-	if view.Panel.ChartType == "stat" || (view.Panel.ChartType == "" && len(res.Rows) == 1 && len(res.Columns) == 1 && numericCols[0]) {
+	if chartType == "stat" || (chartType == "" && len(res.Rows) == 1 && len(res.Columns) == 1 && numericCols[0]) {
 		for j := range res.Columns {
 			if numericCols[j] {
-				view.Kind, view.Stat = "stat", formatStat(res.Rows[0][j])
-				return
+				s.Kind, s.Stat = "stat", formatStat(res.Rows[0][j])
+				return s
 			}
 		}
-		view.Kind, view.ErrMsg = "error", "stat needs a numeric column"
-		return
+		s.Kind, s.ErrMsg = "error", "stat needs a numeric column"
+		return s
 	}
 
 	// x axis = first column; series = every other numeric column
@@ -223,21 +230,11 @@ func shapePanel(view *templates.PanelView, res *query.Result) {
 	}
 	if len(datasets) == 0 {
 		// nothing chartable: show the rows instead of erroring
-		view.Kind = "table"
-		view.Columns = res.Columns
-		view.Rows = make([][]string, len(res.Rows))
-		for i, row := range res.Rows {
-			cells := make([]string, len(row))
-			for j, cell := range row {
-				cells[j] = cellString(cell)
-			}
-			view.Rows[i] = cells
-		}
-		return
+		s.Kind = "table"
+		return s
 	}
 
 	timeX := colLooksLikeEpochMs(res, 0)
-	chartType := view.Panel.ChartType
 	if chartType == "" {
 		if timeX {
 			chartType = "line"
@@ -257,7 +254,20 @@ func shapePanel(view *templates.PanelView, res *query.Result) {
 			payload.Labels[i] = cellString(row[0])
 		}
 	}
-	view.Kind, view.Chart = "chart", payload
+	s.Kind, s.Chart = "chart", payload
+	return s
+}
+
+func cellsOf(res *query.Result) [][]string {
+	rows := make([][]string, len(res.Rows))
+	for i, row := range res.Rows {
+		cells := make([]string, len(row))
+		for j, cell := range row {
+			cells[j] = cellString(cell)
+		}
+		rows[i] = cells
+	}
+	return rows
 }
 
 func numericColumns(res *query.Result) map[int]bool {

@@ -121,6 +121,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 
 		r.Get("/", ur.metricsExplorerPage)
 		r.Get("/export", ur.exportMetrics)
+		r.Post("/save-panel", ur.saveExplorerPanel)
 	})
 
 	router.Route("/dashboards", func(r chi.Router) {
