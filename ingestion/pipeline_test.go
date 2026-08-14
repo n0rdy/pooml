@@ -12,6 +12,7 @@ import (
 	"github.com/n0rdy/pooml/api"
 	"github.com/n0rdy/pooml/db"
 	"github.com/n0rdy/pooml/ingestion"
+	"github.com/n0rdy/pooml/metrics"
 	"github.com/n0rdy/pooml/services"
 )
 
@@ -38,10 +39,14 @@ func setup(t *testing.T) (*db.Pools, *ingestion.Pipeline, *ingestion.Broadcaster
 		t.Fatal(err)
 	}
 
+	metricsPipeline := metrics.NewPipeline(pools.Metrics)
+	metricsPipeline.Start()
+	t.Cleanup(metricsPipeline.Shutdown)
+
 	router := api.NewRouter(
 		services.NewMonitoringService(pools),
 		services.NewThrottlingService(),
-		apiKeys, pipeline, "local", false,
+		apiKeys, pipeline, metricsPipeline, "local", false,
 	)
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)

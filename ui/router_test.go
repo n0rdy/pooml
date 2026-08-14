@@ -56,6 +56,8 @@ func newClient(t *testing.T) *client {
 		Settings:          settings,
 		Alerts:            services.NewAlertsService(pools.Meta),
 		Notifier:          services.NewNotificationService(settings),
+		ScrapeTargets:     services.NewScrapeTargetsService(pools.Meta, enc),
+		Dashboards:        services.NewDashboardsService(pools.Meta),
 		Pools:             pools,
 		Broadcaster:       broadcaster,
 		StreamCtx:         context.Background(),

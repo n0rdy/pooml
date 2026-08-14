@@ -70,6 +70,50 @@ func TestMigrateAndPoolsRoundTrip(t *testing.T) {
 	}
 }
 
+// metrics.db is attached read-only to every logs-read connection: unqualified
+// `metrics` resolves there, cross-DB JOINs work, and writes stay impossible.
+func TestReadPoolMetricsAttach(t *testing.T) {
+	dir := t.TempDir()
+	MigrateAll(dir)
+	pools, err := OpenPools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pools.Close)
+
+	if _, err := pools.Metrics.Exec(
+		"INSERT INTO metrics(timestamp, name, type, value, service, host) VALUES (1000, 'queue_depth', 1, 7, 'shop', 'h1')"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := pools.LogsWrite.Exec(
+		"INSERT INTO logs(timestamp, ingested_at, service, host, raw) VALUES (1000, 1000, 'shop', 'h1', 'raw line')"); err != nil {
+		t.Fatal(err)
+	}
+
+	var v float64
+	if err := pools.LogsRead.QueryRow(
+		"SELECT value FROM metrics WHERE name = 'queue_depth'").Scan(&v); err != nil {
+		t.Fatalf("unqualified metrics via read pool: %v", err)
+	}
+	if v != 7 {
+		t.Errorf("value = %v, want 7", v)
+	}
+
+	// the flagship: logs and metrics in one statement
+	var cnt int
+	if err := pools.LogsRead.QueryRow(
+		`SELECT count(*) FROM logs l JOIN metrics m ON l.service = m.service AND l.timestamp = m.timestamp`).Scan(&cnt); err != nil {
+		t.Fatalf("cross-DB JOIN: %v", err)
+	}
+	if cnt != 1 {
+		t.Errorf("JOIN hits = %d, want 1", cnt)
+	}
+
+	if _, err := pools.LogsRead.Exec("DELETE FROM metrics"); err == nil {
+		t.Error("write to attached metrics.db succeeded; mode=ro not enforced")
+	}
+}
+
 // The authorizer is defense in depth under the AST validation: even raw SQL
 // reaching the read pool must not be able to run PRAGMA/ATTACH/load_extension.
 func TestReadPoolAuthorizer(t *testing.T) {

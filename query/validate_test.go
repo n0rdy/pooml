@@ -37,6 +37,16 @@ func TestValidateAccepts(t *testing.T) {
 			wantShape: ShapeAggregation,
 		},
 		{
+			name:      "metrics table (attached metrics.db)",
+			q:         "SELECT name, value FROM metrics WHERE service = 'shop' LIMIT 50",
+			wantShape: ShapeLogViewer,
+		},
+		{
+			name:      "cross-DB join of logs and metrics",
+			q:         "SELECT l.raw, m.value FROM logs l JOIN metrics m ON l.service = m.service LIMIT 50",
+			wantShape: ShapeLogViewer,
+		},
+		{
 			name:      "bare aggregate is aggregation",
 			q:         "SELECT count(*) FROM logs",
 			wantShape: ShapeAggregation,

@@ -205,143 +205,17 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, cs
 	</label>
 }
 
-// alertsScript mounts CodeMirror on every alert query editor (create form +
-// HTMX-loaded edit rows), syncs docs back to the hidden textarea at submit,
-// and handles channel-field visibility and open-in-logs. Extension setup is
-// knowingly duplicated from the logs page; extract when a third SQL editor
-// appears (likely M9 metrics explorer).
+// alertsScript keeps only alert-specific behavior; the editor itself (mount,
+// submit sync, open-in-logs, theming) lives in the shared sqlEditorModule.
 templ alertsScript() {
-	<style>
-		.sql-editor-host .cm-content { font-size: 14px; }
-		.sql-editor-host .cm-editor { max-height: 8rem; min-height: calc(3.5rem - 4px); }
-		.sql-editor-host:focus-within {
-			outline: 2px solid var(--color-primary);
-			outline-offset: 2px;
-			border-color: var(--color-primary);
-		}
-	</style>
-	<script type="module">
-		import { EditorView, basicSetup } from "codemirror";
-		import { placeholder, keymap } from "@codemirror/view";
-		import { Compartment, Prec } from "@codemirror/state";
-		import { acceptCompletion } from "@codemirror/autocomplete";
-		import { SQLite, schemaCompletionSource } from "@codemirror/lang-sql";
-		import { LanguageSupport, syntaxTree } from "@codemirror/language";
-		import { linter } from "@codemirror/lint";
-		import { oneDark } from "@codemirror/theme-one-dark";
-
-		const schemaSource = schemaCompletionSource({
-			dialect: SQLite,
-			schema: { logs: ["id", "timestamp", "ingested_at", "level", "service", "host", "message", "parsed", "raw"] },
-			defaultTable: "logs",
-			upperCaseKeywords: true,
-		});
-		const KEYWORD_OPTIONS = ("SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC " +
-			"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST")
-			.split(" ").map((k) => ({ label: k, type: "keyword", boost: -1 }))
-			.concat(("count sum avg min max unixepoch strftime datetime json_extract length coalesce round")
-				.split(" ").map((f) => ({ label: f, type: "function", boost: -2 })));
-		function keywordSource(ctx) {
-			if (complCtx(ctx) !== "general") return null;
-			const w = ctx.matchBefore(/[A-Za-z_]+/);
-			if (!w && !ctx.explicit) return null;
-			return { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };
-		}
-		// completion context gating: after FROM/JOIN only table names make
-		// sense; after a dot the schema source's column completion owns it
-		const TABLES = [{ label: "logs", type: "type" }];
-		const tablePosRe = /\b(from|join)\s+[\w"]*$/i;
-		const dotPosRe = /\.\w*$/;
-		function complCtx(ctx) {
-			const before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);
-			if (tablePosRe.test(before)) return "table";
-			if (dotPosRe.test(before)) return "dot";
-			return "general";
-		}
-		function tableSource(ctx) {
-			if (complCtx(ctx) !== "table") return null;
-			const w = ctx.matchBefore(/[\w"]+/);
-			if (!w && !ctx.explicit) return null;
-			return { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\w"]*$/ };
-		}
-		const gatedSchema = (ctx) => complCtx(ctx) === "table" ? null : schemaSource(ctx);
-		const sqlSupport = new LanguageSupport(SQLite.language, [
-			SQLite.language.data.of({ autocomplete: tableSource }),
-			SQLite.language.data.of({ autocomplete: gatedSchema }),
-			SQLite.language.data.of({ autocomplete: keywordSource }),
-		]);
-		const syntaxLinter = linter((v) => {
-			if (!v.state.doc.length) return [];
-			const diags = [];
-			syntaxTree(v.state).iterate({
-				enter: (n) => {
-					if (n.type.isError) diags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: "error", message: "syntax error" });
-				},
-			});
-			return diags;
-		});
-
-		const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
-		const editors = new WeakMap();
-		const instances = [];
-
-		function mountAll() {
-			document.querySelectorAll(".sql-editor-host:not([data-cm])").forEach((host) => {
-				host.dataset.cm = "1";
-				const src = host.closest("form").querySelector("textarea[name=query]");
-				const themeComp = new Compartment();
-				const view = new EditorView({
-					doc: src ? src.value : "",
-					extensions: [
-						Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
-						basicSetup,
-						themeComp.of(isLight() ? [] : oneDark),
-						placeholder("SELECT * FROM logs WHERE level >= 4 AND timestamp > unixepoch() * 1000 - 300000"),
-						sqlSupport,
-						syntaxLinter,
-					],
-					parent: host,
-				});
-				editors.set(host, view);
-				instances.push({ view, themeComp });
-			});
-		}
-
-		function syncedQuery(form) {
-			const host = form.querySelector(".sql-editor-host");
-			const src = form.querySelector("textarea[name=query]");
-			const view = host && editors.get(host);
-			if (view && src) src.value = view.state.doc.toString();
-			return src ? src.value.trim() : "";
-		}
-
-		// capture phase: runs before htmx collects form parameters
-		document.addEventListener("submit", (e) => {
-			if (e.target && e.target.querySelector) syncedQuery(e.target);
-		}, true);
-
+	@sqlEditorModule()
+	<script>
 		document.addEventListener("change", (e) => {
 			if (!e.target || e.target.name !== "target_type") return;
 			const form = e.target.closest("form");
 			form.querySelectorAll(".target-pushover").forEach((el) => el.classList.toggle("hidden", e.target.value !== "pushover"));
 			form.querySelectorAll(".target-campfire").forEach((el) => el.classList.toggle("hidden", e.target.value !== "campfire"));
 		});
-		document.addEventListener("click", (e) => {
-			const btn = e.target.closest(".open-in-logs");
-			if (!btn) return;
-			const q = syncedQuery(btn.closest("form"));
-			if (q) window.open("/logs?q=" + encodeURIComponent(q), "_blank");
-		});
-
-		new MutationObserver(() => {
-			instances.forEach((i) => {
-				if (!i.view.dom.isConnected) return;
-				i.view.dispatch({ effects: i.themeComp.reconfigure(isLight() ? [] : oneDark) });
-			});
-		}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-
-		mountAll();
-		document.body.addEventListener("htmx:afterSettle", mountAll);
 	</script>
 }
 

@@ -1,0 +1,80 @@
+package templates
+
+import "strconv"
+
+type MetricsExplorerView struct {
+	Query   string
+	Columns []string
+	Rows    [][]string
+	ErrMsg  string
+}
+
+templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
+	@Shell("metrics · pooml", "metrics", csrfToken) {
+		<div class="max-w-6xl mx-auto flex flex-col gap-4">
+			<div class="card bg-base-100 border border-base-content/15">
+				<div class="card-body py-4 gap-2">
+					<form method="get" action="/metrics-explorer" class="flex flex-col gap-2">
+						<span class="flex items-center justify-between">
+							<span class="text-xs opacity-80">SQL over <code class="font-mono">metrics</code> (JOIN <code class="font-mono">logs</code> works too - same engine)</span>
+							<span class="text-xs opacity-50">Cmd/Ctrl+Enter runs</span>
+						</span>
+						<textarea name="q" class="hidden">{ v.Query }</textarea>
+						<div
+							class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors"
+							style="min-height: 3.5rem"
+							data-placeholder="SELECT name, service, value, timestamp FROM metrics ORDER BY timestamp DESC LIMIT 100"
+						></div>
+						<div class="flex items-center gap-2">
+							<button type="submit" class="btn btn-primary btn-sm">Run</button>
+							<button type="button" class="btn btn-ghost btn-sm" onclick="window.location.href='/metrics-explorer'">Reset</button>
+						</div>
+					</form>
+				</div>
+			</div>
+			if v.ErrMsg != "" {
+				<div role="alert" class="alert alert-error text-sm">{ v.ErrMsg }</div>
+			} else {
+				<div class="card bg-base-100 border border-base-content/15">
+					<div class="card-body py-3 gap-2">
+						if len(v.Rows) == 0 {
+							<p class="text-sm opacity-60 italic py-4">
+								No rows. No metrics ingested yet? Add a scrape target in
+								<a href="/settings" class="link link-primary">Settings</a> or push via OTLP.
+							</p>
+						} else {
+							<div class="overflow-x-auto max-h-[70vh]">
+								<table class="table table-sm table-pin-rows font-mono text-sm">
+									<thead>
+										<tr>
+											for _, c := range v.Columns {
+												<th>{ c }</th>
+											}
+										</tr>
+									</thead>
+									<tbody>
+										for _, row := range v.Rows {
+											<tr>
+												for _, cell := range row {
+													<td class="max-w-80 truncate" title={ cell }>{ cell }</td>
+												}
+											</tr>
+										}
+									</tbody>
+								</table>
+							</div>
+							<div class="flex items-center justify-between text-xs opacity-60">
+								<span>{ strconv.Itoa(len(v.Rows)) } rows</span>
+								<span class="flex gap-3">
+									<a href={ templ.SafeURL(metricsExportURL(v.Query, "csv")) } class="link link-hover">CSV</a>
+									<a href={ templ.SafeURL(metricsExportURL(v.Query, "json")) } class="link link-hover">JSON</a>
+								</span>
+							</div>
+						}
+					</div>
+				</div>
+			}
+		</div>
+		@sqlEditorModule()
+	}
+}

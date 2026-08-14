@@ -7,10 +7,12 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/ingestion"
+	"github.com/n0rdy/pooml/metrics"
 	"github.com/n0rdy/pooml/services"
 
 	"github.com/go-chi/chi/v5"
@@ -29,8 +31,11 @@ type Router struct {
 	throttlingService *services.ThrottlingService
 	apiKeysService    *services.ApiKeysService
 	pipeline          *ingestion.Pipeline
+	metricsPipeline   *metrics.Pipeline
 	env               string
 	trustProxyHeaders bool
+
+	downcastWarned sync.Map // metric name -> struct{}; once-per-name OTLP downcast warning
 }
 
 func NewRouter(
@@ -38,6 +43,7 @@ func NewRouter(
 	throttlingService *services.ThrottlingService,
 	apiKeysService *services.ApiKeysService,
 	pipeline *ingestion.Pipeline,
+	metricsPipeline *metrics.Pipeline,
 	env string,
 	trustProxyHeaders bool,
 ) *Router {
@@ -46,6 +52,7 @@ func NewRouter(
 		throttlingService: throttlingService,
 		apiKeysService:    apiKeysService,
 		pipeline:          pipeline,
+		metricsPipeline:   metricsPipeline,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
 	}
@@ -65,6 +72,7 @@ func (ar *Router) NewRouter() *chi.Mux {
 		r.Use(apiKeyTokenAuth(ar.apiKeysService, ar.throttlingService, ar.trustProxyHeaders))
 
 		r.Post("/ingest/{service}/{host}", ar.ingestLogs)
+		r.Post("/otlp/v1/metrics", ar.otlpMetrics)
 	})
 
 	return router

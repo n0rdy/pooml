@@ -28,7 +28,10 @@ var (
 	ErrUnsupportedShape   = errors.New("not supported for this query shape")
 )
 
-var allowedTables = map[string]bool{"logs": true, "logs_fts": true}
+// metrics lives in metrics.db, attached read-only to every logs-read
+// connection (db/pool.go), so unqualified `metrics` resolves there and
+// cross-DB JOINs work in a single statement.
+var allowedTables = map[string]bool{"logs": true, "logs_fts": true, "metrics": true}
 
 var bannedFunctions = map[string]bool{"load_extension": true}
 
@@ -141,7 +144,7 @@ func (c *checkVisitor) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
 		}
 		name := strings.ToLower(t.Name.Name)
 		if !allowedTables[name] && !c.cteNames[name] {
-			return nil, nil, fmt.Errorf("table %q is not allowed: only logs and logs_fts can be queried", t.Name.Name)
+			return nil, nil, fmt.Errorf("table %q is not allowed: only logs, logs_fts and metrics can be queried", t.Name.Name)
 		}
 	case *sqlp.Call:
 		if bannedFunctions[strings.ToLower(t.Name.Name)] {

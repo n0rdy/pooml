@@ -15,6 +15,9 @@ type SettingsView struct {
 	PushoverConfigured bool
 	CampfireBaseURL    string
 	CampfireKeySet     bool
+
+	ScrapeTargets []services.ScrapeTarget
+	ScrapeErrMsg  string
 }
 
 templ SettingsPage(v SettingsView, csrfToken string) {
@@ -23,9 +26,10 @@ templ SettingsPage(v SettingsView, csrfToken string) {
 			@ApiKeysSection(v.Keys, v.NewKey, v.ErrMsg, csrfToken)
 			@PushoverSection(v.PushoverConfigured, csrfToken)
 			@CampfireSection(v.CampfireBaseURL, v.CampfireKeySet, csrfToken)
-			@comingLater("Scrape targets", "Prometheus scraping lands in M9.")
+			@ScrapeTargetsSection(v.ScrapeTargets, v.ScrapeErrMsg, csrfToken)
 			@comingLater("Retention & backup", "Cleanup schedules and S3 backup land in M10.")
 		</div>
+		@homeScript()
 	}
 }
 
@@ -186,6 +190,113 @@ templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfT
 			</form>
 		</div>
 	</section>
+}
+
+// ScrapeTargetsSection is also served as an HTMX fragment after toggle/delete.
+templ ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfToken string) {
+	<section id="scrape-targets" class="card bg-base-100 shadow">
+		<div class="card-body py-4 gap-3">
+			<h2 class="card-title text-base">Scrape targets</h2>
+			<p class="text-xs opacity-60 -mt-2">
+				Prometheus-format <code class="font-mono">/metrics</code> endpoints pooml pulls on a schedule.
+				Every scraped value is stamped with the service and host you set here.
+				Prefer push? Point an OTLP/HTTP exporter at <code class="font-mono">/api/v1/otlp/v1/metrics</code> instead.
+			</p>
+			if errMsg != "" {
+				<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
+			}
+			if len(targets) == 0 {
+				<p class="text-sm opacity-60 italic">No targets yet. Add your first exporter below.</p>
+			} else {
+				<div class="overflow-x-auto">
+					<table class="table table-sm">
+						<thead>
+							<tr>
+								<th>Service</th>
+								<th>URL</th>
+								<th>Every</th>
+								<th>Status</th>
+								<th></th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, t := range targets {
+								<tr class={ templ.KV("opacity-50", !t.Enabled) }>
+									<td class="font-mono">{ t.Service }</td>
+									<td class="font-mono text-xs max-w-60 truncate" title={ t.URL }>{ t.URL }</td>
+									<td class="whitespace-nowrap">{ humanMs(t.ScrapeIntervalMs) }</td>
+									<td>
+										@scrapeTargetStatus(t)
+									</td>
+									<td class="text-right whitespace-nowrap">
+										<button
+											class="btn btn-ghost btn-xs"
+											hx-post={ fmt.Sprintf("/settings/scrape-targets/%d/toggle", t.ID) }
+											hx-target="#scrape-targets"
+											hx-swap="outerHTML"
+										>
+											if t.Enabled {
+												Pause
+											} else {
+												Resume
+											}
+										</button>
+										<button
+											class="btn btn-ghost btn-xs text-error"
+											hx-delete={ fmt.Sprintf("/settings/scrape-targets/%d", t.ID) }
+											hx-target="#scrape-targets"
+											hx-swap="outerHTML"
+											hx-confirm={ fmt.Sprintf("Delete scrape target %q? Already-collected metrics stay.", t.Service) }
+										>Delete</button>
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			}
+			<form method="post" action="/settings/scrape-targets" class="flex gap-3 items-end flex-wrap border-t border-base-content/10 pt-3">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<label class="flex flex-col gap-1 flex-1 min-w-56">
+					<span class="text-xs opacity-80">URL</span>
+					<input type="url" name="url" placeholder="http://localhost:9100/metrics" class="input input-bordered input-sm w-full" required/>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">Service</span>
+					<input type="text" name="service" placeholder="node-exporter" class="input input-bordered input-sm w-36" maxlength="200" required/>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">Host</span>
+					<input type="text" name="host" placeholder="auto from URL" class="input input-bordered input-sm w-32" maxlength="200"/>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">Auth header (optional)</span>
+					<input type="password" name="auth_header" placeholder="X-API-Key: ..." class="input input-bordered input-sm w-40"/>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-xs opacity-80">Every (seconds)</span>
+					<input type="number" name="interval_s" value="30" min="30" max="3600" class="input input-bordered input-sm w-24" required/>
+				</label>
+				<button type="submit" class="btn btn-primary btn-sm">Add target</button>
+			</form>
+		</div>
+	</section>
+}
+
+templ scrapeTargetStatus(t services.ScrapeTarget) {
+	if !t.Enabled {
+		<span class="badge badge-sm badge-ghost">paused</span>
+	} else if t.LastError.Valid {
+		<span class="badge badge-sm badge-soft badge-error" title={ t.LastError.String }>error</span>
+		<div class="text-xs text-error max-w-48 truncate" title={ t.LastError.String }>{ t.LastError.String }</div>
+	} else if t.LastScrapedAt.Valid {
+		<span class="badge badge-sm badge-soft badge-success">ok</span>
+	} else {
+		<span class="badge badge-sm badge-ghost">waiting</span>
+	}
+	if t.LastScrapedAt.Valid {
+		<div class="text-xs opacity-50" data-reltime={ msString(t.LastScrapedAt.Int64) }>{ utcTime(t.LastScrapedAt.Int64) }</div>
+	}
 }
 
 templ comingLater(title string, note string) {

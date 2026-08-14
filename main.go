@@ -17,6 +17,7 @@ import (
 	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/db"
 	"github.com/n0rdy/pooml/ingestion"
+	"github.com/n0rdy/pooml/metrics"
 	"github.com/n0rdy/pooml/services"
 	"github.com/n0rdy/pooml/ui"
 
@@ -75,15 +76,37 @@ func main() {
 	alertsService := services.NewAlertsService(pools.Meta)
 	notifier := services.NewNotificationService(settingsService)
 	evaluator := services.NewEvaluator(alertsService, pools.LogsRead, notifier)
-
-	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
-	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
-	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
+	scrapeTargetsService := services.NewScrapeTargetsService(pools.Meta, encryptionService)
 
 	// Log ingestion pipeline (broadcaster is shared with the SSE handlers in M6)
 	broadcaster := ingestion.NewBroadcaster()
 	pipeline := ingestion.NewPipeline(pools.LogsWrite, broadcaster)
 	pipeline.Start()
+
+	metricsPipeline := metrics.NewPipeline(pools.Metrics)
+	metricsPipeline.Start()
+
+	scraper := services.NewScraper(scrapeTargetsService, metricsPipeline)
+
+	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
+	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
+	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
+
+	// The scraper produces into the metrics pipeline, so it lives on its own
+	// context and WaitGroup: it must be fully stopped BEFORE stage 3 drains
+	// that pipeline (appCtx jobs stop at stage 4, too late).
+	scraperCtx, scraperCancel := context.WithCancel(context.Background())
+	defer scraperCancel()
+	var scraperWG sync.WaitGroup
+	startJob(scraperCtx, &scraperWG, "prometheus-scraper", scraper.Run)
+
+	// Self-scrape registration only; the /metrics endpoint itself lands in
+	// M10, so the flag stays off until then. See CONTEXT.md > Metrics.
+	if getMetricsEnabled() {
+		if err := scrapeTargetsService.EnsureSelfScrape(appCtx, apiAddr); err != nil {
+			log.Error().Err(err).Msg("failed to register self-scrape target")
+		}
+	}
 
 	// SSE connections close the moment Shutdown is called (RegisterOnShutdown
 	// below); appCtx would fire too late - stage 1 waits on handlers first.
@@ -91,7 +114,7 @@ func main() {
 	defer sseCancel()
 
 	// Routers
-	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, env, trustProxyHeaders)
+	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders)
 	uiRouter := ui.NewRouter(ui.Deps{
 		Sessions:          sessionsService,
 		Throttling:        throttlingService,
@@ -99,6 +122,8 @@ func main() {
 		Settings:          settingsService,
 		Alerts:            alertsService,
 		Notifier:          notifier,
+		ScrapeTargets:     scrapeTargetsService,
+		Dashboards:        services.NewDashboardsService(pools.Meta),
 		Pools:             pools,
 		Broadcaster:       broadcaster,
 		StreamCtx:         sseCtx,
@@ -178,7 +203,27 @@ func main() {
 		log.Warn().Msg("shutdown deadline reached with ingestion pipeline still draining; proceeding anyway")
 	}
 
-	// Stage 3 (M9): drain the metrics ingestion pipeline the same way.
+	// Stage 3: stop the scraper (its Run waits for in-flight scrapes), then
+	// drain the metrics pipeline. The other producer, the OTLP handler, is
+	// already down with the HTTP servers at stage 1.
+	scraperCancel()
+	if waitWithContext(&scraperWG, shutdownCtx) {
+		metricsDrained := make(chan struct{})
+		go func() {
+			metricsPipeline.Shutdown()
+			close(metricsDrained)
+		}()
+		select {
+		case <-metricsDrained:
+			log.Info().Msg("metrics pipeline drained")
+		case <-shutdownCtx.Done():
+			log.Warn().Msg("shutdown deadline reached with metrics pipeline still draining; proceeding anyway")
+		}
+	} else {
+		// a live scraper could push into a closing pipeline and panic;
+		// past the deadline, losing the buffered rows is the lesser evil
+		log.Warn().Msg("shutdown deadline reached with the scraper still running; skipping the metrics drain")
+	}
 
 	// Stage 4: stop background jobs. Only safe once the pipelines above have
 	// drained, since later jobs (retention, backup, optimize) share the pools.
@@ -345,6 +390,18 @@ func getTrustProxyHeaders() bool {
 			"otherwise IPs are spoofable and throttling can be bypassed.")
 	}
 	return trust
+}
+
+func getMetricsEnabled() bool {
+	v := os.Getenv("POOML_METRICS_ENABLED")
+	if v == "" {
+		return false
+	}
+	enabled, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse POOML_METRICS_ENABLED")
+	}
+	return enabled
 }
 
 func getShutdownTimeout() time.Duration {

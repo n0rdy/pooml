@@ -27,14 +27,16 @@ const (
 // Deps is everything the UI router needs; a struct because the positional
 // constructor stopped scaling around the sixth parameter.
 type Deps struct {
-	Sessions    *services.SessionsService
-	Throttling  *services.ThrottlingService
-	ApiKeys     *services.ApiKeysService
-	Settings    *services.SettingsService
-	Alerts      *services.AlertsService
-	Notifier    *services.NotificationService
-	Pools       *db.Pools
-	Broadcaster *ingestion.Broadcaster
+	Sessions      *services.SessionsService
+	Throttling    *services.ThrottlingService
+	ApiKeys       *services.ApiKeysService
+	Settings      *services.SettingsService
+	Alerts        *services.AlertsService
+	Notifier      *services.NotificationService
+	ScrapeTargets *services.ScrapeTargetsService
+	Dashboards    *services.DashboardsService
+	Pools         *db.Pools
+	Broadcaster   *ingestion.Broadcaster
 	// StreamCtx closes open SSE connections; main cancels it via the UI
 	// server's RegisterOnShutdown. appCtx (stage 4) would fire too late:
 	// Server.Shutdown waits on handlers first.
@@ -109,6 +111,29 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Post("/pushover/test", ur.testPushover)
 		r.Post("/campfire", ur.saveCampfire)
 		r.Post("/campfire/test", ur.testCampfire)
+		r.Post("/scrape-targets", ur.createScrapeTarget)
+		r.Post("/scrape-targets/{id}/toggle", ur.toggleScrapeTarget)
+		r.Delete("/scrape-targets/{id}", ur.deleteScrapeTarget)
+	})
+
+	router.Route("/metrics-explorer", func(r chi.Router) {
+		r.Use(sessionAuth(ur.Sessions))
+
+		r.Get("/", ur.metricsExplorerPage)
+		r.Get("/export", ur.exportMetrics)
+	})
+
+	router.Route("/dashboards", func(r chi.Router) {
+		r.Use(sessionAuth(ur.Sessions))
+
+		r.Get("/", ur.dashboardsPage)
+		r.Post("/", ur.createDashboard)
+		r.Get("/{id:[0-9]+}", ur.dashboardPage)
+		r.Delete("/{id:[0-9]+}", ur.deleteDashboard)
+		r.Post("/{id:[0-9]+}/panels", ur.createPanel)
+		r.Get("/{id:[0-9]+}/panels/{pid:[0-9]+}", ur.panelFragment)
+		r.Put("/{id:[0-9]+}/panels/{pid:[0-9]+}", ur.updatePanel)
+		r.Delete("/{id:[0-9]+}/panels/{pid:[0-9]+}", ur.deletePanel)
 	})
 
 	return router

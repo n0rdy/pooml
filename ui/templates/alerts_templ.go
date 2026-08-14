@@ -815,11 +815,8 @@ func alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, csr
 	})
 }
 
-// alertsScript mounts CodeMirror on every alert query editor (create form +
-// HTMX-loaded edit rows), syncs docs back to the hidden textarea at submit,
-// and handles channel-field visibility and open-in-logs. Extension setup is
-// knowingly duplicated from the logs page; extract when a third SQL editor
-// appears (likely M9 metrics explorer).
+// alertsScript keeps only alert-specific behavior; the editor itself (mount,
+// submit sync, open-in-logs, theming) lives in the shared sqlEditorModule.
 func alertsScript() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -841,7 +838,11 @@ func alertsScript() templ.Component {
 			templ_7745c5c3_Var40 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<style>\n\t\t.sql-editor-host .cm-content { font-size: 14px; }\n\t\t.sql-editor-host .cm-editor { max-height: 8rem; min-height: calc(3.5rem - 4px); }\n\t\t.sql-editor-host:focus-within {\n\t\t\toutline: 2px solid var(--color-primary);\n\t\t\toutline-offset: 2px;\n\t\t\tborder-color: var(--color-primary);\n\t\t}\n\t</style><script type=\"module\">\n\t\timport { EditorView, basicSetup } from \"codemirror\";\n\t\timport { placeholder, keymap } from \"@codemirror/view\";\n\t\timport { Compartment, Prec } from \"@codemirror/state\";\n\t\timport { acceptCompletion } from \"@codemirror/autocomplete\";\n\t\timport { SQLite, schemaCompletionSource } from \"@codemirror/lang-sql\";\n\t\timport { LanguageSupport, syntaxTree } from \"@codemirror/language\";\n\t\timport { linter } from \"@codemirror/lint\";\n\t\timport { oneDark } from \"@codemirror/theme-one-dark\";\n\n\t\tconst schemaSource = schemaCompletionSource({\n\t\t\tdialect: SQLite,\n\t\t\tschema: { logs: [\"id\", \"timestamp\", \"ingested_at\", \"level\", \"service\", \"host\", \"message\", \"parsed\", \"raw\"] },\n\t\t\tdefaultTable: \"logs\",\n\t\t\tupperCaseKeywords: true,\n\t\t});\n\t\tconst KEYWORD_OPTIONS = (\"SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC \" +\n\t\t\t\"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST\")\n\t\t\t.split(\" \").map((k) => ({ label: k, type: \"keyword\", boost: -1 }))\n\t\t\t.concat((\"count sum avg min max unixepoch strftime datetime json_extract length coalesce round\")\n\t\t\t\t.split(\" \").map((f) => ({ label: f, type: \"function\", boost: -2 })));\n\t\tfunction keywordSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"general\") return null;\n\t\t\tconst w = ctx.matchBefore(/[A-Za-z_]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };\n\t\t}\n\t\t// completion context gating: after FROM/JOIN only table names make\n\t\t// sense; after a dot the schema source's column completion owns it\n\t\tconst TABLES = [{ label: \"logs\", type: \"type\" }];\n\t\tconst tablePosRe = /\\b(from|join)\\s+[\\w\"]*$/i;\n\t\tconst dotPosRe = /\\.\\w*$/;\n\t\tfunction complCtx(ctx) {\n\t\t\tconst before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);\n\t\t\tif (tablePosRe.test(before)) return \"table\";\n\t\t\tif (dotPosRe.test(before)) return \"dot\";\n\t\t\treturn \"general\";\n\t\t}\n\t\tfunction tableSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"table\") return null;\n\t\t\tconst w = ctx.matchBefore(/[\\w\"]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\\w\"]*$/ };\n\t\t}\n\t\tconst gatedSchema = (ctx) => complCtx(ctx) === \"table\" ? null : schemaSource(ctx);\n\t\tconst sqlSupport = new LanguageSupport(SQLite.language, [\n\t\t\tSQLite.language.data.of({ autocomplete: tableSource }),\n\t\t\tSQLite.language.data.of({ autocomplete: gatedSchema }),\n\t\t\tSQLite.language.data.of({ autocomplete: keywordSource }),\n\t\t]);\n\t\tconst syntaxLinter = linter((v) => {\n\t\t\tif (!v.state.doc.length) return [];\n\t\t\tconst diags = [];\n\t\t\tsyntaxTree(v.state).iterate({\n\t\t\t\tenter: (n) => {\n\t\t\t\t\tif (n.type.isError) diags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: \"error\", message: \"syntax error\" });\n\t\t\t\t},\n\t\t\t});\n\t\t\treturn diags;\n\t\t});\n\n\t\tconst isLight = () => document.documentElement.getAttribute(\"data-theme\") === \"light\";\n\t\tconst editors = new WeakMap();\n\t\tconst instances = [];\n\n\t\tfunction mountAll() {\n\t\t\tdocument.querySelectorAll(\".sql-editor-host:not([data-cm])\").forEach((host) => {\n\t\t\t\thost.dataset.cm = \"1\";\n\t\t\t\tconst src = host.closest(\"form\").querySelector(\"textarea[name=query]\");\n\t\t\t\tconst themeComp = new Compartment();\n\t\t\t\tconst view = new EditorView({\n\t\t\t\t\tdoc: src ? src.value : \"\",\n\t\t\t\t\textensions: [\n\t\t\t\t\t\tPrec.highest(keymap.of([{ key: \"Tab\", run: acceptCompletion }])),\n\t\t\t\t\t\tbasicSetup,\n\t\t\t\t\t\tthemeComp.of(isLight() ? [] : oneDark),\n\t\t\t\t\t\tplaceholder(\"SELECT * FROM logs WHERE level >= 4 AND timestamp > unixepoch() * 1000 - 300000\"),\n\t\t\t\t\t\tsqlSupport,\n\t\t\t\t\t\tsyntaxLinter,\n\t\t\t\t\t],\n\t\t\t\t\tparent: host,\n\t\t\t\t});\n\t\t\t\teditors.set(host, view);\n\t\t\t\tinstances.push({ view, themeComp });\n\t\t\t});\n\t\t}\n\n\t\tfunction syncedQuery(form) {\n\t\t\tconst host = form.querySelector(\".sql-editor-host\");\n\t\t\tconst src = form.querySelector(\"textarea[name=query]\");\n\t\t\tconst view = host && editors.get(host);\n\t\t\tif (view && src) src.value = view.state.doc.toString();\n\t\t\treturn src ? src.value.trim() : \"\";\n\t\t}\n\n\t\t// capture phase: runs before htmx collects form parameters\n\t\tdocument.addEventListener(\"submit\", (e) => {\n\t\t\tif (e.target && e.target.querySelector) syncedQuery(e.target);\n\t\t}, true);\n\n\t\tdocument.addEventListener(\"change\", (e) => {\n\t\t\tif (!e.target || e.target.name !== \"target_type\") return;\n\t\t\tconst form = e.target.closest(\"form\");\n\t\t\tform.querySelectorAll(\".target-pushover\").forEach((el) => el.classList.toggle(\"hidden\", e.target.value !== \"pushover\"));\n\t\t\tform.querySelectorAll(\".target-campfire\").forEach((el) => el.classList.toggle(\"hidden\", e.target.value !== \"campfire\"));\n\t\t});\n\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\tconst btn = e.target.closest(\".open-in-logs\");\n\t\t\tif (!btn) return;\n\t\t\tconst q = syncedQuery(btn.closest(\"form\"));\n\t\t\tif (q) window.open(\"/logs?q=\" + encodeURIComponent(q), \"_blank\");\n\t\t});\n\n\t\tnew MutationObserver(() => {\n\t\t\tinstances.forEach((i) => {\n\t\t\t\tif (!i.view.dom.isConnected) return;\n\t\t\t\ti.view.dispatch({ effects: i.themeComp.reconfigure(isLight() ? [] : oneDark) });\n\t\t\t});\n\t\t}).observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\n\t\tmountAll();\n\t\tdocument.body.addEventListener(\"htmx:afterSettle\", mountAll);\n\t</script>")
+		templ_7745c5c3_Err = sqlEditorModule().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<script>\n\t\tdocument.addEventListener(\"change\", (e) => {\n\t\t\tif (!e.target || e.target.name !== \"target_type\") return;\n\t\t\tconst form = e.target.closest(\"form\");\n\t\t\tform.querySelectorAll(\".target-pushover\").forEach((el) => el.classList.toggle(\"hidden\", e.target.value !== \"pushover\"));\n\t\t\tform.querySelectorAll(\".target-campfire\").forEach((el) => el.classList.toggle(\"hidden\", e.target.value !== \"campfire\"));\n\t\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -922,7 +923,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 			var templ_7745c5c3_Var43 string
 			templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 362, Col: 45}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 236, Col: 45}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 			if templ_7745c5c3_Err != nil {
@@ -935,7 +936,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 362, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 236, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -953,7 +954,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 			var templ_7745c5c3_Var45 string
 			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 364, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 238, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 			if templ_7745c5c3_Err != nil {
@@ -971,7 +972,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 			var templ_7745c5c3_Var46 string
 			templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 366, Col: 18}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 240, Col: 18}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 			if templ_7745c5c3_Err != nil {
@@ -984,7 +985,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 			var templ_7745c5c3_Var47 string
 			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(cells)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 366, Col: 52}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 240, Col: 52}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 			if templ_7745c5c3_Err != nil {
@@ -1002,7 +1003,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 				var templ_7745c5c3_Var48 string
 				templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(c)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 371, Col: 14}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 245, Col: 14}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 				if templ_7745c5c3_Err != nil {
@@ -1030,7 +1031,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 					var templ_7745c5c3_Var49 string
 					templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 378, Col: 51}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 252, Col: 51}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var49)
 					if templ_7745c5c3_Err != nil {
@@ -1043,7 +1044,7 @@ func DryRunResult(name string, columns []string, cells [][]string, errMsg string
 					var templ_7745c5c3_Var50 string
 					templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 378, Col: 60}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/alerts.templ`, Line: 252, Col: 60}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 					if templ_7745c5c3_Err != nil {

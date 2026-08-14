@@ -95,6 +95,8 @@ templ Shell(title string, active string, csrfToken string) {
 						<ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-30 w-44 p-2 shadow-lg border border-base-content/10">
 							@menuLink("/", "Home", active == "home")
 							@menuLink("/logs", "Logs", active == "logs")
+							@menuLink("/metrics-explorer", "Metrics", active == "metrics")
+							@menuLink("/dashboards", "Dashboards", active == "dashboards")
 							@menuLink("/alerts", "Alerts", active == "alerts")
 							@menuLink("/settings", "Settings", active == "settings")
 						</ul>
@@ -103,6 +105,8 @@ templ Shell(title string, active string, csrfToken string) {
 					<nav class="tabs tabs-border hidden sm:flex">
 						@navLink("/", "Home", active == "home")
 						@navLink("/logs", "Logs", active == "logs")
+						@navLink("/metrics-explorer", "Metrics", active == "metrics")
+						@navLink("/dashboards", "Dashboards", active == "dashboards")
 						@navLink("/alerts", "Alerts", active == "alerts")
 						@navLink("/settings", "Settings", active == "settings")
 					</nav>

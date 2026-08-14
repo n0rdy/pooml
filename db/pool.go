@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/mattn/go-sqlite3"
 	"github.com/rs/zerolog/log"
@@ -54,28 +55,47 @@ var (
 	}
 
 	registerOnce sync.Once
+
+	// The logs-read hook bakes in the metrics.db path for ATTACH, so its
+	// driver is registered per OpenPools call under a unique name. A shared
+	// package var instead would let concurrently-open pools (tests) attach
+	// each other's files.
+	logsReadDriverSeq atomic.Int64
 )
 
 func registerDrivers() {
 	registerOnce.Do(func() {
-		sql.Register(driverLogsRead, &sqlite3.SQLiteDriver{ConnectHook: logsReadConnectHook})
 		sql.Register(driverLogsWrite, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(logsWritePragmas)})
 		sql.Register(driverMetrics, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(metricsPragmas)})
 		sql.Register(driverMeta, &sqlite3.SQLiteDriver{ConnectHook: makeConnectHook(metaPragmas)})
 	})
 }
 
-// logsReadConnectHook applies the read pragmas, then registers the authorizer:
-// defense in depth under the AST validation for user queries. Order matters -
-// the authorizer would deny our own pragmas. Registered only on the read pool;
-// jobs and ingestion on the other pools legitimately run PRAGMA (optimize,
-// incremental_vacuum) and, later, ATTACH for cross-DB queries.
-func logsReadConnectHook(conn *sqlite3.SQLiteConn) error {
-	if err := makeConnectHook(logsReadPragmas)(conn); err != nil {
-		return err
+func registerLogsReadDriver(metricsPath string) string {
+	name := fmt.Sprintf("%s-%d", driverLogsRead, logsReadDriverSeq.Add(1))
+	sql.Register(name, &sqlite3.SQLiteDriver{ConnectHook: makeLogsReadHook(metricsPath)})
+	return name
+}
+
+// makeLogsReadHook: pragmas, then ATTACH metrics.db read-only (so user
+// queries can JOIN logs and metrics in one statement), then the authorizer:
+// defense in depth under the AST validation. Order matters - the authorizer
+// would deny our own pragmas and the ATTACH. Registered only on the read
+// pool; jobs and ingestion on the other pools legitimately run PRAGMA
+// (optimize, incremental_vacuum).
+func makeLogsReadHook(metricsPath string) func(*sqlite3.SQLiteConn) error {
+	return func(conn *sqlite3.SQLiteConn) error {
+		if err := makeConnectHook(logsReadPragmas)(conn); err != nil {
+			return err
+		}
+		attach := fmt.Sprintf("ATTACH DATABASE 'file:%s?mode=ro' AS metricsdb",
+			strings.ReplaceAll(metricsPath, "'", "''"))
+		if _, err := conn.Exec(attach, nil); err != nil {
+			return fmt.Errorf("attach metrics.db: %w", err)
+		}
+		conn.RegisterAuthorizer(readAuthorizer)
+		return nil
 	}
-	conn.RegisterAuthorizer(readAuthorizer)
-	return nil
 }
 
 func readAuthorizer(op int, arg1, arg2, arg3 string) int {
@@ -134,7 +154,7 @@ func OpenPools(dbDir string) (*Pools, error) {
 
 	poolSize := runtime.NumCPU()*2 + 1
 
-	logsRead, err := openPool(driverLogsRead, "file:"+logsPath+"?mode=ro", poolSize, poolSize)
+	logsRead, err := openPool(registerLogsReadDriver(metricsPath), "file:"+logsPath+"?mode=ro", poolSize, poolSize)
 	if err != nil {
 		return nil, fmt.Errorf("logs read pool: %w", err)
 	}
