@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -27,14 +28,25 @@ func (ur *Router) metricsExplorerPage(w http.ResponseWriter, req *http.Request) 
 }
 
 func (ur *Router) renderExplorer(w http.ResponseWriter, req *http.Request, q, saveErr string) {
-	if q == "" {
+	landing := q == ""
+	if landing {
 		q = defaultMetricsQuery
 	}
 	viewSel := req.URL.Query().Get("view")
 	if !explorerViews[viewSel] {
 		viewSel = "auto"
 	}
+	if landing {
+		viewSel = "table" // the landing catalog is a listing, not a chart
+	}
 	view := templates.MetricsExplorerView{Query: q, View: viewSel, SaveErr: saveErr}
+
+	if strings.Contains(q, snippetPlaceholderMarker) {
+		view.Shaped = templates.ShapedResult{Kind: "error", ErrMsg: placeholderErr(q)}
+		view.Snippets = explorerSnippets
+		ur.render(w, req, http.StatusBadRequest, templates.MetricsExplorerPage(view, nosurf.Token(req)))
+		return
+	}
 
 	v, err := query.ValidateIn(q, query.ScopeMetrics)
 	if err != nil {
@@ -48,6 +60,8 @@ func (ur *Router) renderExplorer(w http.ResponseWriter, req *http.Request, q, sa
 		}
 		view.Shaped = shapeResult(res, chartType, "explorer")
 	}
+
+	view.Snippets = explorerSnippets
 
 	switch view.Shaped.Kind {
 	case "empty":
@@ -70,6 +84,35 @@ func (ur *Router) renderExplorer(w http.ResponseWriter, req *http.Request, q, sa
 	ur.render(w, req, status, templates.MetricsExplorerPage(view, nosurf.Token(req)))
 }
 
+// Snippets teach the hard query patterns (counter increase, bucketed
+// averages, _sum/_count division, SQL pivots). Deliberately generic with
+// screaming placeholders, never prefilled from the catalog: picking a metric
+// for the user means interpreting names, and that guessing game reads as
+// magic when right and as a bug when wrong. The catalog on the landing page
+// shows what exists; the snippets show what to do with it.
+const snippetPlaceholderMarker = "REPLACE_WITH_"
+
+var explorerSnippets = []templates.QuerySnippet{
+	{Label: "counter increase / hour", SQL: "SELECT hour, SUM(inc) AS increase\nFROM (\n  SELECT timestamp / 3600000 * 3600000 AS hour, labels,\n         MAX(value) - MIN(value) AS inc\n  FROM metrics\n  WHERE name = 'REPLACE_WITH_YOUR_COUNTER_NAME' AND timestamp > (unixepoch() - 86400) * 1000\n  GROUP BY hour, labels\n)\nGROUP BY hour\nORDER BY hour"},
+	{Label: "gauge avg over time", SQL: "SELECT timestamp / 600000 * 600000 AS bucket, AVG(value) AS avg_value\nFROM metrics\nWHERE name = 'REPLACE_WITH_YOUR_GAUGE_NAME' AND timestamp > (unixepoch() - 86400) * 1000\nGROUP BY bucket\nORDER BY bucket"},
+	{Label: "avg from _sum/_count", SQL: "SELECT s.timestamp, s.value / c.value AS avg_value\nFROM metrics s\nJOIN metrics c ON c.timestamp = s.timestamp AND c.service = s.service AND c.name = 'REPLACE_WITH_BASE_NAME_count'\nWHERE s.name = 'REPLACE_WITH_BASE_NAME_sum'\nORDER BY s.timestamp"},
+	{Label: "pivot: compare services", SQL: "SELECT timestamp / 600000 * 600000 AS bucket,\n       AVG(CASE WHEN service = 'REPLACE_WITH_SERVICE_A' THEN value END) AS service_a,\n       AVG(CASE WHEN service = 'REPLACE_WITH_SERVICE_B' THEN value END) AS service_b\nFROM metrics\nWHERE name = 'REPLACE_WITH_YOUR_GAUGE_NAME'\nGROUP BY bucket\nORDER BY bucket"},
+	{Label: "top metrics", SQL: "SELECT name, COUNT(*) AS datapoints\nFROM metrics\nGROUP BY name\nORDER BY datapoints DESC\nLIMIT 20"},
+	{Label: "latest per service", SQL: "SELECT service, value AS latest\nFROM metrics m\nWHERE name = 'REPLACE_WITH_YOUR_GAUGE_NAME'\n  AND id = (SELECT MAX(id) FROM metrics WHERE name = m.name AND service = m.service)"},
+}
+
+var placeholderRe = regexp.MustCompile(`REPLACE_WITH_[A-Z_]+`)
+
+// placeholderErr names the exact placeholder and what belongs in its place.
+func placeholderErr(q string) string {
+	ph := placeholderRe.FindString(q)
+	what := "metric name"
+	if strings.Contains(ph, "SERVICE") {
+		what = "service name"
+	}
+	return fmt.Sprintf("Replace %s with a real %s, then run again.", ph, what)
+}
+
 // saveExplorerPanel turns the current explorer query into a dashboard panel.
 func (ur *Router) saveExplorerPanel(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
@@ -87,6 +130,11 @@ func (ur *Router) saveExplorerPanel(w http.ResponseWriter, req *http.Request) {
 		Query:       req.PostFormValue("query"),
 		ChartType:   chartType,
 		Width:       2,
+	}
+	if strings.Contains(p.Query, snippetPlaceholderMarker) {
+		// a placeholder panel would render 0 rows forever; catch it here
+		ur.renderExplorer(w, req, p.Query, placeholderErr(p.Query))
+		return
 	}
 	if err := ur.Dashboards.CreatePanel(req.Context(), p); err != nil {
 		ur.renderExplorer(w, req, p.Query, err.Error())

@@ -1,6 +1,7 @@
 package ui_test
 
 import (
+	"html"
 	"io"
 	"net/http"
 	"net/url"
@@ -109,7 +110,7 @@ func TestMetricsExplorer(t *testing.T) {
 	cl.login(testSecret, cl.csrfToken())
 	seedMetrics(cl)
 
-	// default catalog query
+	// default catalog query: renders as a table (a listing, never a chart)
 	status, body := cl.get("/metrics-explorer")
 	if status != http.StatusOK {
 		t.Fatalf("explorer = %d", status)
@@ -118,6 +119,19 @@ func TestMetricsExplorer(t *testing.T) {
 		if !strings.Contains(body, want) {
 			t.Errorf("explorer missing %q", want)
 		}
+	}
+	if strings.Contains(body, "data-chart=") {
+		t.Error("landing catalog must not render a chart")
+	}
+
+	// the same catalog run explicitly auto-shapes to a bar, and the epoch-ms
+	// last_seen column is excluded from the series
+	status, body = cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT name, service, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics GROUP BY name, service"))
+	if status != http.StatusOK || !strings.Contains(body, `"type":"bar"`) {
+		t.Fatalf("explicit catalog should bar-chart: %d", status)
+	}
+	if strings.Contains(body, `"label":"last_seen"`) {
+		t.Error("epoch-ms column charted as a data series")
 	}
 
 	// custom query incl. metrics filter
@@ -219,6 +233,16 @@ func TestExplorerViewsAndEmptyStates(t *testing.T) {
 	if status != http.StatusOK || strings.Contains(body, "data-chart=\"explorer\"") {
 		t.Fatalf("table override still rendered a chart: %d", status)
 	}
+
+	// the results header carries the segmented switcher: links per view, and
+	// the auto segment reports its verdict
+	status, body = cl.get("/metrics-explorer?q=" + timeQ)
+	if status != http.StatusOK || !strings.Contains(body, "auto (line)") {
+		t.Fatalf("auto segment must show its verdict: %d", status)
+	}
+	if !strings.Contains(body, "view=bar") || !strings.Contains(body, "view=table") {
+		t.Fatal("view segment links missing")
+	}
 }
 
 func TestExplorerSaveAsPanel(t *testing.T) {
@@ -261,6 +285,69 @@ func TestExplorerSaveAsPanel(t *testing.T) {
 	})
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("mixed-signal save = %d, want 400", resp.StatusCode)
+	}
+}
+
+var snippetRe = regexp.MustCompile(`data-snippet="([^"]+)"`)
+
+// Snippets are generic patterns with screaming placeholders: running one
+// unedited gets a guided error, and with placeholders substituted every
+// snippet must validate and execute.
+func TestExplorerSnippets(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedMetrics(cl)
+
+	_, body := cl.get("/metrics-explorer")
+	matches := snippetRe.FindAllStringSubmatch(body, -1)
+	if len(matches) != 6 {
+		t.Fatalf("expected 6 snippets, got %d", len(matches))
+	}
+
+	substitutions := strings.NewReplacer(
+		"REPLACE_WITH_YOUR_COUNTER_NAME", "orders_total",
+		"REPLACE_WITH_YOUR_GAUGE_NAME", "queue_depth",
+		"REPLACE_WITH_BASE_NAME", "req_duration_seconds",
+		"REPLACE_WITH_SERVICE_A", "shop",
+		"REPLACE_WITH_SERVICE_B", "warehouse",
+	)
+	sawPlaceholder := false
+	for i, m := range matches {
+		raw := html.UnescapeString(m[1])
+
+		if strings.Contains(raw, "REPLACE_WITH_") {
+			sawPlaceholder = true
+			// unedited: guided error, not silent zero rows
+			status, page := cl.get("/metrics-explorer?q=" + url.QueryEscape(raw))
+			if status != http.StatusBadRequest || !strings.Contains(page, "Replace REPLACE_WITH_") {
+				t.Errorf("snippet %d unedited: want guided placeholder error, got %d", i, status)
+			}
+		}
+
+		// substituted: must validate and run
+		q := substitutions.Replace(raw)
+		status, page := cl.get("/metrics-explorer?q=" + url.QueryEscape(q))
+		if status != http.StatusOK || strings.Contains(page, "alert-error") {
+			t.Errorf("snippet %d failed to run after substitution: %d\n%s", i, status, q)
+		}
+	}
+	if !sawPlaceholder {
+		t.Error("no snippet carries a placeholder; the guided-error path is untested")
+	}
+
+	// saving a placeholder query as a panel is caught too
+	_, dashBody := cl.get("/dashboards")
+	token := csrfRe.FindStringSubmatch(dashBody)[1]
+	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"d"}})
+	resp := cl.postForm("/metrics-explorer/save-panel", url.Values{
+		"csrf_token":   {token},
+		"query":        {"SELECT value FROM metrics WHERE name = 'REPLACE_WITH_YOUR_GAUGE_NAME'"},
+		"chart_type":   {"auto"},
+		"title":        {"nope"},
+		"dashboard_id": {"1"},
+	})
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("placeholder panel save = %d, want 400", resp.StatusCode)
 	}
 }
 

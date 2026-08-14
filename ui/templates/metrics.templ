@@ -16,6 +16,13 @@ type MetricsExplorerView struct {
 	HasAnyMetrics bool
 	// save-as-panel targets; empty = offer creating a dashboard first
 	Dashboards []services.Dashboard
+	// clickable examples of the hard patterns, prefilled from the catalog
+	Snippets []QuerySnippet
+}
+
+type QuerySnippet struct {
+	Label string
+	SQL   string
 }
 
 templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
@@ -34,19 +41,23 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 							style={ sqlEditorReserve(v.Query) }
 							data-placeholder="SELECT name, service, value, timestamp FROM metrics ORDER BY timestamp DESC LIMIT 100"
 						></div>
-						<div class="flex items-center gap-2 flex-wrap">
+						<input type="hidden" name="view" value={ v.View }/>
+						if len(v.Snippets) > 0 {
+							<div class="flex items-center gap-1.5 flex-wrap">
+								<span class="text-xs opacity-50">examples:</span>
+								for _, s := range v.Snippets {
+									<button
+										type="button"
+										class="btn btn-xs btn-ghost border border-base-content/15 font-normal"
+										data-snippet={ s.SQL }
+										title="Load into the editor (nothing runs until you hit Run)"
+									>{ s.Label }</button>
+								}
+							</div>
+						}
+						<div class="flex items-center gap-2">
 							<button type="submit" class="btn btn-primary btn-sm">Run</button>
-							<button type="button" class="btn btn-ghost btn-sm" onclick="window.location.href='/metrics-explorer'">Reset</button>
-							<label class="flex items-center gap-2 text-xs opacity-80 ml-auto">
-								View
-								<select name="view" class="select select-bordered select-sm">
-									<option value="auto" selected?={ v.View == "auto" }>auto</option>
-									<option value="line" selected?={ v.View == "line" }>line</option>
-									<option value="bar" selected?={ v.View == "bar" }>bar</option>
-									<option value="stat" selected?={ v.View == "stat" }>stat</option>
-									<option value="table" selected?={ v.View == "table" }>table</option>
-								</select>
-							</label>
+							<a href="/metrics-explorer" class="btn btn-ghost btn-sm">Reset</a>
 						</div>
 					</form>
 				</div>
@@ -74,6 +85,22 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 				default:
 					<div class="card bg-base-100 border border-base-content/15">
 						<div class="card-body py-3 gap-2">
+							// the view switcher lives with the result it controls:
+							// "I want this as a table" happens while looking at the chart
+							<div class="flex items-center gap-3 flex-wrap">
+								<span class="text-xs opacity-60 whitespace-nowrap">{ strconv.Itoa(len(v.Shaped.Rows)) } rows</span>
+								<div class="join">
+									@viewSegment(v, "auto", autoViewLabel(v))
+									@viewSegment(v, "line", "line")
+									@viewSegment(v, "bar", "bar")
+									@viewSegment(v, "stat", "stat")
+									@viewSegment(v, "table", "table")
+								</div>
+								<span class="ml-auto flex gap-3 text-xs opacity-60">
+									<a href={ templ.SafeURL(metricsExportURL(v.Query, "csv")) } class="link link-hover">CSV</a>
+									<a href={ templ.SafeURL(metricsExportURL(v.Query, "json")) } class="link link-hover">JSON</a>
+								</span>
+							</div>
 							if v.Shaped.Kind == "chart" {
 								<div class="h-72 relative">
 									<canvas data-chart={ v.Shaped.ChartID }></canvas>
@@ -86,13 +113,6 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 							} else {
 								@Shaped(v.Shaped)
 							}
-							<div class="flex items-center justify-between text-xs opacity-60">
-								<span>{ strconv.Itoa(len(v.Shaped.Rows)) } rows</span>
-								<span class="flex gap-3">
-									<a href={ templ.SafeURL(metricsExportURL(v.Query, "csv")) } class="link link-hover">CSV</a>
-									<a href={ templ.SafeURL(metricsExportURL(v.Query, "json")) } class="link link-hover">JSON</a>
-								</span>
-							</div>
 						</div>
 					</div>
 					@saveAsPanel(v, csrfToken)
@@ -101,6 +121,15 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 		@sqlEditorModule()
 		@chartScripts()
 	}
+}
+
+// viewSegment: plain GET links, not JS - switching view IS navigation, and
+// the URL stays the single source of truth for q + view.
+templ viewSegment(v MetricsExplorerView, view string, label string) {
+	<a
+		href={ templ.SafeURL(metricsViewURL(v.Query, view)) }
+		class={ "join-item btn btn-xs", templ.KV("btn-active", v.View == view) }
+	>{ label }</a>
 }
 
 // saveAsPanel moves an iterated-into-shape query onto a dashboard without

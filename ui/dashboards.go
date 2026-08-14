@@ -216,10 +216,12 @@ func shapeResult(res *query.Result, chartType, chartID string) templates.ShapedR
 		return s
 	}
 
-	// x axis = first column; series = every other numeric column
+	// x axis = first column; series = every other numeric column. Epoch-ms
+	// columns never chart as series: a timestamp is an axis, and its
+	// magnitude (~1.7e12) flattens every real value next to it.
 	var datasets []templates.ChartDataset
 	for j := 1; j < len(res.Columns); j++ {
-		if !numericCols[j] {
+		if !numericCols[j] || colLooksLikeEpochMs(res, j) {
 			continue
 		}
 		data := make([]float64, len(res.Rows))

@@ -26,7 +26,8 @@ func logsEditorReserve(q string) templ.SafeCSS { return editorReserve(q, 64, 21,
 // sqlEditorModule is the shared CodeMirror mount used by every page except
 // /logs (whose editor is older and interwoven with FTS/diagnostics/history;
 // folding it onto this module is recorded debt). It mounts on every
-// `.sql-editor-host` next to a hidden `textarea[name=query]`, syncs the doc
+// `.sql-editor-host` next to a hidden textarea named `query` or `q`
+// (the explorer uses `q` for bookmarkable URLs), syncs the doc
 // back on submit, runs the form on Mod-Enter, and follows the theme toggle.
 templ sqlEditorModule() {
 	<style>
@@ -116,7 +117,7 @@ templ sqlEditorModule() {
 		function mountAll() {
 			document.querySelectorAll(".sql-editor-host:not([data-cm])").forEach((host) => {
 				host.dataset.cm = "1";
-				const src = host.closest("form").querySelector("textarea[name=query]");
+				const src = host.closest("form").querySelector("textarea[name=query], textarea[name=q]");
 				const themeComp = new Compartment();
 				const view = new EditorView({
 					doc: src ? src.value : "",
@@ -140,7 +141,7 @@ templ sqlEditorModule() {
 
 		function syncedQuery(form) {
 			const host = form.querySelector(".sql-editor-host");
-			const src = form.querySelector("textarea[name=query]");
+			const src = form.querySelector("textarea[name=query], textarea[name=q]");
 			const view = host && editors.get(host);
 			if (view && src) src.value = view.state.doc.toString();
 			return src ? src.value.trim() : "";
@@ -156,6 +157,20 @@ templ sqlEditorModule() {
 			if (!btn) return;
 			const q = syncedQuery(btn.closest("form"));
 			if (q) window.open("/logs?q=" + encodeURIComponent(q), "_blank");
+		});
+
+		// snippet chips load their SQL into the form's editor - never run it;
+		// inspecting-then-running is the point of an example
+		document.addEventListener("click", (e) => {
+			const chip = e.target.closest("[data-snippet]");
+			if (!chip) return;
+			const form = chip.closest("form");
+			const host = form && form.querySelector(".sql-editor-host");
+			const view = host && editors.get(host);
+			if (view) {
+				view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: chip.dataset.snippet } });
+				view.focus();
+			}
 		});
 
 		new MutationObserver(() => {

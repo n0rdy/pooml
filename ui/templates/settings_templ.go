@@ -375,7 +375,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<section id=\"api-keys\" class=\"card bg-base-100 shadow\"><div class=\"card-body\"><h2 class=\"card-title\">API keys</h2><p class=\"text-sm opacity-60\">One key per sender (a FluentBit instance, an app pushing directly). Sent as the <code class=\"font-mono\">X-API-Key</code> header on <code class=\"font-mono\">/api/v1/*</code>.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<section id=\"api-keys\" class=\"card bg-base-100 shadow\"><div class=\"card-body\"><h2 class=\"card-title\">API keys</h2><p class=\"text-sm opacity-60\">One key per sender (a FluentBit instance, an app pushing logs or OTLP metrics). Any key works for every <code class=\"font-mono\">/api/v1/*</code> endpoint, sent as the <code class=\"font-mono\">X-API-Key</code> header - separate keys are for tidy revocation, not scoping.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -387,7 +387,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 137, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 138, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -406,7 +406,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(newKey)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 142, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 143, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -436,7 +436,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var18 string
 				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(k.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 160, Col: 21}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 161, Col: 21}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
@@ -449,7 +449,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(formatMs(k.CreatedAt))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 161, Col: 54}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 162, Col: 54}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -462,7 +462,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/settings/api-keys/%d", k.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 165, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 166, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 				if templ_7745c5c3_Err != nil {
@@ -475,7 +475,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Revoke %q? Anything still using it stops ingesting immediately.", k.Label))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 168, Col: 110}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 169, Col: 110}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 				if templ_7745c5c3_Err != nil {
@@ -498,7 +498,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 177, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 178, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 		if templ_7745c5c3_Err != nil {
@@ -546,7 +546,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 206, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 207, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -593,7 +593,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var27 string
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(t.Service)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 225, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 226, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
@@ -606,7 +606,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.ResolveAttributeValue(t.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 226, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 227, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
 				if templ_7745c5c3_Err != nil {
@@ -619,7 +619,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var29 string
 				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(t.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 226, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 227, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 				if templ_7745c5c3_Err != nil {
@@ -632,7 +632,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(humanMs(t.ScrapeIntervalMs))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 227, Col: 68}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 228, Col: 68}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 				if templ_7745c5c3_Err != nil {
@@ -653,7 +653,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var31 string
 				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/settings/scrape-targets/%d/toggle", t.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 234, Col: 76}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 235, Col: 76}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 				if templ_7745c5c3_Err != nil {
@@ -681,7 +681,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/settings/scrape-targets/%d", t.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 246, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 247, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32)
 				if templ_7745c5c3_Err != nil {
@@ -694,7 +694,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete scrape target %q? Already-collected metrics stay.", t.Service))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 249, Col: 106}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 250, Col: 106}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
 				if templ_7745c5c3_Err != nil {
@@ -717,7 +717,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 		var templ_7745c5c3_Var34 string
 		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 259, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 260, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
 		if templ_7745c5c3_Err != nil {
@@ -765,7 +765,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var36 string
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(t.LastError.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 290, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 291, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
 			if templ_7745c5c3_Err != nil {
@@ -778,7 +778,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(t.LastError.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 291, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 292, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 			if templ_7745c5c3_Err != nil {
@@ -791,7 +791,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(t.LastError.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 291, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 292, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -820,7 +820,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var39 string
 			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(t.LastScrapedAt.Int64))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 298, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 299, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var39)
 			if templ_7745c5c3_Err != nil {
@@ -833,7 +833,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(t.LastScrapedAt.Int64))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 298, Col: 115}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 299, Col: 115}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
@@ -876,7 +876,7 @@ func comingLater(title string, note string) templ.Component {
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 305, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 306, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -889,7 +889,7 @@ func comingLater(title string, note string) templ.Component {
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(note)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 306, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 307, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {

@@ -130,8 +130,9 @@ templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfT
 		<div class="card-body">
 			<h2 class="card-title">API keys</h2>
 			<p class="text-sm opacity-60">
-				One key per sender (a FluentBit instance, an app pushing directly).
-				Sent as the <code class="font-mono">X-API-Key</code> header on <code class="font-mono">/api/v1/*</code>.
+				One key per sender (a FluentBit instance, an app pushing logs or OTLP metrics).
+				Any key works for every <code class="font-mono">/api/v1/*</code> endpoint, sent as the
+				<code class="font-mono">X-API-Key</code> header - separate keys are for tidy revocation, not scoping.
 			</p>
 			if errMsg != "" {
 				<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
