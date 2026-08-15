@@ -36,14 +36,15 @@ var allowedTables = map[string]bool{"logs": true, "logs_fts": true, "metrics": t
 
 // Scope is the per-surface allow-list. Free-form cross-signal JOINs are a
 // foot-gun (no natural join key between logs and metrics), so only alerts
-// keep ScopeAll: their output is fires-or-not, never rendered.
+// keep ScopeAll: their output is fires-or-not, never rendered. Every
+// rendered surface (logs page, explorer, dashboard panels via their typed
+// dashboard) gets exactly one signal.
 type Scope int
 
 const (
 	ScopeAll Scope = iota
 	ScopeLogs
 	ScopeMetrics
-	ScopeOneSignal // logs or metrics, not both in one query (dashboard panels)
 )
 
 var bannedFunctions = map[string]bool{"load_extension": true}
@@ -118,10 +119,6 @@ func checkScope(scope Scope, referenced map[string]bool) error {
 	case ScopeMetrics:
 		if logsUsed {
 			return errors.New("the logs tables are not available here: query them on the Logs page")
-		}
-	case ScopeOneSignal:
-		if logsUsed && metricsUsed {
-			return errors.New("a panel charts one signal: query logs or metrics, not both in one statement")
 		}
 	}
 	return nil

@@ -217,7 +217,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</h2><p class=\"text-sm opacity-60 -mt-2\"><a href=\"https://pushover.net\" target=\"_blank\" rel=\"noopener\" class=\"link link-hover\">Pushover</a> is a simple push-notification app for your phone: one-time purchase, no subscription, made for exactly this kind of alerting. Credentials are encrypted at rest; blank fields keep current values.</p><form method=\"post\" action=\"/settings/pushover\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</h2><p class=\"text-sm opacity-60 -mt-2\"><a href=\"https://pushover.net\" target=\"_blank\" rel=\"noopener\" class=\"link link-primary\">Pushover</a> is a simple push-notification app for your phone: one-time purchase, no subscription, made for exactly this kind of alerting. Credentials are encrypted at rest; blank fields keep current values.</p><form method=\"post\" action=\"/settings/pushover\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -293,7 +293,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</h2><p class=\"text-sm opacity-60 -mt-2\"><a href=\"https://once.com/campfire\" target=\"_blank\" rel=\"noopener\" class=\"link link-hover\">Once Campfire</a> is 37signals' self-hosted chat: buy once, run it on your own box - a natural fit next to pooml. Alerts post to a room via a bot. The bot key is encrypted at rest.</p><form method=\"post\" action=\"/settings/campfire\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</h2><p class=\"text-sm opacity-60 -mt-2\"><a href=\"https://once.com/campfire\" target=\"_blank\" rel=\"noopener\" class=\"link link-primary\">Once Campfire</a> is 37signals' self-hosted chat: buy once, run it on your own box - a natural fit next to pooml. Alerts post to a room via a bot. The bot key is encrypted at rest.</p><form method=\"post\" action=\"/settings/campfire\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

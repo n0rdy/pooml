@@ -136,10 +136,9 @@ func TestLoginFlow(t *testing.T) {
 		t.Fatalf("GET / unauthenticated = %d, want 302", status)
 	}
 
-	// login page renders with the mood intact
 	status, body := cl.get("/login")
-	if status != http.StatusOK || !strings.Contains(body, "don't panic") {
-		t.Fatalf("login page: status %d, don't-panic tagline present: %v", status, strings.Contains(body, "don't panic"))
+	if status != http.StatusOK || !strings.Contains(body, "pooml") {
+		t.Fatalf("login page: status %d, pooml branding present: %v", status, strings.Contains(body, "pooml"))
 	}
 
 	// wrong secret: 401, friendly error, no session

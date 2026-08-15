@@ -30,14 +30,14 @@ func insertRows(t *testing.T, pools *db.Pools, n int, service, rawPrefix string)
 	for off := 0; off < n; off += perStmt {
 		cnt := min(perStmt, n-off)
 		var sb strings.Builder
-		sb.WriteString("INSERT INTO logs(timestamp, ingested_at, service, host, raw) VALUES ")
-		args := make([]any, 0, cnt*5)
+		sb.WriteString("INSERT INTO logs(timestamp, ingested_at, level, service, host, raw) VALUES ")
+		args := make([]any, 0, cnt*6)
 		for i := range cnt {
 			if i > 0 {
 				sb.WriteString(",")
 			}
-			sb.WriteString("(?,?,?,?,?)")
-			args = append(args, now+int64(off+i), now, service, "test-host", fmt.Sprintf("%s line %d", rawPrefix, off+i))
+			sb.WriteString("(?,?,?,?,?,?)")
+			args = append(args, now+int64(off+i), now, 2, service, "test-host", fmt.Sprintf("%s line %d", rawPrefix, off+i))
 		}
 		if _, err := pools.LogsWrite.Exec(sb.String(), args...); err != nil {
 			t.Fatal(err)
@@ -87,6 +87,25 @@ func TestExecuteFTSCombined(t *testing.T) {
 	}
 	if len(res.Rows) != 5 {
 		t.Errorf("fts rows = %d, want 5", len(res.Rows))
+	}
+
+	// OR must EXECUTE too: SQLite rejects `MATCH ... OR ...` outright
+	// ("unable to use function MATCH in the requested context"), so the OR
+	// path combines via an IN-subquery. Latent since M5, caught by the panel
+	// parity tests.
+	v, err = query.Validate("SELECT * FROM logs WHERE service = 'payment-svc' ORDER BY timestamp DESC LIMIT 100")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := v.CombineFTS("or"); err != nil {
+		t.Fatal(err)
+	}
+	res, err = query.Execute(context.Background(), pools.LogsRead, v.SQL(), "OutOfMemoryError")
+	if err != nil {
+		t.Fatalf("OR combine failed to execute: %v", err)
+	}
+	if len(res.Rows) != 25 { // 20 payment-svc + 5 fts matches
+		t.Errorf("OR rows = %d, want 25", len(res.Rows))
 	}
 }
 

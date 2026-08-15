@@ -67,10 +67,13 @@ CREATE TABLE scrape_targets (
     created_at INTEGER NOT NULL
 );
 
--- Saved metric dashboards.
+-- Saved dashboards. Typed: a dashboard shows ONE signal, and every panel in
+-- it validates against that signal's scope. Cross-signal screens are the
+-- future War Room's job, not free-form mixing.
 CREATE TABLE dashboards (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'metrics' CHECK (type IN ('logs', 'metrics')),
     description TEXT,
     created_at INTEGER NOT NULL
 );

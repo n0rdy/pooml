@@ -1,0 +1,472 @@
+package templates
+
+// The quick-query apparatus (builder + DSL text + live SQL mirror + hints),
+// extracted from the explorer so metrics panel forms get the IDENTICAL
+// experience - the parity rule: no lobotomized surfaces. One markup
+// component, one JS module that mounts per `.quick-query` container; the
+// page provides the shared datalists and the metric-names JSON once.
+
+// legacyID keeps the explorer's historical element ids (tests and deep links
+// reference them); panel instances go class-only.
+func legacyID(id string, legacy bool) templ.Attributes {
+	if !legacy {
+		return templ.Attributes{}
+	}
+	return templ.Attributes{"id": id}
+}
+
+templ QuickQueryBlock(dsl string, legacy bool) {
+	<div class="quick-query flex flex-col gap-1">
+		<span class="flex items-center gap-2">
+			<span class="text-sm opacity-80">Quick query</span>
+			<span class="join">
+				<button type="button" { legacyID("dsl-mode-builder", legacy)... } class="qq-mode-builder join-item btn btn-sm">builder</button>
+				<button type="button" { legacyID("dsl-mode-text", legacy)... } class="qq-mode-text join-item btn btn-sm">text</button>
+			</span>
+		</span>
+		<div { legacyID("dsl-builder", legacy)... } class="qq-builder hidden flex-col gap-2 border-2 border-base-content/20 rounded-field bg-base-100 p-2">
+			<div class="flex items-end gap-2 flex-wrap">
+				<label class="flex flex-col gap-1">
+					<span class="text-sm opacity-60">verb</span>
+					<select { legacyID("b-verb", legacy)... } class="qq-verb select select-bordered select-sm">
+						<option>avg</option>
+						<option>increase</option>
+						<option>rate</option>
+						<option>min</option>
+						<option>max</option>
+						<option>sum</option>
+						<option>count</option>
+						<option>latest</option>
+					</select>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-sm opacity-60">metric</span>
+					<input { legacyID("b-metric", legacy)... } list="metric-names-dl" class="qq-metric input input-bordered input-sm w-64" placeholder="pick or type"/>
+				</label>
+			</div>
+			<div class="flex items-end gap-2 flex-wrap">
+				<div class="qq-filters contents"></div>
+				<button type="button" class="qq-add-filter btn btn-ghost btn-sm mb-1" title="Add a key=value filter (service and host are columns; anything else matches labels)">+ filter</button>
+			</div>
+			<div class="flex items-end gap-2 flex-wrap">
+				<label class="flex flex-col gap-1">
+					<span class="text-sm opacity-60">per</span>
+					<select { legacyID("b-per", legacy)... } class="qq-per select select-bordered select-sm w-20">
+						<option value="">off</option>
+						<option>1m</option>
+						<option>5m</option>
+						<option>10m</option>
+						<option>30m</option>
+						<option>1h</option>
+						<option>1d</option>
+					</select>
+				</label>
+				<label class="flex flex-col gap-1">
+					<span class="text-sm opacity-60">last</span>
+					<select { legacyID("b-last", legacy)... } class="qq-last select select-bordered select-sm w-22">
+						<option>15m</option>
+						<option>1h</option>
+						<option>6h</option>
+						<option selected>24h</option>
+						<option>7d</option>
+						<option>30d</option>
+					</select>
+				</label>
+				<label class="flex items-center gap-2 text-sm mb-1 cursor-pointer">
+					<input type="checkbox" { legacyID("b-by-service", legacy)... } class="qq-by-service checkbox checkbox-sm"/>
+					by service
+				</label>
+			</div>
+			<div class="qq-preview text-sm font-mono opacity-60"></div>
+		</div>
+		<div
+			{ legacyID("dsl-input", legacy)... }
+			data-dsl={ dsl }
+			class="qq-dsl-input relative border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors"
+			style="min-height: 45px"
+		><span class="qq-ph" aria-hidden="true"></span></div>
+		<div { legacyID("dsl-hint", legacy)... } class="qq-hint text-sm text-error hidden"></div>
+		<div { legacyID("dsl-counter-hint", legacy)... } class="qq-counter-hint text-sm text-warning hidden"></div>
+		<input type="hidden" name="dsl" value={ dsl }/>
+	</div>
+}
+
+// QuickQueryData is emitted once per page: the shared datalists and catalog
+// names for autocomplete.
+templ QuickQueryData(metricNames []string) {
+	<datalist id="metric-names-dl">
+		for _, n := range metricNames {
+			<option value={ n }></option>
+		}
+	</datalist>
+	<datalist id="b-fkeys-dl"></datalist>
+	<datalist id="b-fvals-dl"></datalist>
+	@templ.JSONScript("metric-names", metricNames)
+}
+
+templ QuickQueryModule() {
+	<style>
+		/* Vertical centering via symmetric content padding, NOT flex align on
+		   the scroller: padding belongs to the box CM measures, so cursor and
+		   placeholder can never drift from the text. !important because CM
+		   injects `.cm-content { padding: 4px 0 }` later at equal specificity. */
+		.qq-dsl-input .cm-content { font-size: 15px; padding: 10px 6px !important; }
+		/* The hint is OUR overlay, not CM's placeholder extension: that one
+		   parks a widget (plus a cm-widgetBuffer img) inside the line, and the
+		   native caret picks up the widget's geometry - off-center forever. */
+		.qq-ph {
+			/* z-index: the editor mounts after the span and oneDark paints an
+			   opaque background over it */
+			position: absolute; top: 50%; left: 12px; transform: translateY(-50%); z-index: 1;
+			max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+			font-family: monospace; font-size: 15px; font-style: italic;
+			color: color-mix(in oklab, var(--color-base-content) 45%, transparent);
+			pointer-events: none;
+		}
+		.qq-dsl-input:focus-within .qq-ph, .qq-dsl-input.qq-has-doc .qq-ph { display: none; }
+		.qq-dsl-input:focus-within {
+			outline: 2px solid var(--color-primary);
+			outline-offset: 2px;
+			border-color: var(--color-primary);
+		}
+	</style>
+	<script type="module">
+		import { EditorView, keymap } from "@codemirror/view";
+		import { EditorState, Compartment, Prec } from "@codemirror/state";
+		import { autocompletion, acceptCompletion } from "@codemirror/autocomplete";
+		import { oneDark } from "@codemirror/theme-one-dark";
+
+		const names = JSON.parse(document.getElementById("metric-names")?.textContent || "[]") || [];
+		const VERBS = ["increase", "rate", "avg", "min", "max", "sum", "count", "latest"];
+		const DURS = ["1m", "5m", "10m", "30m", "1h", "6h", "24h", "7d"];
+		const MODE_KEY = "pooml-dsl-mode";
+		const NORMAL_PH = "avg(queue_depth) per 10m last 6h by service";
+		const DETACHED_PH = "custom SQL below - type here to start over";
+		const isLight = () => document.documentElement.getAttribute("data-theme") === "light";
+		const instances = new WeakMap(); // form -> api
+
+		function dslCompletion(ctx) {
+			const before = ctx.state.sliceDoc(0, ctx.pos);
+			const open = before.lastIndexOf("(");
+			const close = before.lastIndexOf(")");
+			if (open > close) {
+				const w = ctx.matchBefore(/[^()\s]*/);
+				if (!names.length) return null;
+				return { from: w ? w.from : ctx.pos, options: names.map((n) => ({ label: n, type: "constant" })), validFor: /^[^()\s]*$/ };
+			}
+			if (open === -1) {
+				const w = ctx.matchBefore(/\w*/);
+				if (!w && !ctx.explicit) return null;
+				return { from: w ? w.from : ctx.pos, options: VERBS.map((v) => ({ label: v, apply: v + "(", type: "function" })), validFor: /^\w*$/ };
+			}
+			const w = ctx.matchBefore(/[\w]*/);
+			if (/(per|last)\s+\w*$/i.test(before)) {
+				return { from: w ? w.from : ctx.pos, options: DURS.map((d) => ({ label: d, type: "constant" })), validFor: /^\w*$/ };
+			}
+			return {
+				from: w ? w.from : ctx.pos,
+				options: [
+					{ label: "per", apply: "per ", type: "keyword" },
+					{ label: "last", apply: "last ", type: "keyword" },
+					{ label: "by service", type: "keyword" },
+					{ label: "service=", type: "keyword" },
+					{ label: "host=", type: "keyword" },
+				],
+				validFor: /^\w*$/,
+			};
+		}
+
+		const fkeysDl = document.getElementById("b-fkeys-dl");
+		const fvalsDl = document.getElementById("b-fvals-dl");
+		const optionsCache = new Map();
+		function fillDatalist(dl, options) {
+			if (!dl) return;
+			dl.innerHTML = "";
+			(options || []).forEach((o) => {
+				const opt = document.createElement("option");
+				opt.value = o;
+				dl.appendChild(opt);
+			});
+		}
+		function fetchOptions(metric, key) {
+			const cacheKey = metric + " " + (key || "");
+			if (optionsCache.has(cacheKey)) return Promise.resolve(optionsCache.get(cacheKey));
+			let u = "/metrics-explorer/filter-options?metric=" + encodeURIComponent(metric);
+			if (key) u += "&key=" + encodeURIComponent(key);
+			return fetch(u)
+				.then((r) => r.json())
+				.then((res) => {
+					optionsCache.set(cacheKey, res.options || []);
+					return res.options || [];
+				})
+				.catch(() => []);
+		}
+
+		function fmtDur(ms) {
+			if (ms % 86400000 === 0) return (ms / 86400000) + "d";
+			if (ms % 3600000 === 0) return (ms / 3600000) + "h";
+			return (ms / 60000) + "m";
+		}
+
+		function mount(container) {
+			if (container.dataset.qq) return;
+			container.dataset.qq = "1";
+			const form = container.closest("form");
+			const host = container.querySelector(".qq-dsl-input");
+			const hidden = container.querySelector('input[name="dsl"]');
+			const hint = container.querySelector(".qq-hint");
+			const counterHint = container.querySelector(".qq-counter-hint");
+			const builder = container.querySelector(".qq-builder");
+			const bVerb = container.querySelector(".qq-verb");
+			const bMetric = container.querySelector(".qq-metric");
+			const bFilters = container.querySelector(".qq-filters");
+			const bPer = container.querySelector(".qq-per");
+			const bLast = container.querySelector(".qq-last");
+			const bByService = container.querySelector(".qq-by-service");
+			const bPreview = container.querySelector(".qq-preview");
+			const modeBuilder = container.querySelector(".qq-mode-builder");
+			const modeText = container.querySelector(".qq-mode-text");
+
+			const themeComp = new Compartment();
+			let compileTimer = null;
+			let populateBuilderNext = false;
+
+			const ph = container.querySelector(".qq-ph");
+			const setPh = (t) => { ph.textContent = t; };
+
+			const sqlView = () => {
+				const h = form.querySelector(".sql-editor-host");
+				return h && window.poomlSQL ? window.poomlSQL.editors.get(h) : null;
+			};
+
+			function ensureOption(sel, val) {
+				if (!val) return;
+				if (![...sel.options].some((o) => o.value === val || o.text === val)) {
+					const o = document.createElement("option");
+					o.text = val;
+					sel.add(o);
+				}
+				sel.value = val;
+			}
+			function addFilterRow(key, val) {
+				const row = document.createElement("label");
+				row.className = "flex flex-col gap-1 qq-filter";
+				row.innerHTML = '<span class="text-sm opacity-60">filter</span>' +
+					'<span class="join">' +
+					'<input class="qq-fkey join-item input input-bordered input-sm w-24" placeholder="key" list="b-fkeys-dl"/>' +
+					'<input class="qq-fval join-item input input-bordered input-sm w-24" placeholder="value" list="b-fvals-dl"/>' +
+					'<button type="button" class="qq-fremove join-item btn btn-sm btn-ghost" title="remove">✕</button>' +
+					'</span>';
+				row.querySelector(".qq-fkey").value = key || "";
+				row.querySelector(".qq-fval").value = val || "";
+				bFilters.appendChild(row);
+			}
+			function buildDSLText() {
+				const metric = bMetric.value.trim();
+				if (!metric) return "";
+				let t = bVerb.value + "(" + metric + ")";
+				bFilters.querySelectorAll(".qq-filter").forEach((row) => {
+					const k = row.querySelector(".qq-fkey").value.trim();
+					const val = row.querySelector(".qq-fval").value.trim();
+					if (k && val) t += " " + k + "=" + val;
+				});
+				if (bPer.value && bVerb.value !== "latest") t += " per " + bPer.value;
+				t += " last " + bLast.value;
+				if (bByService.checked) t += " by service";
+				return t;
+			}
+			function syncFromBuilder() {
+				const t = buildDSLText();
+				bPreview.textContent = t;
+				if (t === view.state.doc.toString()) return;
+				setPh(NORMAL_PH);
+				view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: t } });
+			}
+			function populateBuilder(p) {
+				bVerb.value = p.verb;
+				bMetric.value = p.metric;
+				bFilters.innerHTML = "";
+				(p.filters || []).forEach((f) => addFilterRow(f.key, f.value));
+				if (p.perMs) { ensureOption(bPer, fmtDur(p.perMs)); } else { bPer.value = ""; }
+				ensureOption(bLast, p.lastMs === 86400000 ? "24h" : fmtDur(p.lastMs));
+				bByService.checked = !!p.byService;
+				bPreview.textContent = view.state.doc.toString();
+			}
+			function resetBuilder() {
+				bVerb.value = "avg";
+				bMetric.value = "";
+				bFilters.innerHTML = "";
+				bPer.value = "";
+				bLast.value = "24h";
+				bByService.checked = false;
+				bPreview.textContent = "";
+			}
+			function compile() {
+				const text = view.state.doc.toString().trim();
+				hidden.value = text;
+				if (!text) {
+					hint.classList.add("hidden");
+					counterHint.classList.add("hidden");
+					return;
+				}
+				fetch("/metrics-explorer/compile?dsl=" + encodeURIComponent(text))
+					.then((r) => r.json())
+					.then((res) => {
+						if (res.error) {
+							hint.textContent = res.error;
+							hint.classList.remove("hidden");
+							counterHint.classList.add("hidden");
+							return;
+						}
+						hint.classList.add("hidden");
+						counterHint.textContent = res.hint || "";
+						counterHint.classList.toggle("hidden", !res.hint);
+						const sv = sqlView();
+						if (sv && res.sql !== sv.state.doc.toString()) {
+							sv.dispatch({ changes: { from: 0, to: sv.state.doc.length, insert: res.sql } });
+						}
+						if (populateBuilderNext && res.parsed) {
+							populateBuilder(res.parsed);
+							populateBuilderNext = false;
+						}
+					})
+					.catch(() => {});
+			}
+
+			const view = new EditorView({
+				doc: host.dataset.dsl || "",
+				extensions: [
+					Prec.highest(keymap.of([
+						{ key: "Tab", run: acceptCompletion },
+						{ key: "Enter", run: (v) => acceptCompletion(v) || (form.requestSubmit(), true) },
+					])),
+					autocompletion({ override: [dslCompletion] }),
+					themeComp.of(isLight() ? [] : oneDark),
+					EditorState.transactionFilter.of((tr) => (tr.newDoc.lines > 1 ? [] : tr)),
+					EditorView.updateListener.of((u) => {
+						if (!u.docChanged) return;
+						host.classList.toggle("qq-has-doc", u.state.doc.length > 0);
+						clearTimeout(compileTimer);
+						compileTimer = setTimeout(compile, 250);
+					}),
+				],
+				parent: host,
+			});
+			setPh(NORMAL_PH);
+			host.classList.toggle("qq-has-doc", view.state.doc.length > 0);
+
+			function setDSL(text) {
+				populateBuilderNext = true;
+				setPh(NORMAL_PH);
+				view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+			}
+			function detach() {
+				clearTimeout(compileTimer);
+				hidden.value = "";
+				hint.classList.add("hidden");
+				counterHint.classList.add("hidden");
+				resetBuilder();
+				if (view.state.doc.length) {
+					setPh(DETACHED_PH);
+					view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: "" } });
+				}
+			}
+			function applyMode(mode) {
+				localStorage.setItem(MODE_KEY, mode);
+				const isBuilder = mode === "builder";
+				builder.classList.toggle("hidden", !isBuilder);
+				builder.classList.toggle("flex", isBuilder);
+				host.classList.toggle("hidden", isBuilder);
+				modeBuilder.classList.toggle("btn-primary", isBuilder);
+				modeText.classList.toggle("btn-primary", !isBuilder);
+			}
+			modeText.addEventListener("click", () => applyMode("text"));
+			modeBuilder.addEventListener("click", () => {
+				const t = view.state.doc.toString().trim();
+				if (!t) {
+					applyMode("builder");
+					return;
+				}
+				fetch("/metrics-explorer/compile?dsl=" + encodeURIComponent(t))
+					.then((r) => r.json())
+					.then((res) => {
+						if (!res.parsed) {
+							hint.textContent = (res.error || "can't read this expression") + " - fix it (or clear it) to switch to the builder";
+							hint.classList.remove("hidden");
+							return;
+						}
+						populateBuilder(res.parsed);
+						applyMode("builder");
+					})
+					.catch(() => {});
+			});
+			bFilters.addEventListener("click", (e) => {
+				if (e.target.closest(".qq-fremove")) {
+					e.target.closest(".qq-filter").remove();
+					syncFromBuilder();
+				}
+			});
+			container.querySelector(".qq-add-filter").addEventListener("click", () => addFilterRow("", ""));
+			builder.addEventListener("input", syncFromBuilder);
+			builder.addEventListener("change", syncFromBuilder);
+			bFilters.addEventListener("focusin", (e) => {
+				const metric = bMetric.value.trim();
+				if (!metric) return;
+				if (e.target.classList.contains("qq-fkey")) {
+					fetchOptions(metric, "").then((o) => fillDatalist(fkeysDl, o));
+				} else if (e.target.classList.contains("qq-fval")) {
+					const key = e.target.closest(".qq-filter").querySelector(".qq-fkey").value.trim();
+					if (key) fetchOptions(metric, key).then((o) => fillDatalist(fvalsDl, o));
+				}
+			});
+
+			// hand-editing this form's SQL detaches its quick query
+			const sqlHost = form.querySelector(".sql-editor-host");
+			if (sqlHost) sqlHost.addEventListener("pooml:user-edit", detach);
+
+			new MutationObserver(() => {
+				view.dispatch({ effects: themeComp.reconfigure(isLight() ? [] : oneDark) });
+			}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+			instances.set(form, { setDSL, detach });
+			container._qqView = view;
+
+			const initialMode = localStorage.getItem(MODE_KEY) || "builder";
+			applyMode(initialMode);
+			const initial = view.state.doc.toString().trim();
+			if (initial) {
+				fetch("/metrics-explorer/compile?dsl=" + encodeURIComponent(initial))
+					.then((r) => r.json())
+					.then((res) => { if (res.parsed) populateBuilder(res.parsed); })
+					.catch(() => {});
+			}
+		}
+
+		// snippet chips route to their form's instance: authored DSL fills the
+		// quick query, plain-SQL chips detach it
+		document.addEventListener("click", (e) => {
+			const chip = e.target.closest("[data-snippet]");
+			if (!chip) return;
+			const api = instances.get(chip.closest("form"));
+			if (!api) return;
+			if (chip.dataset.dslSnippet) {
+				api.setDSL(chip.dataset.dslSnippet);
+			} else {
+				api.detach();
+			}
+		});
+
+		const mountAll = () => document.querySelectorAll(".quick-query").forEach(mount);
+		mountAll();
+		document.body.addEventListener("htmx:afterSettle", mountAll);
+
+		// same hidden-mount fix as the SQL editors: re-measure DSL editors
+		// when their collapsed <details> opens
+		document.addEventListener("toggle", (e) => {
+			if (!e.target.open || !e.target.querySelectorAll) return;
+			e.target.querySelectorAll(".quick-query").forEach((c) => {
+				if (c._qqView) c._qqView.requestMeasure();
+			});
+		}, true);
+	</script>
+}

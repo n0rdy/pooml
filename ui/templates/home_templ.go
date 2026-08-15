@@ -457,7 +457,7 @@ func HomeMetrics(v HomeMetricsView) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, " datapoints · 24h</span> <a href=\"/metrics-explorer\" class=\"link link-hover opacity-70 ml-auto\">explore →</a></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, " datapoints · 24h</span> <a href=\"/metrics-explorer\" class=\"link opacity-70 ml-auto\">explore →</a></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

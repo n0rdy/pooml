@@ -15,27 +15,13 @@ templ LogsPage(v LogsView, csrfToken string) {
 				class="flex flex-col gap-2 shrink-0"
 			>
 				<div class="flex gap-2 items-center">
-					<input
-						type="search"
-						name="fts"
-						value={ v.FTS }
-						placeholder="Search everything (FTS5 syntax welcome)"
-						class="input input-bordered input-sm sm:input-md flex-1 min-w-0 font-mono"
-					/>
+					@FTSSearchInput(v.FTS)
 					<label class="flex items-center gap-1 cursor-pointer text-sm shrink-0" title="Live tail">
 						<input type="checkbox" id="live-toggle" class="toggle toggle-sm toggle-success"/>
 						Live
 					</label>
 					<button type="button" id="sql-toggle" class="btn btn-sm sm:hidden">SQL</button>
-					<div class="join hidden sm:flex" title="How the search combines with the SQL below">
-						if v.Op == "or" {
-							<input class="join-item btn btn-sm" type="radio" name="op" value="and" aria-label="AND"/>
-							<input class="join-item btn btn-sm" type="radio" name="op" value="or" aria-label="OR" checked/>
-						} else {
-							<input class="join-item btn btn-sm" type="radio" name="op" value="and" aria-label="AND" checked/>
-							<input class="join-item btn btn-sm" type="radio" name="op" value="or" aria-label="OR"/>
-						}
-					</div>
+					@FTSOpToggle(v.Op, "hidden sm:flex")
 				</div>
 				<div id="sql-block" class="hidden sm:flex flex-col gap-2">
 				<div class="flex items-center justify-between px-1">
@@ -83,6 +69,31 @@ templ LogsPage(v LogsView, csrfToken string) {
 	}
 }
 
+// The logs search controls, extracted so every surface that queries logs
+// (the logs page, logs panel forms) offers the IDENTICAL experience - the
+// parity rule, and one place for bugs to get fixed.
+templ FTSSearchInput(fts string) {
+	<input
+		type="search"
+		name="fts"
+		value={ fts }
+		placeholder="Search everything (FTS5 syntax welcome)"
+		class="input input-bordered input-sm sm:input-md flex-1 min-w-0 font-mono"
+	/>
+}
+
+templ FTSOpToggle(op string, extraClass string) {
+	<div class={ "join", extraClass } title="How the search combines with the SQL below">
+		if op == "or" {
+			<input class="join-item btn btn-sm" type="radio" name="op" value="and" aria-label="AND"/>
+			<input class="join-item btn btn-sm" type="radio" name="op" value="or" aria-label="OR" checked/>
+		} else {
+			<input class="join-item btn btn-sm" type="radio" name="op" value="and" aria-label="AND" checked/>
+			<input class="join-item btn btn-sm" type="radio" name="op" value="or" aria-label="OR"/>
+		}
+	</div>
+}
+
 // LogsResults is the fragment swapped into #results on every query run.
 templ LogsResults(v LogsView) {
 	if v.Error != "" {
@@ -107,8 +118,8 @@ templ resultsToolbar(count int, truncated bool, v LogsView) {
 templ exportFooter(v LogsView) {
 	<div class="flex justify-end gap-3 text-sm shrink-0 pt-1">
 		<span class="opacity-60">export:</span>
-		<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover">CSV</a>
-		<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover">JSON</a>
+		<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link">CSV</a>
+		<a href={ templ.SafeURL(exportURL(v, "json")) } class="link">JSON</a>
 	</div>
 }
 
@@ -213,20 +224,70 @@ templ LogDetailRow(d LogDetail) {
 	<tr class="detail-row bg-base-300/40">
 		<td colspan="4" class="p-3">
 			<div class="flex flex-col gap-2 text-sm font-mono">
-				<div class="flex gap-4 opacity-80">
-					<span>id { rowID(d.ID) }</span>
-					<span>event <span data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
-					<span>ingested <span data-ts={ msString(d.IngestedAt) } data-ts-full>{ utcTime(d.IngestedAt) }</span></span>
-					<span>{ d.Service + " on " + d.Host }</span>
+				<div class="flex gap-4 opacity-80 flex-wrap">
+					@logDetailMeta(d)
 					<span class="js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100">✕ close</span>
 				</div>
-				<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2">{ d.Raw }</pre>
-				if d.Parsed != "" {
-					<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80">{ d.Parsed }</pre>
-				}
+				@logDetailPayload(d)
 			</div>
 		</td>
 	</tr>
+}
+
+// LogDetailBlock is the same expansion for stream panels, which are flex
+// columns rather than tables; closed client-side.
+templ LogDetailBlock(d LogDetail) {
+	<div class="stream-detail bg-base-300/40 rounded-field p-3 my-1">
+		<div class="flex flex-col gap-2 text-sm font-mono">
+			<div class="flex gap-4 opacity-80 flex-wrap">
+				@logDetailMeta(d)
+				<span class="js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100">✕ close</span>
+			</div>
+			@logDetailPayload(d)
+		</div>
+	</div>
+}
+
+templ logDetailMeta(d LogDetail) {
+	<span>id { rowID(d.ID) }</span>
+	<span>event <span data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
+	<span>ingested <span data-ts={ msString(d.IngestedAt) } data-ts-full>{ utcTime(d.IngestedAt) }</span></span>
+	<span>{ d.Service + " on " + d.Host }</span>
+}
+
+templ logDetailPayload(d LogDetail) {
+	<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2">{ d.Raw }</pre>
+	if d.Parsed != "" {
+		<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80">{ d.Parsed }</pre>
+	}
+}
+
+// LogDetailPage is the same detail as a standalone page: reached by direct
+// navigation (stream panels, shared links) rather than the logs page's
+// inline HTMX expansion.
+templ LogDetailPage(d LogDetail, csrfToken string) {
+	@Shell("log "+rowID(d.ID)+" · pooml", "logs", csrfToken) {
+		<div class="max-w-4xl mx-auto flex flex-col gap-3">
+			<div>
+				<a href="/logs" class="btn btn-ghost btn-sm">← logs</a>
+			</div>
+			<div class="card bg-base-100">
+				<div class="card-body py-4">
+					<div class="flex flex-col gap-2 text-sm font-mono">
+						<div class="flex gap-4 opacity-80 flex-wrap">
+							@logDetailMeta(d)
+						</div>
+						@logDetailPayload(d)
+					</div>
+				</div>
+			</div>
+		</div>
+		<script>
+			document.querySelectorAll("[data-ts]").forEach((el) => {
+				el.textContent = new Date(Number(el.dataset.ts)).toLocaleString(undefined, { hour12: false });
+			});
+		</script>
+	}
 }
 
 templ genericTable(v LogsView) {

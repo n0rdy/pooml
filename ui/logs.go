@@ -264,7 +264,17 @@ func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) {
 	if parsed != nil {
 		d.Parsed = prettyJSON(cellString(parsed))
 	}
-	ur.render(w, req, http.StatusOK, templates.LogDetailRow(d))
+	// inline expansions: the logs page swaps in a table-row fragment, stream
+	// panels a div-based one (frag=block); direct navigation gets a real page
+	if req.Header.Get("HX-Request") == "true" && req.Header.Get("HX-History-Restore-Request") != "true" {
+		if req.URL.Query().Get("frag") == "block" {
+			ur.render(w, req, http.StatusOK, templates.LogDetailBlock(d))
+			return
+		}
+		ur.render(w, req, http.StatusOK, templates.LogDetailRow(d))
+		return
+	}
+	ur.render(w, req, http.StatusOK, templates.LogDetailPage(d, nosurf.Token(req)))
 }
 
 // GET /logs/export?format=csv|json - current results as a download.

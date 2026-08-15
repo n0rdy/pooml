@@ -134,7 +134,7 @@ templ HomeMetrics(v HomeMetricsView) {
 				<span class="opacity-70">last datapoint <span data-reltime={ msString(v.LastSeenMs) }>{ utcTime(v.LastSeenMs) }</span></span>
 			}
 			<span class="opacity-70">{ strconv.FormatInt(v.Points24h, 10) } datapoints · 24h</span>
-			<a href="/metrics-explorer" class="link link-hover opacity-70 ml-auto">explore →</a>
+			<a href="/metrics-explorer" class="link opacity-70 ml-auto">explore →</a>
 		</div>
 		for _, t := range v.FailingTargets {
 			<div class="text-sm text-error truncate" title={ t.Error }>

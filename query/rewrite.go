@@ -31,22 +31,33 @@ func (v *Validated) CombineFTS(op string) error {
 		return ErrUnsupportedShape
 	}
 
-	if !v.referencesFTS() {
-		// "rowid" quoted: the parser rejects it as a bare identifier
-		join := mustParse(`SELECT * FROM logs JOIN logs_fts ON logs.id = logs_fts."rowid"`).Source.(*sqlp.JoinClause)
-		join.X = v.stmt.Source
-		v.stmt.Source = join
+	// SQLite only accepts MATCH as an AND-driven constraint the FTS index can
+	// own; `MATCH ... OR ...` dies with "unable to use function MATCH in the
+	// requested context". OR therefore combines through an IN-subquery, which
+	// is a valid MATCH context (and needs no join at all).
+	isOr := strings.EqualFold(op, "or")
 
-		// bare * would now expand logs_fts's columns too, adding a duplicate
-		// raw column and breaking log-viewer shape detection downstream
-		if len(v.stmt.Columns) == 1 && v.stmt.Columns[0].Star.IsValid() {
-			v.stmt.Columns = mustParse("SELECT logs.* FROM logs").Columns
+	var match sqlp.Expr
+	if isOr {
+		match = mustParse(`SELECT * FROM logs WHERE logs.id IN (SELECT "rowid" FROM logs_fts WHERE logs_fts.raw MATCH ?)`).WhereExpr
+	} else {
+		if !v.referencesFTS() {
+			// "rowid" quoted: the parser rejects it as a bare identifier
+			join := mustParse(`SELECT * FROM logs JOIN logs_fts ON logs.id = logs_fts."rowid"`).Source.(*sqlp.JoinClause)
+			join.X = v.stmt.Source
+			v.stmt.Source = join
+
+			// bare * would now expand logs_fts's columns too, adding a duplicate
+			// raw column and breaking log-viewer shape detection downstream
+			if len(v.stmt.Columns) == 1 && v.stmt.Columns[0].Star.IsValid() {
+				v.stmt.Columns = mustParse("SELECT logs.* FROM logs").Columns
+			}
 		}
+		match = mustParse("SELECT * FROM logs_fts WHERE logs_fts.raw MATCH ?").WhereExpr
 	}
 
-	match := mustParse("SELECT * FROM logs_fts WHERE logs_fts.raw MATCH ?").WhereExpr
 	tok := sqlp.AND
-	if strings.EqualFold(op, "or") {
+	if isOr {
 		tok = sqlp.OR
 	}
 	if v.stmt.WhereExpr == nil {

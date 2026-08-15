@@ -44,107 +44,95 @@ func LogsPage(v LogsView, csrfToken string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"h-full flex flex-col gap-3 max-w-6xl mx-auto w-full\"><form id=\"query-form\" hx-get=\"/logs\" hx-target=\"#results\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"flex flex-col gap-2 shrink-0\"><div class=\"flex gap-2 items-center\"><input type=\"search\" name=\"fts\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"h-full flex flex-col gap-3 max-w-6xl mx-auto w-full\"><form id=\"query-form\" hx-get=\"/logs\" hx-target=\"#results\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"flex flex-col gap-2 shrink-0\"><div class=\"flex gap-2 items-center\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = FTSSearchInput(v.FTS).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<label class=\"flex items-center gap-1 cursor-pointer text-sm shrink-0\" title=\"Live tail\"><input type=\"checkbox\" id=\"live-toggle\" class=\"toggle toggle-sm toggle-success\"> Live</label> <button type=\"button\" id=\"sql-toggle\" class=\"btn btn-sm sm:hidden\">SQL</button>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = FTSOpToggle(v.Op, "hidden sm:flex").Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</div><div id=\"sql-block\" class=\"hidden sm:flex flex-col gap-2\"><div class=\"flex items-center justify-between px-1\"><span class=\"text-sm font-semibold opacity-80\">SQL query</span> <span class=\"text-sm opacity-60 hidden sm:flex items-center gap-3\"><button type=\"button\" id=\"fmt-sql-logs\" class=\"link link-primary\" title=\"Format the SQL (Cmd/Ctrl+Shift+F)\">format</button> <span>Cmd/Ctrl + Enter runs</span></span></div><div id=\"sql-editor\" data-q=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.FTS)
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Q)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 21, Col: 19}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 36, Col: 17}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" placeholder=\"Search everything (FTS5 syntax welcome)\" class=\"input input-bordered input-sm sm:input-md flex-1 min-w-0 font-mono\"> <label class=\"flex items-center gap-1 cursor-pointer text-sm shrink-0\" title=\"Live tail\"><input type=\"checkbox\" id=\"live-toggle\" class=\"toggle toggle-sm toggle-success\"> Live</label> <button type=\"button\" id=\"sql-toggle\" class=\"btn btn-sm sm:hidden\">SQL</button><div class=\"join hidden sm:flex\" title=\"How the search combines with the SQL below\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			if v.Op == "or" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"and\" aria-label=\"AND\"> <input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"or\" aria-label=\"OR\" checked>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"and\" aria-label=\"AND\" checked> <input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"or\" aria-label=\"OR\">")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div></div><div id=\"sql-block\" class=\"hidden sm:flex flex-col gap-2\"><div class=\"flex items-center justify-between px-1\"><span class=\"text-sm font-semibold opacity-80\">SQL query</span> <span class=\"text-sm opacity-60 hidden sm:flex items-center gap-3\"><button type=\"button\" id=\"fmt-sql-logs\" class=\"link link-primary\" title=\"Format the SQL (Cmd/Ctrl+Shift+F)\">format</button> <span>Cmd/Ctrl + Enter runs</span></span></div><div id=\"sql-editor\" data-q=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\" style=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Q)
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(logsEditorReserve(v.Q))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 50, Col: 17}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 37, Col: 35}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\" style=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(logsEditorReserve(v.Q))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 51, Col: 35}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" class=\"border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors\"></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" class=\"border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors\"></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(v.Snippets) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"flex items-center gap-1.5 flex-wrap\"><span class=\"text-sm opacity-60\">examples:</span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"flex items-center gap-1.5 flex-wrap\"><span class=\"text-sm opacity-60\">examples:</span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, s := range v.Snippets {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<button type=\"button\" class=\"btn btn-sm btn-ghost border border-base-content/15 font-normal\" data-snippet=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<button type=\"button\" class=\"btn btn-sm btn-ghost border border-base-content/15 font-normal\" data-snippet=\"")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var5 string
+					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.SQL)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 47, Col: 28}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" title=\"Load into the editor (nothing runs until you hit Run)\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var6 string
-					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.SQL)
+					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 61, Col: 28}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 49, Col: 17}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\" title=\"Load into the editor (nothing runs until you hit Run)\">")
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var7 string
-					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 63, Col: 17}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</button>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</button>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div class=\"flex items-center gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Run</button> <button type=\"button\" id=\"reset-query\" class=\"btn btn-ghost btn-sm\" title=\"Back to the default query, filters cleared\">Reset</button></div></div></form><div id=\"results\" class=\"flex-1 min-h-0 flex flex-col relative\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div class=\"flex items-center gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Run</button> <button type=\"button\" id=\"reset-query\" class=\"btn btn-ghost btn-sm\" title=\"Back to the default query, filters cleared\">Reset</button></div></div></form><div id=\"results\" class=\"flex-1 min-h-0 flex flex-col relative\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -152,7 +140,7 @@ func LogsPage(v LogsView, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div><button type=\"button\" id=\"resume-live\" class=\"btn btn-primary btn-sm shadow-lg fixed bottom-8 right-8 hidden z-20\">&#9660; Resume live tail</button></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div><button type=\"button\" id=\"resume-live\" class=\"btn btn-primary btn-sm shadow-lg fixed bottom-8 right-8 hidden z-20\">&#9660; Resume live tail</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -163,6 +151,113 @@ func LogsPage(v LogsView, csrfToken string) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = Shell("logs · pooml", "logs", csrfToken).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// The logs search controls, extracted so every surface that queries logs
+// (the logs page, logs panel forms) offers the IDENTICAL experience - the
+// parity rule, and one place for bugs to get fixed.
+func FTSSearchInput(fts string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var7 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var7 == nil {
+			templ_7745c5c3_Var7 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<input type=\"search\" name=\"fts\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(fts)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 79, Col: 13}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\" placeholder=\"Search everything (FTS5 syntax welcome)\" class=\"input input-bordered input-sm sm:input-md flex-1 min-w-0 font-mono\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func FTSOpToggle(op string, extraClass string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var9 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var9 == nil {
+			templ_7745c5c3_Var9 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		var templ_7745c5c3_Var10 = []any{"join", extraClass}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var10...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var10).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" title=\"How the search combines with the SQL below\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if op == "or" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"and\" aria-label=\"AND\"> <input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"or\" aria-label=\"OR\" checked>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"and\" aria-label=\"AND\" checked> <input class=\"join-item btn btn-sm\" type=\"radio\" name=\"op\" value=\"or\" aria-label=\"OR\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -187,26 +282,26 @@ func LogsResults(v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var8 == nil {
-			templ_7745c5c3_Var8 = templ.NopComponent
+		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var12 == nil {
+			templ_7745c5c3_Var12 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		if v.Error != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div role=\"alert\" class=\"alert alert-error text-sm shrink-0\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "<div role=\"alert\" class=\"alert alert-error text-sm shrink-0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(v.Error)
+			var templ_7745c5c3_Var13 string
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(v.Error)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 89, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 100, Col: 72}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -241,25 +336,25 @@ func resultsToolbar(count int, truncated bool, v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var10 == nil {
-			templ_7745c5c3_Var10 = templ.NopComponent
+		templ_7745c5c3_Var14 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var14 == nil {
+			templ_7745c5c3_Var14 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div class=\"flex items-center justify-between shrink-0 pb-1\"><span class=\"text-sm opacity-70\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div class=\"flex items-center justify-between shrink-0 pb-1\"><span class=\"text-sm opacity-70\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var11 string
-		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(rowsLabel(count, truncated))
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(rowsLabel(count, truncated))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 99, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 110, Col: 64}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</span> <label class=\"flex items-center gap-1 cursor-pointer text-sm\" title=\"Wrap long lines instead of truncating\"><input type=\"checkbox\" id=\"wrap-toggle\" class=\"toggle toggle-xs\"> wrap</label></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</span> <label class=\"flex items-center gap-1 cursor-pointer text-sm\" title=\"Wrap long lines instead of truncating\"><input type=\"checkbox\" id=\"wrap-toggle\" class=\"toggle toggle-xs\"> wrap</label></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -283,38 +378,38 @@ func exportFooter(v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var12 == nil {
-			templ_7745c5c3_Var12 = templ.NopComponent
+		templ_7745c5c3_Var16 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var16 == nil {
+			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"flex justify-end gap-3 text-sm shrink-0 pt-1\"><span class=\"opacity-60\">export:</span> <a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<div class=\"flex justify-end gap-3 text-sm shrink-0 pt-1\"><span class=\"opacity-60\">export:</span> <a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var13 templ.SafeURL
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(exportURL(v, "csv")))
+		var templ_7745c5c3_Var17 templ.SafeURL
+		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(exportURL(v, "csv")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 110, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 121, Col: 46}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" class=\"link link-hover\">CSV</a> <a href=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var14 templ.SafeURL
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(exportURL(v, "json")))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 111, Col: 47}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" class=\"link\">CSV</a> <a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "\" class=\"link link-hover\">JSON</a></div>")
+		var templ_7745c5c3_Var18 templ.SafeURL
+		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(exportURL(v, "json")))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 122, Col: 47}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" class=\"link\">JSON</a></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -338,16 +433,16 @@ func logViewer(v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var15 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var15 == nil {
-			templ_7745c5c3_Var15 = templ.NopComponent
+		templ_7745c5c3_Var19 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var19 == nil {
+			templ_7745c5c3_Var19 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = resultsToolbar(len(v.Rows), v.Truncated, v).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<div id=\"log-scroll\" data-anchor=\"bottom\" class=\"flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100 [overflow-anchor:none]\"><table class=\"table font-mono\"><thead class=\"sticky top-0 bg-base-100 z-10\"><tr class=\"text-sm text-center\"><th class=\"w-32\">time</th><th class=\"w-16\">level</th><th class=\"w-28 hidden sm:table-cell\">service</th><th>message</th></tr></thead> <tbody id=\"log-rows\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<div id=\"log-scroll\" data-anchor=\"bottom\" class=\"flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100 [overflow-anchor:none]\"><table class=\"table font-mono\"><thead class=\"sticky top-0 bg-base-100 z-10\"><tr class=\"text-sm text-center\"><th class=\"w-32\">time</th><th class=\"w-16\">level</th><th class=\"w-28 hidden sm:table-cell\">service</th><th>message</th></tr></thead> <tbody id=\"log-rows\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -362,12 +457,12 @@ func logViewer(v LogsView) templ.Component {
 			}
 		}
 		if len(v.Rows) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<tr><td colspan=\"4\" class=\"text-center py-8 opacity-60 italic\">Nothing matches. All quiet, or too quiet?</td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<tr><td colspan=\"4\" class=\"text-center py-8 opacity-60 italic\">Nothing matches. All quiet, or too quiet?</td></tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</tbody></table></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</tbody></table></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -397,9 +492,9 @@ func LogRowsPage(v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var16 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var16 == nil {
-			templ_7745c5c3_Var16 = templ.NopComponent
+		templ_7745c5c3_Var20 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var20 == nil {
+			templ_7745c5c3_Var20 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = pageSentinel(v).Render(ctx, templ_7745c5c3_Buffer)
@@ -432,31 +527,31 @@ func pageSentinel(v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var17 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var17 == nil {
-			templ_7745c5c3_Var17 = templ.NopComponent
+		templ_7745c5c3_Var21 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var21 == nil {
+			templ_7745c5c3_Var21 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		if v.HasMore {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "   <tr hx-get=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "   <tr hx-get=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var18 string
-			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageURL(v))
+			var templ_7745c5c3_Var22 string
+			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue(pageURL(v))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 163, Col: 22}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 174, Col: 22}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "\" hx-trigger=\"intersect root:#log-scroll\" hx-swap=\"outerHTML\"><td colspan=\"4\" class=\"text-center py-2 opacity-40 text-sm\"><span class=\"loading loading-dots loading-xs\"></span> reaching further back</td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\" hx-trigger=\"intersect root:#log-scroll\" hx-swap=\"outerHTML\"><td colspan=\"4\" class=\"text-center py-2 opacity-40 text-sm\"><span class=\"loading loading-dots loading-xs\"></span> reaching further back</td></tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else if v.AtStart {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "<tr><td colspan=\"4\" class=\"text-center py-2 opacity-30 text-sm\">beginning of history</td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<tr><td colspan=\"4\" class=\"text-center py-2 opacity-30 text-sm\">beginning of history</td></tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -481,110 +576,61 @@ func logRowTr(r LogRow, q string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var19 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var19 == nil {
-			templ_7745c5c3_Var19 = templ.NopComponent
+		templ_7745c5c3_Var23 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var23 == nil {
+			templ_7745c5c3_Var23 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<tr class=\"log-row hover:bg-base-content/5 cursor-pointer\" data-id=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<tr class=\"log-row hover:bg-base-content/5 cursor-pointer\" data-id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var20 string
-		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(rowID(r.ID))
+		var templ_7745c5c3_Var24 string
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(rowID(r.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 179, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 190, Col: 81}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\"><td class=\"whitespace-nowrap opacity-80\"><span data-ts=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var21 string
-		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(r.Ts))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 180, Col: 73}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\"><td class=\"whitespace-nowrap opacity-80\"><span data-ts=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "\">")
+		var templ_7745c5c3_Var25 string
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(r.Ts))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 191, Col: 73}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var22 string
-		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(r.Ts))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 180, Col: 91}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</span></td><td class=\"text-center\">")
+		var templ_7745c5c3_Var26 string
+		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(r.Ts))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 191, Col: 91}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</span></td><td class=\"text-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if r.Level != nil {
-			var templ_7745c5c3_Var23 = []any{levelClass(r.Level)}
-			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var23...)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<button class=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var24 string
-			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var23).String())
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 1, Col: 0}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" hx-get=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var25 string
-			templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(filterURL(q, "level", levelValue(r.Level)))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 185, Col: 56}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\" hx-target=\"#results\" hx-swap=\"innerHTML\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var26 string
-			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(levelName(r.Level))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 188, Col: 25}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</button>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
 			var templ_7745c5c3_Var27 = []any{levelClass(r.Level)}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var27...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<span class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<button class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -597,99 +643,148 @@ func logRowTr(r LogRow, q string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "\">-</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "\" hx-get=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var29 string
+			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(filterURL(q, "level", levelValue(r.Level)))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 196, Col: 56}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\" hx-target=\"#results\" hx-swap=\"innerHTML\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var30 string
+			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(levelName(r.Level))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 199, Col: 25}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "</button>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			var templ_7745c5c3_Var31 = []any{levelClass(r.Level)}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var31...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<span class=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var32 string
+			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var31).String())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 1, Col: 0}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\">-</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "</td><td class=\"text-center hidden sm:table-cell\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</td><td class=\"text-center hidden sm:table-cell\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var29 = []any{serviceBadgeClass(r.Service)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var29...)
+		var templ_7745c5c3_Var33 = []any{serviceBadgeClass(r.Service)}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var33...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<button class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var30 string
-		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var29).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\" data-tip=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var31 string
-		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(serviceTip(r.Service))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 196, Col: 36}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\" hx-get=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var32 string
-		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.ResolveAttributeValue(filterURL(q, "service", r.Service))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 197, Col: 47}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\" hx-target=\"#results\" hx-swap=\"innerHTML\"><span class=\"truncate\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var33 string
-		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 200, Col: 38}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</span></button></td><td class=\"msg-cell max-w-xl truncate\" title=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "<button class=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var34 string
-		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.ResolveAttributeValue(r.Message)
+		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var33).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 202, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\" data-tip=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var35 string
-		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(r.Message)
+		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.ResolveAttributeValue(serviceTip(r.Service))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 202, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 207, Col: 36}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var35)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</td></tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "\" hx-get=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var36 string
+		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(filterURL(q, "service", r.Service))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 208, Col: 47}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\" hx-target=\"#results\" hx-swap=\"innerHTML\"><span class=\"truncate\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var37 string
+		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 211, Col: 38}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "</span></button></td><td class=\"msg-cell max-w-xl truncate\" title=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var38 string
+		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.ResolveAttributeValue(r.Message)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 213, Col: 58}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var38)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var39 string
+		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(r.Message)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 213, Col: 72}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "</td></tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -714,9 +809,9 @@ func StreamRow(r LogRow, q string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var36 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var36 == nil {
-			templ_7745c5c3_Var36 = templ.NopComponent
+		templ_7745c5c3_Var40 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var40 == nil {
+			templ_7745c5c3_Var40 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = logRowTr(r, q).Render(ctx, templ_7745c5c3_Buffer)
@@ -744,126 +839,309 @@ func LogDetailRow(d LogDetail) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var37 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var37 == nil {
-			templ_7745c5c3_Var37 = templ.NopComponent
+		templ_7745c5c3_Var41 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var41 == nil {
+			templ_7745c5c3_Var41 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<tr class=\"detail-row bg-base-300/40\"><td colspan=\"4\" class=\"p-3\"><div class=\"flex flex-col gap-2 text-sm font-mono\"><div class=\"flex gap-4 opacity-80\"><span>id ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<tr class=\"detail-row bg-base-300/40\"><td colspan=\"4\" class=\"p-3\"><div class=\"flex flex-col gap-2 text-sm font-mono\"><div class=\"flex gap-4 opacity-80 flex-wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var38 string
-		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(rowID(d.ID))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 217, Col: 27}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
+		templ_7745c5c3_Err = logDetailMeta(d).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "</span> <span>event <span data-ts=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<span class=\"js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100\">✕ close</span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var39 string
-		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(d.Ts))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 218, Col: 47}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var39)
+		templ_7745c5c3_Err = logDetailPayload(d).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "\" data-ts-full>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "</div></td></tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var40 string
-		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(d.Ts))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 218, Col: 78}
+		return nil
+	})
+}
+
+// LogDetailBlock is the same expansion for stream panels, which are flex
+// columns rather than tables; closed client-side.
+func LogDetailBlock(d LogDetail) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</span></span> <span>ingested <span data-ts=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var42 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var42 == nil {
+			templ_7745c5c3_Var42 = templ.NopComponent
 		}
-		var templ_7745c5c3_Var41 string
-		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(d.IngestedAt))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 219, Col: 58}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var41)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "\" data-ts-full>")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var42 string
-		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(d.IngestedAt))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 219, Col: 97}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<div class=\"stream-detail bg-base-300/40 rounded-field p-3 my-1\"><div class=\"flex flex-col gap-2 text-sm font-mono\"><div class=\"flex gap-4 opacity-80 flex-wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</span></span> <span>")
+		templ_7745c5c3_Err = logDetailMeta(d).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var43 string
-		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(d.Service + " on " + d.Host)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 220, Col: 40}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<span class=\"js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100\">✕ close</span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "</span> <span class=\"js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100\">✕ close</span></div><pre class=\"whitespace-pre-wrap break-all bg-base-100 rounded-field p-2\">")
+		templ_7745c5c3_Err = logDetailPayload(d).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func logDetailMeta(d LogDetail) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var43 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var43 == nil {
+			templ_7745c5c3_Var43 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<span>id ")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var44 string
-		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(d.Raw)
+		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(rowID(d.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 223, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 252, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "</pre>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "</span> <span>event <span data-ts=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var45 string
+		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(d.Ts))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 253, Col: 43}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "\" data-ts-full>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var46 string
+		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(d.Ts))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 253, Col: 74}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</span></span> <span>ingested <span data-ts=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var47 string
+		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(d.IngestedAt))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 254, Col: 54}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var47)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "\" data-ts-full>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var48 string
+		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(d.IngestedAt))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 254, Col: 93}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "</span></span> <span>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var49 string
+		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(d.Service + " on " + d.Host)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 255, Col: 36}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "</span>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func logDetailPayload(d LogDetail) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var50 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var50 == nil {
+			templ_7745c5c3_Var50 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "<pre class=\"whitespace-pre-wrap break-all bg-base-100 rounded-field p-2\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var51 string
+		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(d.Raw)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 259, Col: 81}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</pre>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if d.Parsed != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<pre class=\"whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<pre class=\"whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var45 string
-			templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(d.Parsed)
+			var templ_7745c5c3_Var52 string
+			templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.JoinStringErrs(d.Parsed)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 225, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 261, Col: 96}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var52))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</pre>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</pre>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "</div></td></tr>")
+		return nil
+	})
+}
+
+// LogDetailPage is the same detail as a standalone page: reached by direct
+// navigation (stream panels, shared links) rather than the logs page's
+// inline HTMX expansion.
+func LogDetailPage(d LogDetail, csrfToken string) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var53 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var53 == nil {
+			templ_7745c5c3_Var53 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Var54 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+			if !templ_7745c5c3_IsBuffer {
+				defer func() {
+					templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err == nil {
+						templ_7745c5c3_Err = templ_7745c5c3_BufErr
+					}
+				}()
+			}
+			ctx = templ.InitializeContext(ctx)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<div class=\"max-w-4xl mx-auto flex flex-col gap-3\"><div><a href=\"/logs\" class=\"btn btn-ghost btn-sm\">← logs</a></div><div class=\"card bg-base-100\"><div class=\"card-body py-4\"><div class=\"flex flex-col gap-2 text-sm font-mono\"><div class=\"flex gap-4 opacity-80 flex-wrap\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = logDetailMeta(d).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, "</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = logDetailPayload(d).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, "</div></div></div></div><script>\n\t\t\tdocument.querySelectorAll(\"[data-ts]\").forEach((el) => {\n\t\t\t\tel.textContent = new Date(Number(el.dataset.ts)).toLocaleString(undefined, { hour12: false });\n\t\t\t});\n\t\t</script>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return nil
+		})
+		templ_7745c5c3_Err = Shell("log "+rowID(d.ID)+" · pooml", "logs", csrfToken).Render(templ.WithChildren(ctx, templ_7745c5c3_Var54), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -887,91 +1165,91 @@ func genericTable(v LogsView) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var46 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var46 == nil {
-			templ_7745c5c3_Var46 = templ.NopComponent
+		templ_7745c5c3_Var55 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var55 == nil {
+			templ_7745c5c3_Var55 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		templ_7745c5c3_Err = resultsToolbar(len(v.Cells), v.Truncated, v).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div id=\"log-scroll\" class=\"flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100\"><table class=\"table font-mono\"><thead class=\"sticky top-0 bg-base-100 z-10\"><tr class=\"text-sm text-center\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "<div id=\"log-scroll\" class=\"flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100\"><table class=\"table font-mono\"><thead class=\"sticky top-0 bg-base-100 z-10\"><tr class=\"text-sm text-center\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, c := range v.Columns {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "<th>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "<th>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var47 string
-			templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(c)
+			var templ_7745c5c3_Var56 string
+			templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(c)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 239, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 300, Col: 13}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "</th>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "</th>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</tr></thead> <tbody>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "</tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for _, row := range v.Cells {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "<tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, cell := range row {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<td class=\"msg-cell max-w-md truncate\" title=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "<td class=\"msg-cell max-w-md truncate\" title=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var48 string
-				templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
+				var templ_7745c5c3_Var57 string
+				templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 247, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 308, Col: 58}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var48)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, "\">")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var57)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var49 string
-				templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 247, Col: 67}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, "</td>")
+				var templ_7745c5c3_Var58 string
+				templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/logs.templ`, Line: 308, Col: 67}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</td>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "</tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "</tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if len(v.Cells) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "<tr><td colspan=\"99\" class=\"text-center py-8 opacity-60 italic\">Zero rows. The query ran fine; there's just nothing there.</td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "<tr><td colspan=\"99\" class=\"text-center py-8 opacity-60 italic\">Zero rows. The query ran fine; there's just nothing there.</td></tr>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "</tbody></table></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "</tbody></table></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1002,12 +1280,12 @@ func logsScript() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var50 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var50 == nil {
-			templ_7745c5c3_Var50 = templ.NopComponent
+		templ_7745c5c3_Var59 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var59 == nil {
+			templ_7745c5c3_Var59 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, "<style>\n\t\t#sql-editor .cm-content { font-size: 15px; }\n\t\t#sql-editor .cm-gutters { font-size: 12px; }\n\t\t/* container reserves the mounted height so the page doesn't jump when\n\t\t   CodeMirror loads: 4rem total = cm-editor min + the 2x2px border */\n\t\t#sql-editor { min-height: 4rem; }\n\t\t#sql-editor .cm-editor { max-height: 10rem; min-height: calc(4rem - 4px); }\n\t\t/* clickable badges light up on hover so filtering reads as intended */\n\t\t.log-row button.badge:hover {\n\t\t\tfilter: brightness(1.2);\n\t\t\tbox-shadow: 0 0 0 1px currentColor;\n\t\t}\n\t\t/* wrap mode: #results survives fragment swaps, so the class sticks */\n\t\t#results.wrap-lines .msg-cell {\n\t\t\twhite-space: normal;\n\t\t\toverflow-wrap: anywhere;\n\t\t\tmax-width: none;\n\t\t\toverflow: visible;\n\t\t\ttext-overflow: clip;\n\t\t}\n\t\t/* same focus treatment as daisy inputs, so the editor reads as a field */\n\t\t/* cause-and-effect: pulses when a quick filter rewrites the query */\n\t\t#sql-editor.query-updated {\n\t\t\tborder-color: var(--color-primary);\n\t\t\tbox-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);\n\t\t}\n\t\t#sql-editor:focus-within {\n\t\t\toutline: 2px solid var(--color-primary);\n\t\t\toutline-offset: 2px;\n\t\t\tborder-color: var(--color-primary);\n\t\t}\n\t</style><script>\n\t\t(() => {\n\t\t\t// compact local times in rows (full timestamp on hover); detail\n\t\t\t// rows marked data-ts-full keep the complete local timestamp\n\t\t\tfunction fmtTimes() {\n\t\t\t\tdocument.querySelectorAll(\"[data-ts]:not([data-ts-done])\").forEach((el) => {\n\t\t\t\t\tel.dataset.tsDone = \"1\";\n\t\t\t\t\tconst t = new Date(Number(el.dataset.ts));\n\t\t\t\t\tif (el.hasAttribute(\"data-ts-full\")) {\n\t\t\t\t\t\tel.textContent = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t\t} else {\n\t\t\t\t\t\tel.textContent = t.toLocaleTimeString(undefined, { hour12: false })\n\t\t\t\t\t\t\t+ \".\" + String(t.getMilliseconds()).padStart(3, \"0\");\n\t\t\t\t\t}\n\t\t\t\t\tel.title = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t});\n\t\t\t}\n\n\t\t\tconst pane = () => document.getElementById(\"log-scroll\");\n\t\t\tfunction anchorBottom() {\n\t\t\t\tconst p = pane();\n\t\t\t\tif (p && p.dataset.anchor === \"bottom\") p.scrollTop = p.scrollHeight;\n\t\t\t}\n\n\t\t\tconst wrapKey = \"pooml-wrap\";\n\t\t\tfunction applyWrap() {\n\t\t\t\tconst on = localStorage.getItem(wrapKey) !== \"0\"; // ON by default\n\t\t\t\tdocument.getElementById(\"results\").classList.toggle(\"wrap-lines\", on);\n\t\t\t\tconst cb = document.getElementById(\"wrap-toggle\");\n\t\t\t\tif (cb) cb.checked = on;\n\t\t\t}\n\t\t\tdocument.body.addEventListener(\"change\", (e) => {\n\t\t\t\tif (e.target && e.target.id === \"wrap-toggle\") {\n\t\t\t\t\tlocalStorage.setItem(wrapKey, e.target.checked ? \"1\" : \"0\");\n\t\t\t\t\tapplyWrap();\n\t\t\t\t}\n\t\t\t});\n\n\t\t\twindow.poomlView = { fmtTimes, applyWrap, anchorBottom, pane };\n\t\t\tfmtTimes();\n\t\t\tapplyWrap();\n\t\t\tanchorBottom();\n\t\t})();\n\t</script><script type=\"module\">\n\t\timport { EditorView, basicSetup } from \"codemirror\";\n\t\timport { placeholder, keymap } from \"@codemirror/view\";\n\t\timport { Compartment, Prec } from \"@codemirror/state\";\n\t\timport { acceptCompletion } from \"@codemirror/autocomplete\";\n\t\timport { SQLite, schemaCompletionSource } from \"@codemirror/lang-sql\";\n\t\timport { LanguageSupport, syntaxTree } from \"@codemirror/language\";\n\t\timport { linter, setDiagnostics } from \"@codemirror/lint\";\n\t\timport { oneDark } from \"@codemirror/theme-one-dark\";\n\t\timport { format } from \"sql-formatter\";\n\n\t\tconst { fmtTimes, applyWrap, anchorBottom, pane } = window.poomlView;\n\n\t\t// formatting survives until the next Run: the server canonicalizes q\n\t\t// through the serializer when merging filters/FTS (see CONTEXT.md)\n\t\tfunction fmtDoc(v) {\n\t\t\ttry {\n\t\t\t\tconst pretty = format(v.state.doc.toString(), { language: \"sqlite\", keywordCase: \"upper\" });\n\t\t\t\tif (pretty !== v.state.doc.toString()) {\n\t\t\t\t\tv.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: pretty } });\n\t\t\t\t}\n\t\t\t} catch (e) { /* unparseable mid-edit SQL: leave it alone */ }\n\t\t\treturn true;\n\t\t}\n\n\t\tconst host = document.getElementById(\"sql-editor\");\n\n\t\t// Completions are composed by hand instead of using sql()'s bundle:\n\t\t// the dialect keyword source suggests the whole SQL-standard word list\n\t\t// (SYSTEM_USER and friends - not even SQLite), drowning the schema.\n\t\t// Here: columns first (defaultTable makes them top-level), then a\n\t\t// curated keyword/function list that is actually true for pooml.\n\t\t// logs_fts deliberately absent: the search bar is the FTS path.\n\t\tconst LOGS_COLUMNS = [\"id\", \"timestamp\", \"ingested_at\", \"level\", \"service\", \"host\", \"message\", \"parsed\", \"raw\"];\n\t\tconst schemaSource = schemaCompletionSource({\n\t\t\tdialect: SQLite,\n\t\t\tschema: { logs: LOGS_COLUMNS },\n\t\t\tdefaultTable: \"logs\",\n\t\t\tupperCaseKeywords: true,\n\t\t});\n\t\tconst KEYWORDS = (\"SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC \" +\n\t\t\t\"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST\")\n\t\t\t.split(\" \").map((k) => ({ label: k, type: \"keyword\", boost: -1 }));\n\t\tconst FUNCTIONS = (\"count sum avg min max unixepoch strftime datetime json_extract length coalesce round\")\n\t\t\t.split(\" \").map((f) => ({ label: f, type: \"function\", boost: -2 }));\n\t\tconst KEYWORD_OPTIONS = KEYWORDS.concat(FUNCTIONS);\n\t\tfunction keywordSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"general\") return null;\n\t\t\tconst w = ctx.matchBefore(/[A-Za-z_]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };\n\t\t}\n\t\t// completion context gating: after FROM/JOIN only table names make\n\t\t// sense; after a dot the schema source's column completion owns it\n\t\tconst TABLES = [{ label: \"logs\", type: \"type\" }];\n\t\tconst tablePosRe = /\\b(from|join)\\s+[\\w\"]*$/i;\n\t\tconst dotPosRe = /\\.\\w*$/;\n\t\tfunction complCtx(ctx) {\n\t\t\tconst before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);\n\t\t\tif (tablePosRe.test(before)) return \"table\";\n\t\t\tif (dotPosRe.test(before)) return \"dot\";\n\t\t\treturn \"general\";\n\t\t}\n\t\tfunction tableSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"table\") return null;\n\t\t\tconst w = ctx.matchBefore(/[\\w\"]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\\w\"]*$/ };\n\t\t}\n\t\tconst gatedSchema = (ctx) => complCtx(ctx) === \"table\" ? null : schemaSource(ctx);\n\t\tconst sqlSupport = new LanguageSupport(SQLite.language, [\n\t\t\tSQLite.language.data.of({ autocomplete: tableSource }),\n\t\t\tSQLite.language.data.of({ autocomplete: gatedSchema }),\n\t\t\tSQLite.language.data.of({ autocomplete: keywordSource }),\n\t\t]);\n\n\t\t// live squiggles from the lezer parse: generic but instant. The\n\t\t// authoritative check stays server-side (rqlite parser).\n\t\tconst syntaxLinter = linter((v) => {\n\t\t\tif (!v.state.doc.length) return [];\n\t\t\tconst diags = [];\n\t\t\tsyntaxTree(v.state).iterate({\n\t\t\t\tenter: (n) => {\n\t\t\t\t\tif (n.type.isError) {\n\t\t\t\t\t\tdiags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: \"error\", message: \"syntax error\" });\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t});\n\t\t\treturn diags;\n\t\t});\n\n\t\t// theme lives in a compartment so the nav toggle can swap it live;\n\t\t// light mode uses CodeMirror's default (light) look\n\t\tconst editorTheme = new Compartment();\n\t\tconst isLight = () => document.documentElement.getAttribute(\"data-theme\") === \"light\";\n\t\tconst view = new EditorView({\n\t\t\tdoc: host.dataset.q,\n\t\t\textensions: [\n\t\t\t\tPrec.highest(keymap.of([\n\t\t\t\t\t{ key: \"Tab\", run: acceptCompletion },\n\t\t\t\t\t{ key: \"Enter\", run: acceptCompletion },\n\t\t\t\t\t{ key: \"Mod-Shift-f\", run: fmtDoc },\n\t\t\t\t])),\n\t\t\t\tbasicSetup,\n\t\t\t\teditorTheme.of(isLight() ? [] : oneDark),\n\t\t\t\tplaceholder(\"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\"),\n\t\t\t\tsqlSupport,\n\t\t\t\tsyntaxLinter,\n\t\t\t],\n\t\t\tparent: host,\n\t\t});\n\n\t\t// server-rejected SQL comes back with an exact position; underline it\n\t\tdocument.body.addEventListener(\"sqlError\", (e) => {\n\t\t\tconst d = e.detail;\n\t\t\tlet from = 0;\n\t\t\ttry {\n\t\t\t\tconst l = view.state.doc.line(d.line);\n\t\t\t\tfrom = Math.min(l.from + Math.max(d.col - 1, 0), l.to);\n\t\t\t} catch { /* stale position; underline from the start */ }\n\t\t\tview.dispatch(setDiagnostics(view.state, [{ from, to: from, severity: \"error\", message: d.message }]));\n\t\t});\n\n\t\tconst form = document.getElementById(\"query-form\");\n\t\tform.addEventListener(\"htmx:configRequest\", (e) => {\n\t\t\te.detail.parameters.q = view.state.doc.toString();\n\t\t});\n\t\thost.addEventListener(\"keydown\", (e) => {\n\t\t\tif ((e.metaKey || e.ctrlKey) && e.key === \"Enter\") {\n\t\t\t\te.preventDefault();\n\t\t\t\tform.requestSubmit();\n\t\t\t}\n\t\t}, true);\n\t\tdocument.body.addEventListener(\"setQuery\", (e) => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });\n\t\t\thost.classList.add(\"query-updated\");\n\t\t\tsetTimeout(() => host.classList.remove(\"query-updated\"), 800);\n\t\t});\n\n\t\t// prepends shift content down; compensate manually so the viewport\n\t\t// stays put (native scroll anchoring is off - Safari doesn't have it)\n\t\tlet heightBefore = 0;\n\t\tdocument.body.addEventListener(\"htmx:beforeRequest\", (e) => {\n\t\t\tconst p = pane();\n\t\t\theightBefore = p && e.detail.elt.closest(\"#log-scroll\") ? p.scrollHeight : 0;\n\t\t});\n\t\tdocument.body.addEventListener(\"htmx:afterSettle\", (e) => {\n\t\t\tfmtTimes();\n\t\t\tapplyWrap();\n\t\t\tconst p = pane();\n\t\t\tif (!p) return;\n\t\t\tif (e.detail.target && e.detail.target.id === \"results\") {\n\t\t\t\tanchorBottom();\n\t\t\t\tif (liveWanted) startLive();\n\t\t\t} else if (heightBefore > 0) {\n\t\t\t\tp.scrollTop += p.scrollHeight - heightBefore;\n\t\t\t\theightBefore = 0;\n\t\t\t}\n\t\t});\n\n\t\tnew MutationObserver(() => {\n\t\t\tview.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });\n\t\t}).observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\n\t\t// snippet chips load their SQL into the editor - never run it\n\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\tconst chip = e.target.closest(\"[data-snippet]\");\n\t\t\tif (!chip) return;\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: chip.dataset.snippet } });\n\t\t\tview.focus();\n\t\t});\n\n\t\tconst fmtBtn = document.getElementById(\"fmt-sql-logs\");\n\t\tif (fmtBtn) fmtBtn.addEventListener(\"click\", () => fmtDoc(view));\n\n\t\t// re-anchor once the editor is mounted: the reserved min-height keeps\n\t\t// this a no-op unless the line estimate was slightly off\n\t\tanchorBottom();\n\n\t\tconst DEFAULT_Q = \"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\";\n\t\tdocument.getElementById(\"sql-toggle\").addEventListener(\"click\", () => {\n\t\t\tconst block = document.getElementById(\"sql-block\");\n\t\t\tblock.classList.toggle(\"hidden\");\n\t\t\tblock.classList.toggle(\"flex\");\n\t\t});\n\n\t\tdocument.getElementById(\"reset-query\").addEventListener(\"click\", () => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: DEFAULT_Q } });\n\t\t\tform.elements.fts.value = \"\";\n\t\t\tconst andRadio = form.querySelector('input[name=\"op\"][value=\"and\"]');\n\t\t\tif (andRadio) andRadio.checked = true;\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\t// --- live tail (SSE via EventSource; see CONTEXT.md > Streaming) ---\n\t\tconst liveToggle = document.getElementById(\"live-toggle\");\n\t\tconst resumeBtn = document.getElementById(\"resume-live\");\n\t\tlet es = null;\n\t\tlet liveWanted = false;\n\n\t\tfunction startLive() {\n\t\t\tstopLive();\n\t\t\tconst params = new URLSearchParams({ q: view.state.doc.toString() });\n\t\t\tconst fts = form.elements.fts.value.trim();\n\t\t\tif (fts) {\n\t\t\t\tparams.set(\"fts\", fts);\n\t\t\t\tparams.set(\"op\", new FormData(form).get(\"op\") || \"and\");\n\t\t\t}\n\t\t\tes = new EventSource(\"/logs/stream?\" + params.toString());\n\t\t\tes.addEventListener(\"log\", (e) => {\n\t\t\t\tconst tbody = document.getElementById(\"log-rows\");\n\t\t\t\tif (!tbody) return;\n\t\t\t\ttbody.insertAdjacentHTML(\"beforeend\", e.data);\n\t\t\t\twhile (tbody.children.length > 5000) tbody.removeChild(tbody.firstElementChild);\n\t\t\t\tfmtTimes();\n\t\t\t\tanchorBottom();\n\t\t\t});\n\t\t\tes.addEventListener(\"refresh\", (e) => {\n\t\t\t\tdocument.getElementById(\"results\").innerHTML = e.data;\n\t\t\t\tfmtTimes();\n\t\t\t\tapplyWrap();\n\t\t\t});\n\t\t\tes.addEventListener(\"streamerror\", (e) => {\n\t\t\t\tstopLive();\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tliveWanted = false;\n\t\t\t\tconsole.warn(\"live tail: \" + e.data);\n\t\t\t});\n\t\t}\n\t\tfunction stopLive() {\n\t\t\tif (es) { es.close(); es = null; }\n\t\t}\n\t\tfunction showResume(on) {\n\t\t\tresumeBtn.classList.toggle(\"hidden\", !on);\n\t\t}\n\n\t\tif (new URLSearchParams(location.search).get(\"live\") === \"1\") {\n\t\t\tliveToggle.checked = true;\n\t\t\tliveWanted = true;\n\t\t\tstartLive();\n\t\t}\n\n\t\tliveToggle.addEventListener(\"change\", () => {\n\t\t\tliveWanted = liveToggle.checked;\n\t\t\tshowResume(false);\n\t\t\tif (liveWanted) { startLive(); anchorBottom(); } else { stopLive(); }\n\t\t});\n\n\t\t// scroll-up stops the stream outright - toggle off, honest state;\n\t\t// the floating button is a shortcut to re-enable from down there\n\t\tdocument.getElementById(\"results\").addEventListener(\"scroll\", (e) => {\n\t\t\tconst p = e.target;\n\t\t\tif (!liveWanted || !es || !p.dataset || p.dataset.anchor !== \"bottom\") return;\n\t\t\tconst nearBottom = p.scrollHeight - p.scrollTop - p.clientHeight < 40;\n\t\t\tif (!nearBottom) {\n\t\t\t\tstopLive();\n\t\t\t\tliveWanted = false;\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tshowResume(true);\n\t\t\t}\n\t\t}, true);\n\n\t\tresumeBtn.addEventListener(\"click\", () => {\n\t\t\tshowResume(false);\n\t\t\tliveWanted = true;\n\t\t\tliveToggle.checked = true;\n\t\t\t// fresh snapshot covers the gap, then afterSettle reconnects\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\tdocument.getElementById(\"results\").addEventListener(\"click\", (e) => {\n\t\t\tconst closer = e.target.closest(\".js-close-detail\");\n\t\t\tif (closer) { closer.closest(\"tr\").remove(); return; }\n\t\t\tif (e.target.closest(\"button, a\")) return;\n\t\t\tconst tr = e.target.closest(\"tr.log-row\");\n\t\t\tif (!tr || !tr.dataset.id || tr.dataset.id === \"0\") return;\n\t\t\tconst next = tr.nextElementSibling;\n\t\t\tif (next && next.classList.contains(\"detail-row\")) { next.remove(); return; }\n\t\t\thtmx.ajax(\"GET\", \"/logs/\" + tr.dataset.id, { target: tr, swap: \"afterend\" });\n\t\t});\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "<style>\n\t\t#sql-editor .cm-content { font-size: 15px; }\n\t\t#sql-editor .cm-gutters { font-size: 12px; }\n\t\t/* container reserves the mounted height so the page doesn't jump when\n\t\t   CodeMirror loads: 4rem total = cm-editor min + the 2x2px border */\n\t\t#sql-editor { min-height: 4rem; }\n\t\t#sql-editor .cm-editor { max-height: 10rem; min-height: calc(4rem - 4px); }\n\t\t/* clickable badges light up on hover so filtering reads as intended */\n\t\t.log-row button.badge:hover {\n\t\t\tfilter: brightness(1.2);\n\t\t\tbox-shadow: 0 0 0 1px currentColor;\n\t\t}\n\t\t/* wrap mode: #results survives fragment swaps, so the class sticks */\n\t\t#results.wrap-lines .msg-cell {\n\t\t\twhite-space: normal;\n\t\t\toverflow-wrap: anywhere;\n\t\t\tmax-width: none;\n\t\t\toverflow: visible;\n\t\t\ttext-overflow: clip;\n\t\t}\n\t\t/* same focus treatment as daisy inputs, so the editor reads as a field */\n\t\t/* cause-and-effect: pulses when a quick filter rewrites the query */\n\t\t#sql-editor.query-updated {\n\t\t\tborder-color: var(--color-primary);\n\t\t\tbox-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary) 40%, transparent);\n\t\t}\n\t\t#sql-editor:focus-within {\n\t\t\toutline: 2px solid var(--color-primary);\n\t\t\toutline-offset: 2px;\n\t\t\tborder-color: var(--color-primary);\n\t\t}\n\t</style><script>\n\t\t(() => {\n\t\t\t// compact local times in rows (full timestamp on hover); detail\n\t\t\t// rows marked data-ts-full keep the complete local timestamp\n\t\t\tfunction fmtTimes() {\n\t\t\t\tdocument.querySelectorAll(\"[data-ts]:not([data-ts-done])\").forEach((el) => {\n\t\t\t\t\tel.dataset.tsDone = \"1\";\n\t\t\t\t\tconst t = new Date(Number(el.dataset.ts));\n\t\t\t\t\tif (el.hasAttribute(\"data-ts-full\")) {\n\t\t\t\t\t\tel.textContent = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t\t} else {\n\t\t\t\t\t\tel.textContent = t.toLocaleTimeString(undefined, { hour12: false })\n\t\t\t\t\t\t\t+ \".\" + String(t.getMilliseconds()).padStart(3, \"0\");\n\t\t\t\t\t}\n\t\t\t\t\tel.title = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t});\n\t\t\t}\n\n\t\t\tconst pane = () => document.getElementById(\"log-scroll\");\n\t\t\tfunction anchorBottom() {\n\t\t\t\tconst p = pane();\n\t\t\t\tif (p && p.dataset.anchor === \"bottom\") p.scrollTop = p.scrollHeight;\n\t\t\t}\n\n\t\t\tconst wrapKey = \"pooml-wrap\";\n\t\t\tfunction applyWrap() {\n\t\t\t\tconst on = localStorage.getItem(wrapKey) !== \"0\"; // ON by default\n\t\t\t\tdocument.getElementById(\"results\").classList.toggle(\"wrap-lines\", on);\n\t\t\t\tconst cb = document.getElementById(\"wrap-toggle\");\n\t\t\t\tif (cb) cb.checked = on;\n\t\t\t}\n\t\t\tdocument.body.addEventListener(\"change\", (e) => {\n\t\t\t\tif (e.target && e.target.id === \"wrap-toggle\") {\n\t\t\t\t\tlocalStorage.setItem(wrapKey, e.target.checked ? \"1\" : \"0\");\n\t\t\t\t\tapplyWrap();\n\t\t\t\t}\n\t\t\t});\n\n\t\t\twindow.poomlView = { fmtTimes, applyWrap, anchorBottom, pane };\n\t\t\tfmtTimes();\n\t\t\tapplyWrap();\n\t\t\tanchorBottom();\n\t\t})();\n\t</script><script type=\"module\">\n\t\timport { EditorView, basicSetup } from \"codemirror\";\n\t\timport { placeholder, keymap } from \"@codemirror/view\";\n\t\timport { Compartment, Prec } from \"@codemirror/state\";\n\t\timport { acceptCompletion } from \"@codemirror/autocomplete\";\n\t\timport { SQLite, schemaCompletionSource } from \"@codemirror/lang-sql\";\n\t\timport { LanguageSupport, syntaxTree } from \"@codemirror/language\";\n\t\timport { linter, setDiagnostics } from \"@codemirror/lint\";\n\t\timport { oneDark } from \"@codemirror/theme-one-dark\";\n\t\timport { format } from \"sql-formatter\";\n\n\t\tconst { fmtTimes, applyWrap, anchorBottom, pane } = window.poomlView;\n\n\t\t// formatting survives until the next Run: the server canonicalizes q\n\t\t// through the serializer when merging filters/FTS (see CONTEXT.md)\n\t\tfunction fmtDoc(v) {\n\t\t\ttry {\n\t\t\t\tconst pretty = format(v.state.doc.toString(), { language: \"sqlite\", keywordCase: \"upper\" });\n\t\t\t\tif (pretty !== v.state.doc.toString()) {\n\t\t\t\t\tv.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: pretty } });\n\t\t\t\t}\n\t\t\t} catch (e) { /* unparseable mid-edit SQL: leave it alone */ }\n\t\t\treturn true;\n\t\t}\n\n\t\tconst host = document.getElementById(\"sql-editor\");\n\n\t\t// Completions are composed by hand instead of using sql()'s bundle:\n\t\t// the dialect keyword source suggests the whole SQL-standard word list\n\t\t// (SYSTEM_USER and friends - not even SQLite), drowning the schema.\n\t\t// Here: columns first (defaultTable makes them top-level), then a\n\t\t// curated keyword/function list that is actually true for pooml.\n\t\t// logs_fts deliberately absent: the search bar is the FTS path.\n\t\tconst LOGS_COLUMNS = [\"id\", \"timestamp\", \"ingested_at\", \"level\", \"service\", \"host\", \"message\", \"parsed\", \"raw\"];\n\t\tconst schemaSource = schemaCompletionSource({\n\t\t\tdialect: SQLite,\n\t\t\tschema: { logs: LOGS_COLUMNS },\n\t\t\tdefaultTable: \"logs\",\n\t\t\tupperCaseKeywords: true,\n\t\t});\n\t\tconst KEYWORDS = (\"SELECT FROM WHERE AND OR NOT ORDER BY GROUP HAVING LIMIT OFFSET DESC ASC \" +\n\t\t\t\"IN LIKE MATCH BETWEEN IS NULL DISTINCT AS JOIN ON CASE WHEN THEN ELSE END CAST\")\n\t\t\t.split(\" \").map((k) => ({ label: k, type: \"keyword\", boost: -1 }));\n\t\tconst FUNCTIONS = (\"count sum avg min max unixepoch strftime datetime json_extract length coalesce round\")\n\t\t\t.split(\" \").map((f) => ({ label: f, type: \"function\", boost: -2 }));\n\t\tconst KEYWORD_OPTIONS = KEYWORDS.concat(FUNCTIONS);\n\t\tfunction keywordSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"general\") return null;\n\t\t\tconst w = ctx.matchBefore(/[A-Za-z_]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: KEYWORD_OPTIONS, validFor: /^[A-Za-z_]*$/ };\n\t\t}\n\t\t// completion context gating: after FROM/JOIN only table names make\n\t\t// sense; after a dot the schema source's column completion owns it\n\t\tconst TABLES = [{ label: \"logs\", type: \"type\" }];\n\t\tconst tablePosRe = /\\b(from|join)\\s+[\\w\"]*$/i;\n\t\tconst dotPosRe = /\\.\\w*$/;\n\t\tfunction complCtx(ctx) {\n\t\t\tconst before = ctx.state.sliceDoc(Math.max(0, ctx.pos - 40), ctx.pos);\n\t\t\tif (tablePosRe.test(before)) return \"table\";\n\t\t\tif (dotPosRe.test(before)) return \"dot\";\n\t\t\treturn \"general\";\n\t\t}\n\t\tfunction tableSource(ctx) {\n\t\t\tif (complCtx(ctx) !== \"table\") return null;\n\t\t\tconst w = ctx.matchBefore(/[\\w\"]+/);\n\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\treturn { from: w ? w.from : ctx.pos, options: TABLES, validFor: /^[\\w\"]*$/ };\n\t\t}\n\t\tconst gatedSchema = (ctx) => complCtx(ctx) === \"table\" ? null : schemaSource(ctx);\n\t\tconst sqlSupport = new LanguageSupport(SQLite.language, [\n\t\t\tSQLite.language.data.of({ autocomplete: tableSource }),\n\t\t\tSQLite.language.data.of({ autocomplete: gatedSchema }),\n\t\t\tSQLite.language.data.of({ autocomplete: keywordSource }),\n\t\t]);\n\n\t\t// live squiggles from the lezer parse: generic but instant. The\n\t\t// authoritative check stays server-side (rqlite parser).\n\t\tconst syntaxLinter = linter((v) => {\n\t\t\tif (!v.state.doc.length) return [];\n\t\t\tconst diags = [];\n\t\t\tsyntaxTree(v.state).iterate({\n\t\t\t\tenter: (n) => {\n\t\t\t\t\tif (n.type.isError) {\n\t\t\t\t\t\tdiags.push({ from: n.from, to: Math.max(n.to, n.from + 1), severity: \"error\", message: \"syntax error\" });\n\t\t\t\t\t}\n\t\t\t\t},\n\t\t\t});\n\t\t\treturn diags;\n\t\t});\n\n\t\t// theme lives in a compartment so the nav toggle can swap it live;\n\t\t// light mode uses CodeMirror's default (light) look\n\t\tconst editorTheme = new Compartment();\n\t\tconst isLight = () => document.documentElement.getAttribute(\"data-theme\") === \"light\";\n\t\tconst view = new EditorView({\n\t\t\tdoc: host.dataset.q,\n\t\t\textensions: [\n\t\t\t\tPrec.highest(keymap.of([\n\t\t\t\t\t{ key: \"Tab\", run: acceptCompletion },\n\t\t\t\t\t{ key: \"Enter\", run: acceptCompletion },\n\t\t\t\t\t{ key: \"Mod-Shift-f\", run: fmtDoc },\n\t\t\t\t])),\n\t\t\t\tbasicSetup,\n\t\t\t\teditorTheme.of(isLight() ? [] : oneDark),\n\t\t\t\tplaceholder(\"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\"),\n\t\t\t\tsqlSupport,\n\t\t\t\tsyntaxLinter,\n\t\t\t],\n\t\t\tparent: host,\n\t\t});\n\n\t\t// server-rejected SQL comes back with an exact position; underline it\n\t\tdocument.body.addEventListener(\"sqlError\", (e) => {\n\t\t\tconst d = e.detail;\n\t\t\tlet from = 0;\n\t\t\ttry {\n\t\t\t\tconst l = view.state.doc.line(d.line);\n\t\t\t\tfrom = Math.min(l.from + Math.max(d.col - 1, 0), l.to);\n\t\t\t} catch { /* stale position; underline from the start */ }\n\t\t\tview.dispatch(setDiagnostics(view.state, [{ from, to: from, severity: \"error\", message: d.message }]));\n\t\t});\n\n\t\tconst form = document.getElementById(\"query-form\");\n\t\tform.addEventListener(\"htmx:configRequest\", (e) => {\n\t\t\te.detail.parameters.q = view.state.doc.toString();\n\t\t});\n\t\thost.addEventListener(\"keydown\", (e) => {\n\t\t\tif ((e.metaKey || e.ctrlKey) && e.key === \"Enter\") {\n\t\t\t\te.preventDefault();\n\t\t\t\tform.requestSubmit();\n\t\t\t}\n\t\t}, true);\n\t\tdocument.body.addEventListener(\"setQuery\", (e) => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });\n\t\t\thost.classList.add(\"query-updated\");\n\t\t\tsetTimeout(() => host.classList.remove(\"query-updated\"), 800);\n\t\t});\n\n\t\t// prepends shift content down; compensate manually so the viewport\n\t\t// stays put (native scroll anchoring is off - Safari doesn't have it)\n\t\tlet heightBefore = 0;\n\t\tdocument.body.addEventListener(\"htmx:beforeRequest\", (e) => {\n\t\t\tconst p = pane();\n\t\t\theightBefore = p && e.detail.elt.closest(\"#log-scroll\") ? p.scrollHeight : 0;\n\t\t});\n\t\tdocument.body.addEventListener(\"htmx:afterSettle\", (e) => {\n\t\t\tfmtTimes();\n\t\t\tapplyWrap();\n\t\t\tconst p = pane();\n\t\t\tif (!p) return;\n\t\t\tif (e.detail.target && e.detail.target.id === \"results\") {\n\t\t\t\tanchorBottom();\n\t\t\t\tif (liveWanted) startLive();\n\t\t\t} else if (heightBefore > 0) {\n\t\t\t\tp.scrollTop += p.scrollHeight - heightBefore;\n\t\t\t\theightBefore = 0;\n\t\t\t}\n\t\t});\n\n\t\tnew MutationObserver(() => {\n\t\t\tview.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });\n\t\t}).observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\n\t\t// snippet chips load their SQL into the editor - never run it\n\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\tconst chip = e.target.closest(\"[data-snippet]\");\n\t\t\tif (!chip) return;\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: chip.dataset.snippet } });\n\t\t\tview.focus();\n\t\t});\n\n\t\tconst fmtBtn = document.getElementById(\"fmt-sql-logs\");\n\t\tif (fmtBtn) fmtBtn.addEventListener(\"click\", () => fmtDoc(view));\n\n\t\t// re-anchor once the editor is mounted: the reserved min-height keeps\n\t\t// this a no-op unless the line estimate was slightly off\n\t\tanchorBottom();\n\n\t\tconst DEFAULT_Q = \"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100\";\n\t\tdocument.getElementById(\"sql-toggle\").addEventListener(\"click\", () => {\n\t\t\tconst block = document.getElementById(\"sql-block\");\n\t\t\tblock.classList.toggle(\"hidden\");\n\t\t\tblock.classList.toggle(\"flex\");\n\t\t});\n\n\t\tdocument.getElementById(\"reset-query\").addEventListener(\"click\", () => {\n\t\t\tview.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: DEFAULT_Q } });\n\t\t\tform.elements.fts.value = \"\";\n\t\t\tconst andRadio = form.querySelector('input[name=\"op\"][value=\"and\"]');\n\t\t\tif (andRadio) andRadio.checked = true;\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\t// --- live tail (SSE via EventSource; see CONTEXT.md > Streaming) ---\n\t\tconst liveToggle = document.getElementById(\"live-toggle\");\n\t\tconst resumeBtn = document.getElementById(\"resume-live\");\n\t\tlet es = null;\n\t\tlet liveWanted = false;\n\n\t\tfunction startLive() {\n\t\t\tstopLive();\n\t\t\tconst params = new URLSearchParams({ q: view.state.doc.toString() });\n\t\t\tconst fts = form.elements.fts.value.trim();\n\t\t\tif (fts) {\n\t\t\t\tparams.set(\"fts\", fts);\n\t\t\t\tparams.set(\"op\", new FormData(form).get(\"op\") || \"and\");\n\t\t\t}\n\t\t\tes = new EventSource(\"/logs/stream?\" + params.toString());\n\t\t\tes.addEventListener(\"log\", (e) => {\n\t\t\t\tconst tbody = document.getElementById(\"log-rows\");\n\t\t\t\tif (!tbody) return;\n\t\t\t\ttbody.insertAdjacentHTML(\"beforeend\", e.data);\n\t\t\t\twhile (tbody.children.length > 5000) tbody.removeChild(tbody.firstElementChild);\n\t\t\t\tfmtTimes();\n\t\t\t\tanchorBottom();\n\t\t\t});\n\t\t\tes.addEventListener(\"refresh\", (e) => {\n\t\t\t\tdocument.getElementById(\"results\").innerHTML = e.data;\n\t\t\t\tfmtTimes();\n\t\t\t\tapplyWrap();\n\t\t\t});\n\t\t\tes.addEventListener(\"streamerror\", (e) => {\n\t\t\t\tstopLive();\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tliveWanted = false;\n\t\t\t\tconsole.warn(\"live tail: \" + e.data);\n\t\t\t});\n\t\t}\n\t\tfunction stopLive() {\n\t\t\tif (es) { es.close(); es = null; }\n\t\t}\n\t\tfunction showResume(on) {\n\t\t\tresumeBtn.classList.toggle(\"hidden\", !on);\n\t\t}\n\n\t\tif (new URLSearchParams(location.search).get(\"live\") === \"1\") {\n\t\t\tliveToggle.checked = true;\n\t\t\tliveWanted = true;\n\t\t\tstartLive();\n\t\t}\n\n\t\tliveToggle.addEventListener(\"change\", () => {\n\t\t\tliveWanted = liveToggle.checked;\n\t\t\tshowResume(false);\n\t\t\tif (liveWanted) { startLive(); anchorBottom(); } else { stopLive(); }\n\t\t});\n\n\t\t// scroll-up stops the stream outright - toggle off, honest state;\n\t\t// the floating button is a shortcut to re-enable from down there\n\t\tdocument.getElementById(\"results\").addEventListener(\"scroll\", (e) => {\n\t\t\tconst p = e.target;\n\t\t\tif (!liveWanted || !es || !p.dataset || p.dataset.anchor !== \"bottom\") return;\n\t\t\tconst nearBottom = p.scrollHeight - p.scrollTop - p.clientHeight < 40;\n\t\t\tif (!nearBottom) {\n\t\t\t\tstopLive();\n\t\t\t\tliveWanted = false;\n\t\t\t\tliveToggle.checked = false;\n\t\t\t\tshowResume(true);\n\t\t\t}\n\t\t}, true);\n\n\t\tresumeBtn.addEventListener(\"click\", () => {\n\t\t\tshowResume(false);\n\t\t\tliveWanted = true;\n\t\t\tliveToggle.checked = true;\n\t\t\t// fresh snapshot covers the gap, then afterSettle reconnects\n\t\t\tform.requestSubmit();\n\t\t});\n\n\t\tdocument.getElementById(\"results\").addEventListener(\"click\", (e) => {\n\t\t\tconst closer = e.target.closest(\".js-close-detail\");\n\t\t\tif (closer) { closer.closest(\"tr\").remove(); return; }\n\t\t\tif (e.target.closest(\"button, a\")) return;\n\t\t\tconst tr = e.target.closest(\"tr.log-row\");\n\t\t\tif (!tr || !tr.dataset.id || tr.dataset.id === \"0\") return;\n\t\t\tconst next = tr.nextElementSibling;\n\t\t\tif (next && next.classList.contains(\"detail-row\")) { next.remove(); return; }\n\t\t\thtmx.ajax(\"GET\", \"/logs/\" + tr.dataset.id, { target: tr, swap: \"afterend\" });\n\t\t});\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

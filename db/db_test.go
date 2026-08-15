@@ -52,8 +52,8 @@ func TestMigrateAndPoolsRoundTrip(t *testing.T) {
 
 	// porter tokenizer (migration 000002): singular finds plural
 	if _, err := pools.LogsWrite.Exec(
-		`INSERT INTO logs(timestamp, ingested_at, service, host, raw)
-		 VALUES (1, 1, 'shop', 'h', 'three orders shipped successfully')`); err != nil {
+		`INSERT INTO logs(timestamp, ingested_at, level, service, host, raw)
+		 VALUES (1, 1, 2, 'shop', 'h', 'three orders shipped successfully')`); err != nil {
 		t.Fatal(err)
 	}
 	if err := pools.LogsRead.QueryRow(
@@ -86,7 +86,7 @@ func TestReadPoolMetricsAttach(t *testing.T) {
 		t.Fatal(err)
 	}
 	if _, err := pools.LogsWrite.Exec(
-		"INSERT INTO logs(timestamp, ingested_at, service, host, raw) VALUES (1000, 1000, 'shop', 'h1', 'raw line')"); err != nil {
+		"INSERT INTO logs(timestamp, ingested_at, level, service, host, raw) VALUES (1000, 1000, 2, 'shop', 'h1', 'raw line')"); err != nil {
 		t.Fatal(err)
 	}
 

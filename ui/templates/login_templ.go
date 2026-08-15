@@ -8,9 +8,9 @@ package templates
 import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
-// LoginPage is the first place the "don't panic" mood shows: calm, warm, one
-// clear action. kind carries the message flavor: "" (none), "error" (wrong
-// secret), "throttled" (locked out), "info" (stale session, logged out).
+// LoginPage: calm, warm, one clear action. kind carries the message flavor:
+// "" (none), "error" (wrong secret), "throttled" (locked out), "info"
+// (stale session, logged out).
 func LoginPage(kind string, message string, csrfToken string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -44,7 +44,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"min-h-screen flex items-center justify-center p-4\"><div class=\"card bg-base-100 w-full max-w-sm\"><div class=\"card-body\"><h1 class=\"text-4xl font-bold tracking-tight\">pooml</h1><p class=\"text-sm opacity-60 -mt-1\">don't panic.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"min-h-screen flex items-center justify-center p-4\"><div class=\"card bg-base-100 w-full max-w-sm\"><div class=\"card-body\"><h1 class=\"text-4xl font-bold tracking-tight\">pooml</h1>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -57,7 +57,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 15, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 14, Col: 73}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -75,7 +75,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 17, Col: 75}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 16, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -93,7 +93,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 19, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 18, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -111,7 +111,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 22, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 21, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -123,7 +123,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Base("pooml · don't panic").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Base("pooml").Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

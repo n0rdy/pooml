@@ -177,10 +177,12 @@ templ sqlEditorModule() {
 		}, true);
 
 		document.addEventListener("click", (e) => {
-			const btn = e.target.closest(".open-in-logs");
+			const btn = e.target.closest(".open-in-logs, .open-in-explorer");
 			if (!btn) return;
 			const q = syncedQuery(btn.closest("form"));
-			if (q) window.open("/logs?q=" + encodeURIComponent(q), "_blank");
+			if (!q) return;
+			const page = btn.classList.contains("open-in-logs") ? "/logs" : "/metrics-explorer";
+			window.open(page + "?q=" + encodeURIComponent(q), "_blank");
 		});
 
 		document.addEventListener("click", (e) => {
@@ -214,6 +216,16 @@ templ sqlEditorModule() {
 
 		mountAll();
 		document.body.addEventListener("htmx:afterSettle", mountAll);
+
+		// CodeMirror measures a hidden element as zero-height and never looks
+		// again - editors mounted inside a collapsed <details> come up with
+		// misaligned cursors. Re-measure when one opens.
+		document.addEventListener("toggle", (e) => {
+			if (!e.target.open || !e.target.querySelectorAll) return;
+			instances.forEach((i) => {
+				if (e.target.contains(i.view.dom)) i.view.requestMeasure();
+			});
+		}, true);
 
 		// page scripts (e.g. the explorer's DSL mirror) reach editors here
 		window.poomlSQL = { editors };

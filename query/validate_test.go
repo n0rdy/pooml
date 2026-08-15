@@ -146,9 +146,9 @@ func TestValidateScopes(t *testing.T) {
 		{"explorer: metrics ok", "SELECT name, value FROM metrics LIMIT 5", ScopeMetrics, ""},
 		{"explorer: logs blocked", "SELECT * FROM logs LIMIT 5", ScopeMetrics, "Logs page"},
 		{"explorer: logs in CTE blocked", "WITH x AS (SELECT service FROM logs) SELECT * FROM metrics WHERE service IN (SELECT service FROM x)", ScopeMetrics, "Logs page"},
-		{"panel: logs alone ok", "SELECT service, COUNT(*) FROM logs GROUP BY service", ScopeOneSignal, ""},
-		{"panel: metrics alone ok", "SELECT timestamp, value FROM metrics ORDER BY timestamp", ScopeOneSignal, ""},
-		{"panel: mixing blocked", "SELECT * FROM logs l JOIN metrics m ON l.service = m.service", ScopeOneSignal, "one signal"},
+		{"logs panel scope: logs ok", "SELECT service, COUNT(*) FROM logs GROUP BY service", ScopeLogs, ""},
+		{"metrics panel scope: metrics ok", "SELECT timestamp, value FROM metrics ORDER BY timestamp", ScopeMetrics, ""},
+		{"metrics panel scope: join blocked", "SELECT * FROM logs l JOIN metrics m ON l.service = m.service", ScopeMetrics, "Logs page"},
 		{"alerts: mixing allowed", "SELECT 1 FROM metrics m WHERE m.value > 10 AND EXISTS (SELECT 1 FROM logs WHERE level >= 4)", ScopeAll, ""},
 		{"CTE named like a signal doesn't count as one", "WITH metrics AS (SELECT service FROM logs) SELECT * FROM metrics", ScopeLogs, ""},
 	}
@@ -188,7 +188,8 @@ func TestCombineFTS(t *testing.T) {
 		if err := v.CombineFTS("or"); err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(v.SQL(), "MATCH ? OR (level >= 4)") {
+		// OR goes through an IN-subquery: SQLite rejects `MATCH ... OR ...`
+		if !strings.Contains(v.SQL(), `IN (SELECT "rowid" FROM logs_fts WHERE logs_fts.raw MATCH ?) OR (level >= 4)`) {
 			t.Errorf("SQL() = %q", v.SQL())
 		}
 	})

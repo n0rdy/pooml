@@ -20,6 +20,7 @@ func (cl *client) htmx(method, path, token string) (int, string) {
 	}
 	req.Header.Set("X-CSRF-Token", token)
 	req.Header.Set("Origin", cl.srv.URL)
+	req.Header.Set("HX-Request", "true") // htmx always sends this
 	resp, err := cl.c.Do(req)
 	if err != nil {
 		cl.t.Fatal(err)
@@ -267,12 +268,19 @@ func TestExplorerSaveAsPanel(t *testing.T) {
 	// no dashboards yet: the save row offers creating one instead (on a
 	// query result - the landing catalog has no save row by design)
 	status, body := cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp"))
-	if status != http.StatusOK || !strings.Contains(body, "Create a dashboard") {
+	if status != http.StatusOK || !strings.Contains(body, "Create a metrics dashboard") {
 		t.Fatalf("save row without dashboards wrong: %d", status)
 	}
 	_, dashBody := cl.get("/dashboards")
 	token := csrfRe.FindStringSubmatch(dashBody)[1]
-	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"kept views"}})
+	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"kept views"}, "type": {"metrics"}})
+
+	// a LOGS dashboard must not appear as a save target
+	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"log board"}, "type": {"logs"}})
+	_, body = cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp"))
+	if strings.Contains(body, "log board") {
+		t.Error("logs dashboard offered as a save-as-panel target")
+	}
 
 	// with a dashboard, saving works and redirects into it
 	resp := cl.postForm("/metrics-explorer/save-panel", url.Values{
@@ -353,7 +361,7 @@ func TestExplorerSnippets(t *testing.T) {
 	// saving a placeholder query as a panel is caught too
 	_, dashBody := cl.get("/dashboards")
 	token := csrfRe.FindStringSubmatch(dashBody)[1]
-	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"d"}})
+	cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"d"}, "type": {"metrics"}})
 	resp := cl.postForm("/metrics-explorer/save-panel", url.Values{
 		"csrf_token":   {token},
 		"query":        {"SELECT value FROM metrics WHERE name = 'REPLACE_WITH_YOUR_GAUGE_NAME'"},
@@ -375,8 +383,11 @@ func TestLogsSnippets(t *testing.T) {
 
 	_, body := cl.get("/logs")
 	matches := snippetRe.FindAllStringSubmatch(body, -1)
-	if len(matches) != 4 {
-		t.Fatalf("expected 4 logs snippets, got %d", len(matches))
+	if len(matches) != 5 {
+		t.Fatalf("expected 5 logs snippets, got %d", len(matches))
+	}
+	if !strings.Contains(body, "0=trace") {
+		t.Error("level snippet must carry the level legend comment")
 	}
 
 	substitutions := strings.NewReplacer(
@@ -668,6 +679,207 @@ func TestCounterHintAndGapFill(t *testing.T) {
 	}
 }
 
+// Logs dashboards: stream is the default kind (latest matching lines,
+// viewer-styled, linking to details); aggregations go in chart/number; a
+// stream panel with an aggregation query is a pointed error.
+func TestLogsDashboardStream(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedLogs(cl, 6) // payment-svc/auth-svc, auth-svc rows are level 4
+
+	_, dashBody := cl.get("/dashboards")
+	token := csrfRe.FindStringSubmatch(dashBody)[1]
+	resp := cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"errors board"}, "type": {"logs"}})
+	loc := resp.Header.Get("Location")
+
+	// the logs panel form offers kinds, not chart shapes
+	_, page := cl.get(loc)
+	for _, want := range []string{"stream - latest matching lines", "number - a single count", "open in logs"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("logs panel form missing %q", want)
+		}
+	}
+	if strings.Contains(page, "open in explorer") {
+		t.Error("logs dashboard offered the explorer link")
+	}
+
+	// default (empty chart_type) becomes a stream panel
+	if resp := cl.postForm(loc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"recent errors"}, "width": {"2"}, "chart_type": {""},
+		"query": {"SELECT * FROM logs WHERE service = 'auth-svc' AND level >= 4 ORDER BY timestamp DESC LIMIT 50"},
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("stream panel create = %d", resp.StatusCode)
+	}
+	status, frag := cl.get(loc + "/panels/1")
+	if status != http.StatusOK {
+		t.Fatalf("stream fragment: %d", status)
+	}
+	// rows expand in place (stream-row + data-id), no navigation links
+	for _, want := range []string{"message 1", "stream-row", `data-id="`, "data-ts", "error", "stream-scroll"} {
+		if !strings.Contains(frag, want) {
+			t.Errorf("stream fragment missing %q: %.300s", want, frag)
+		}
+	}
+	if strings.Contains(frag, "message 0") {
+		t.Error("stream leaked non-matching rows")
+	}
+	// viewer convention: oldest first (newest lands at the anchored bottom)
+	if i1, i3 := strings.Index(frag, "message 1"), strings.Index(frag, "message 3"); i1 > i3 {
+		t.Error("stream rows not in ascending time order")
+	}
+
+	// the expansion fetches a div-based fragment, not the logs page's <tr>
+	status, block := cl.htmx(http.MethodGet, "/logs/1?frag=block", token)
+	if status != http.StatusOK || !strings.Contains(block, "stream-detail") || !strings.Contains(block, "seeded line") {
+		t.Fatalf("frag=block detail = %d: %.200s", status, block)
+	}
+	if strings.Contains(block, "<tr") || strings.Contains(block, "navbar") {
+		t.Error("frag=block must be a bare div fragment")
+	}
+
+	// a direct visit is still a REAL page (Shell-wrapped), not a bare fragment
+	status, page = cl.get("/logs/1")
+	if status != http.StatusOK || !strings.Contains(page, "navbar") || !strings.Contains(page, "seeded line") {
+		t.Fatalf("direct log detail must be a full page: %d", status)
+	}
+	// while the logs page's HTMX expansion still gets the row fragment
+	status, frag = cl.htmx(http.MethodGet, "/logs/1", token)
+	if status != http.StatusOK || !strings.Contains(frag, "detail-row") || strings.Contains(frag, "navbar") {
+		t.Fatalf("HTMX log detail must stay a fragment: %d", status)
+	}
+
+	// aggregation in a stream panel: pointed error
+	if resp := cl.postForm(loc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"nope"}, "width": {"1"}, "chart_type": {"stream"},
+		"query": {"SELECT service, COUNT(*) FROM logs GROUP BY service"},
+	}); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("aggregation stream = %d, want 400", resp.StatusCode)
+	}
+
+	// chart kind: logs aggregation renders through the shared shaping
+	if resp := cl.postForm(loc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"errors by service"}, "width": {"1"}, "chart_type": {"chart"},
+		"query": {"SELECT service, COUNT(*) AS errors FROM logs WHERE level >= 4 GROUP BY service"},
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("chart panel create = %d", resp.StatusCode)
+	}
+	status, frag = cl.get(loc + "/panels/2")
+	if status != http.StatusOK || !strings.Contains(frag, `"type":"bar"`) {
+		t.Fatalf("logs chart fragment: %d", status)
+	}
+
+	// metrics query on a logs dashboard names the dashboard type
+	if resp := cl.postForm(loc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"wrong signal"}, "width": {"1"}, "chart_type": {"number"},
+		"query": {"SELECT COUNT(*) FROM metrics"},
+	}); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("metrics on logs dashboard = %d, want 400", resp.StatusCode)
+	}
+}
+
+// Parity: panel forms carry the same assisted inputs as their exploration
+// surfaces - the quick query for metrics panels (server-authoritative DSL,
+// remembered for editing), the FTS text for logs panels (combined at render).
+func TestPanelAssistedInputs(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedMetrics(cl)
+	seedLogs(cl, 6)
+
+	_, dashBody := cl.get("/dashboards")
+	token := csrfRe.FindStringSubmatch(dashBody)[1]
+
+	// --- metrics dashboard: quick query on the panel form
+	resp := cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"m"}, "type": {"metrics"}})
+	mLoc := resp.Header.Get("Location")
+	_, page := cl.get(mLoc)
+	for _, want := range []string{"quick-query", "qq-builder", `id="metric-names"`, "metric-names-dl"} {
+		if !strings.Contains(page, want) {
+			t.Errorf("metrics panel form missing %q", want)
+		}
+	}
+
+	// DSL is authoritative on save: a stale query field loses to the compiled DSL
+	if resp := cl.postForm(mLoc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"qd"}, "width": {"1"}, "chart_type": {""},
+		"dsl":   {"avg(queue_depth) per 10m last 1h"},
+		"query": {"SELECT 'stale' FROM metrics LIMIT 1"},
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("dsl panel create = %d", resp.StatusCode)
+	}
+	var stored, storedDSL string
+	if err := cl.pools.Meta.QueryRow("SELECT query, COALESCE(dsl,'') FROM dashboard_panels WHERE title = 'qd'").Scan(&stored, &storedDSL); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(stored, "AVG(value)") || strings.Contains(stored, "stale") {
+		t.Errorf("dsl did not outrank stale query: %s", stored)
+	}
+	if storedDSL != "avg(queue_depth) per 10m last 1h" {
+		t.Errorf("dsl not remembered: %q", storedDSL)
+	}
+	// editing restores the quick query, prefilled
+	_, edit := cl.get(mLoc + "/panels/1?edit=1")
+	if !strings.Contains(edit, `data-dsl="avg(queue_depth) per 10m last 1h"`) {
+		t.Error("edit form does not restore the dsl")
+	}
+
+	// a broken DSL is rejected with its own error
+	if resp := cl.postForm(mLoc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"bad"}, "width": {"1"}, "chart_type": {""},
+		"dsl": {"averg(queue_depth)"}, "query": {"SELECT 1 FROM metrics"},
+	}); resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("broken dsl = %d, want 400", resp.StatusCode)
+	}
+
+	// --- logs dashboard: FTS on the panel form, combined at render
+	resp = cl.postForm("/dashboards", url.Values{"csrf_token": {token}, "name": {"l"}, "type": {"logs"}})
+	lLoc := resp.Header.Get("Location")
+	_, page = cl.get(lLoc)
+	// the logs page's controls, verbatim: same search input, same AND/OR
+	for _, want := range []string{`name="fts"`, "FTS5 syntax welcome", `aria-label="AND"`, `aria-label="OR"`} {
+		if !strings.Contains(page, want) {
+			t.Errorf("logs panel form missing %q", want)
+		}
+	}
+	if strings.Contains(page, "quick-query") {
+		t.Error("logs panel form should not carry the metrics quick query")
+	}
+
+	if resp := cl.postForm(lLoc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"needles"}, "width": {"2"}, "chart_type": {"stream"},
+		"fts":   {"needle3"},
+		"query": {"SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"},
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("fts panel create = %d", resp.StatusCode)
+	}
+	_, frag := cl.get(lLoc + "/panels/2")
+	if !strings.Contains(frag, "message 3") {
+		t.Errorf("fts panel missing the matching row: %.300s", frag)
+	}
+	if strings.Contains(frag, "message 2") {
+		t.Error("fts panel leaked non-matching rows")
+	}
+	// and editing restores the search text
+	_, edit = cl.get(lLoc + "/panels/2?edit=1")
+	if !strings.Contains(edit, `value="needle3"`) {
+		t.Error("edit form does not restore the fts text")
+	}
+
+	// OR widens: service filter matches payment-svc rows, fts matches an
+	// auth-svc row - OR shows both worlds, AND would show neither
+	if resp := cl.postForm(lLoc+"/panels", url.Values{
+		"csrf_token": {token}, "title": {"or panel"}, "width": {"1"}, "chart_type": {"stream"},
+		"fts": {"needle3"}, "op": {"or"},
+		"query": {"SELECT * FROM logs WHERE service = 'payment-svc' ORDER BY timestamp DESC LIMIT 100"},
+	}); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("or panel create = %d", resp.StatusCode)
+	}
+	_, frag = cl.get(lLoc + "/panels/3")
+	if !strings.Contains(frag, "message 3") || !strings.Contains(frag, "message 2") {
+		t.Errorf("OR panel should include both the fts match and the service rows: %.300s", frag)
+	}
+}
+
 var dashboardURLRe = regexp.MustCompile(`/dashboards/(\d+)`)
 
 func TestDashboardsFlow(t *testing.T) {
@@ -685,6 +897,7 @@ func TestDashboardsFlow(t *testing.T) {
 	resp := cl.postForm("/dashboards", url.Values{
 		"csrf_token": {token},
 		"name":       {"shop overview"},
+		"type":       {"metrics"},
 	})
 	if resp.StatusCode != http.StatusSeeOther {
 		t.Fatalf("create dashboard = %d", resp.StatusCode)
@@ -748,10 +961,20 @@ func TestDashboardsFlow(t *testing.T) {
 		t.Fatalf("delete panel: %d, body %q", status, frag)
 	}
 
-	// delete dashboard cascades panels
-	status, _ = cl.htmx(http.MethodDelete, loc, token)
-	if status != http.StatusSeeOther && status != http.StatusOK {
-		t.Fatalf("delete dashboard: %d", status)
+	// delete dashboard cascades panels; the HTMX response must be a 200
+	// carrying HX-Redirect (a real 3xx gets swallowed by XHR and htmx never
+	// sees it - "nothing happened")
+	delReq, _ := http.NewRequest(http.MethodDelete, cl.srv.URL+loc, nil)
+	delReq.Header.Set("X-CSRF-Token", token)
+	delReq.Header.Set("Origin", cl.srv.URL)
+	delReq.Header.Set("HX-Request", "true")
+	delResp, err := cl.c.Do(delReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	delResp.Body.Close()
+	if delResp.StatusCode != http.StatusOK || delResp.Header.Get("HX-Redirect") != "/dashboards" {
+		t.Fatalf("htmx delete = %d, HX-Redirect %q", delResp.StatusCode, delResp.Header.Get("HX-Redirect"))
 	}
 	var n int
 	if err := cl.pools.Meta.QueryRow("SELECT COUNT(*) FROM dashboard_panels").Scan(&n); err != nil {

@@ -22,6 +22,8 @@ type ShapedResult struct {
 type PanelView struct {
 	Panel services.Panel
 	ShapedResult
+	// stream panels (logs dashboards): latest matching lines, viewer-styled
+	StreamRows []LogRow
 }
 
 // ChartPayload is embedded as JSON next to the canvas; LabelsMs set means a
@@ -51,30 +53,38 @@ templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfTok
 					}
 					if len(dashboards) == 0 {
 						<p class="text-sm opacity-60 italic">
-							No dashboards yet. Name one below, then add panels - each panel charts one SQL query
-							over logs or metrics, and a dashboard can hold both kinds side by side.
+							No dashboards yet. A dashboard shows one signal - logs or metrics - and every
+							panel in it charts one SQL query over that signal.
 						</p>
 					} else {
 						<ul class="flex flex-col gap-1">
 							for _, d := range dashboards {
 								<li>
-									<a href={ templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)) } class="flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-2">
+									<a href={ templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)) } class="flex items-center gap-2 hover:bg-base-content/5 rounded-field px-2 py-2">
 										<span class="font-semibold">{ d.Name }</span>
+										@dashboardTypeBadge(d.Type)
 										if d.Description != "" {
-											<span class="text-sm opacity-60 truncate min-w-0">{ d.Description }</span>
+											<span class="text-sm opacity-60 truncate min-w-0 ml-auto">{ d.Description }</span>
 										}
 									</a>
 								</li>
 							}
 						</ul>
 					}
-					<form method="post" action="/dashboards" class="flex gap-2 items-end border-t border-base-content/10 pt-3">
+					<form method="post" action="/dashboards" class="flex gap-2 items-end flex-wrap border-t border-base-content/10 pt-3">
 						<input type="hidden" name="csrf_token" value={ csrfToken }/>
 						<label class="flex flex-col gap-1">
 							<span class="text-sm opacity-80">Name</span>
 							<input type="text" name="name" placeholder="shop overview" class="input input-bordered input-sm" maxlength="100" required/>
 						</label>
-						<label class="flex flex-col gap-1 flex-1">
+						<label class="flex flex-col gap-1">
+							<span class="text-sm opacity-80">Shows</span>
+							<div class="join">
+								<input class="join-item btn btn-sm" type="radio" name="type" value="metrics" aria-label="metrics" checked/>
+								<input class="join-item btn btn-sm" type="radio" name="type" value="logs" aria-label="logs"/>
+							</div>
+						</label>
+						<label class="flex flex-col gap-1 flex-1 min-w-40">
 							<span class="text-sm opacity-80">Description (optional)</span>
 							<input type="text" name="description" class="input input-bordered input-sm w-full"/>
 						</label>
@@ -86,12 +96,15 @@ templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfTok
 	}
 }
 
-templ DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string, csrfToken string) {
+templ DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []string, errMsg string, csrfToken string) {
 	@Shell(d.Name+" · pooml", "dashboards", csrfToken) {
 		<div class="max-w-7xl mx-auto flex flex-col gap-4">
 			<div class="flex items-center justify-between gap-2 flex-wrap">
 				<div>
-					<h2 class="text-xl font-bold">{ d.Name }</h2>
+					<h2 class="text-xl font-bold flex items-center gap-2">
+						{ d.Name }
+						@dashboardTypeBadge(d.Type)
+					</h2>
 					if d.Description != "" {
 						<p class="text-sm opacity-60">{ d.Description }</p>
 					}
@@ -108,28 +121,35 @@ templ DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string
 			if errMsg != "" {
 				<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
 			}
-			@PanelsRegion(d.ID, panels, csrfToken)
+			@PanelsRegion(d.ID, d.Type, panels, csrfToken)
 			<details class="card bg-base-100">
 				<summary class="card-body py-3 cursor-pointer text-sm font-semibold">+ Add panel</summary>
 				<div class="card-body pt-0 py-4">
 					<form method="post" action={ templ.SafeURL(fmt.Sprintf("/dashboards/%d/panels", d.ID)) } class="flex flex-col gap-3">
-						@panelFormFields(services.Panel{Width: 1}, csrfToken)
+						@panelFormFields(services.Panel{Width: 1}, d.Type, csrfToken)
 						<div><button type="submit" class="btn btn-primary btn-sm">Add panel</button></div>
 					</form>
 				</div>
 			</details>
 		</div>
+		if d.Type == "metrics" {
+			@QuickQueryData(metricNames)
+			@QuickQueryModule()
+		}
 		@dashboardScripts()
 	}
 }
 
-templ PanelsRegion(dashboardID int64, panels []services.Panel, csrfToken string) {
+templ PanelsRegion(dashboardID int64, dashboardType string, panels []services.Panel, csrfToken string) {
 	<div id="panels-region" class="grid grid-cols-1 md:grid-cols-3 gap-4">
 		if len(panels) == 0 {
 			<p class="text-sm opacity-60 italic md:col-span-3">
-				Empty so far. Add a panel below - one signal per panel, both kinds welcome:
-				<code class="font-mono">SELECT COUNT(*) FROM logs WHERE level >= 4</code> (logs) or
-				<code class="font-mono">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp</code> (metrics).
+				Empty so far. Add a panel below - try
+				if dashboardType == "logs" {
+					<code class="font-mono">SELECT timestamp / 600000 * 600000 AS bucket, COUNT(*) FROM logs WHERE level >= 4 GROUP BY bucket ORDER BY bucket</code>
+				} else {
+					<code class="font-mono">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp</code>
+				}
 			</p>
 		}
 		for _, p := range panels {
@@ -172,7 +192,27 @@ templ PanelCard(p services.Panel, csrfToken string) {
 }
 
 templ PanelFragment(v PanelView) {
-	@Shaped(v.ShapedResult)
+	if v.Kind == "stream" {
+		@streamPanel(v.StreamRows)
+	} else {
+		@Shaped(v.ShapedResult)
+	}
+}
+
+templ streamPanel(rows []LogRow) {
+	if len(rows) == 0 {
+		<p class="text-sm opacity-60 italic py-2">No matching log lines right now.</p>
+	} else {
+		<div class="stream-scroll overflow-y-auto overflow-x-hidden max-h-56 flex flex-col">
+			for _, r := range rows {
+				<div class="stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer" data-id={ fmt.Sprint(r.ID) }>
+					<span class="font-mono text-sm opacity-70 whitespace-nowrap" data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span>
+					<span class={ levelClass(r.Level) }>{ levelName(r.Level) }</span>
+					<span class="font-mono text-sm truncate min-w-0" title={ r.Message }>{ r.Message }</span>
+				</div>
+			}
+		</div>
+	}
 }
 
 // Shaped renders a ShapedResult body; shared by panels and the explorer.
@@ -220,7 +260,7 @@ templ shapedTable(s ShapedResult, heightClass string) {
 }
 
 // PanelEditCard swaps a panel card for its inline edit form.
-templ PanelEditCard(p services.Panel, errMsg string, csrfToken string) {
+templ PanelEditCard(p services.Panel, dashboardType string, errMsg string, csrfToken string) {
 	<div class={ "panel-card card bg-base-100 border border-primary/40 md:col-span-3" }>
 		<div class="card-body py-4 gap-3">
 			if errMsg != "" {
@@ -232,7 +272,7 @@ templ PanelEditCard(p services.Panel, errMsg string, csrfToken string) {
 				hx-swap="outerHTML"
 				class="flex flex-col gap-3"
 			>
-				@panelFormFields(p, csrfToken)
+				@panelFormFields(p, dashboardType, csrfToken)
 				<div class="flex gap-2">
 					<button type="submit" class="btn btn-primary btn-sm">Save</button>
 					<button
@@ -248,22 +288,33 @@ templ PanelEditCard(p services.Panel, errMsg string, csrfToken string) {
 	</div>
 }
 
-templ panelFormFields(p services.Panel, csrfToken string) {
+templ panelFormFields(p services.Panel, dashboardType string, csrfToken string) {
 	<input type="hidden" name="csrf_token" value={ csrfToken }/>
 	<div class="grid gap-3 md:grid-cols-3">
 		<label class="flex flex-col gap-1">
 			<span class="text-sm opacity-80">Title</span>
 			<input type="text" name="title" value={ p.Title } class="input input-bordered input-sm" maxlength="100" required/>
 		</label>
-		<label class="flex flex-col gap-1">
-			<span class="text-sm opacity-80">Chart</span>
-			<select name="chart_type" class="select select-bordered select-sm">
-				<option value="" selected?={ p.ChartType == "" }>auto-detect</option>
-				<option value="line" selected?={ p.ChartType == "line" }>line</option>
-				<option value="bar" selected?={ p.ChartType == "bar" }>bar</option>
-				<option value="stat" selected?={ p.ChartType == "stat" }>stat</option>
-			</select>
-		</label>
+		if dashboardType == "logs" {
+			<label class="flex flex-col gap-1">
+				<span class="text-sm opacity-80">Show as</span>
+				<select name="chart_type" class="select select-bordered select-sm">
+					<option value="stream" selected?={ p.ChartType == "stream" || p.ChartType == "" }>stream - latest matching lines</option>
+					<option value="chart" selected?={ p.ChartType == "chart" }>chart - counts over time or by category</option>
+					<option value="number" selected?={ p.ChartType == "number" }>number - a single count</option>
+				</select>
+			</label>
+		} else {
+			<label class="flex flex-col gap-1">
+				<span class="text-sm opacity-80">Chart</span>
+				<select name="chart_type" class="select select-bordered select-sm">
+					<option value="" selected?={ p.ChartType == "" }>auto-detect</option>
+					<option value="line" selected?={ p.ChartType == "line" }>line</option>
+					<option value="bar" selected?={ p.ChartType == "bar" }>bar</option>
+					<option value="stat" selected?={ p.ChartType == "stat" }>stat</option>
+				</select>
+			</label>
+		}
 		<label class="flex flex-col gap-1">
 			<span class="text-sm opacity-80">Width (of 3 columns)</span>
 			<select name="width" class="select select-bordered select-sm">
@@ -273,16 +324,33 @@ templ panelFormFields(p services.Panel, csrfToken string) {
 			</select>
 		</label>
 	</div>
+	if dashboardType == "logs" {
+		// the logs page's search controls, verbatim: same input, same AND/OR
+		<div class="flex gap-2 items-center">
+			@FTSSearchInput(p.FTS)
+			@FTSOpToggle(p.Op, "")
+		</div>
+	} else {
+		@QuickQueryBlock(p.DSL, false)
+	}
 	<div class="flex flex-col gap-1">
 		<span class="flex items-center justify-between">
-			<span class="text-sm opacity-80">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span>
-			<button type="button" class="open-in-logs link link-primary text-sm" title="Run this query on the logs page (new tab)">open in logs ↗</button>
+			if dashboardType == "logs" {
+				<span class="text-sm opacity-80">Query over <code class="font-mono">logs</code> (stream lists rows; chart/number want an aggregation)</span>
+			} else {
+				<span class="text-sm opacity-80">Query over <code class="font-mono">metrics</code> <span class="opacity-60">- the quick query compiles here; edit it and it's yours</span></span>
+			}
+			if dashboardType == "logs" {
+				<button type="button" class="open-in-logs link link-primary text-sm" title="Run this query on the logs page (new tab)">open in logs ↗</button>
+			} else {
+				<button type="button" class="open-in-explorer link link-primary text-sm" title="Run this query on the metrics explorer (new tab)">open in explorer ↗</button>
+			}
 		</span>
 		<textarea name="query" class="hidden">{ p.Query }</textarea>
 		<div
 			class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors"
 			style={ sqlEditorReserve(p.Query) }
-			data-placeholder="SELECT timestamp / 60000 * 60000 AS minute, AVG(value) FROM metrics WHERE name = 'queue_depth' GROUP BY minute ORDER BY minute LIMIT 500"
+			data-placeholder={ panelPlaceholder(dashboardType) }
 		></div>
 	</div>
 }
@@ -356,6 +424,48 @@ templ chartScripts() {
 				});
 			}
 
+			// stream panels carry [data-ts] rows: compact local times, same
+			// convention as the log viewer; detail expansions want the full date
+			function fmtTs() {
+				document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
+					el.dataset.tsDone = "1";
+					const t = new Date(Number(el.dataset.ts));
+					el.textContent = el.hasAttribute("data-ts-full")
+						? t.toLocaleString(undefined, { hour12: false })
+						: t.toLocaleTimeString(undefined, { hour12: false });
+					el.title = t.toLocaleString(undefined, { hour12: false });
+				});
+			}
+			// newest at the bottom, pane anchored there - but only when the pane
+			// itself (re)loaded, so expanding a row doesn't yank it back down
+			function anchorStreams(root) {
+				root.querySelectorAll(".stream-scroll").forEach((el) => {
+					el.scrollTop = el.scrollHeight;
+				});
+			}
+			fmtTs();
+			anchorStreams(document);
+			document.body.addEventListener("htmx:afterSettle", (e) => {
+				fmtTs();
+				const t = e.detail && e.detail.target;
+				if (t && t.querySelectorAll) anchorStreams(t);
+			});
+
+			// stream rows expand in place, same interaction as the log viewer
+			document.body.addEventListener("click", (e) => {
+				const closer = e.target.closest(".js-close-detail");
+				if (closer) { closer.closest(".stream-detail")?.remove(); return; }
+				const row = e.target.closest(".stream-row");
+				if (!row || !row.dataset.id) return;
+				const next = row.nextElementSibling;
+				if (next && next.classList.contains("stream-detail")) { next.remove(); return; }
+				htmx.ajax("GET", "/logs/" + row.dataset.id + "?frag=block", { target: row, swap: "afterend" })
+					.then(() => {
+						const d = row.nextElementSibling;
+						if (d && d.classList.contains("stream-detail")) d.scrollIntoView({ block: "nearest" });
+					});
+			});
+
 			document.body.addEventListener("htmx:beforeSwap", (e) => {
 				if (!e.detail.target || !e.detail.target.querySelectorAll) return;
 				e.detail.target.querySelectorAll("canvas[data-chart]").forEach((c) => {
@@ -369,6 +479,17 @@ templ chartScripts() {
 			renderAll(false);
 		})();
 	</script>
+}
+
+templ dashboardTypeBadge(dtype string) {
+	<span class="badge badge-sm badge-soft font-mono">{ dtype }</span>
+}
+
+func panelPlaceholder(dashboardType string) string {
+	if dashboardType == "logs" {
+		return "SELECT * FROM logs WHERE service = 'orders-api' AND level >= 4 ORDER BY timestamp DESC LIMIT 100"
+	}
+	return "SELECT timestamp / 60000 * 60000 AS minute, AVG(value) FROM metrics WHERE name = 'queue_depth' GROUP BY minute ORDER BY minute LIMIT 500"
 }
 
 func panelWidthClass(w int64) string {

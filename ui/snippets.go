@@ -38,6 +38,7 @@ var logsSnippets = []templates.QuerySnippet{
 	{Label: "errors vs total per service (24h)", SQL: "SELECT service,\n       SUM(CASE WHEN level >= 4 THEN 1 ELSE 0 END) AS errors,\n       COUNT(*) AS total\nFROM logs\nWHERE timestamp > (unixepoch() - 86400) * 1000\nGROUP BY service\nORDER BY errors DESC"},
 	{Label: "extract a field from parsed JSON", SQL: "SELECT timestamp, json_extract(parsed, '$.REPLACE_WITH_FIELD_NAME') AS field, message\nFROM logs\nWHERE parsed IS NOT NULL\nORDER BY timestamp DESC\nLIMIT 100"},
 	{Label: "logs from one host + service", SQL: "SELECT *\nFROM logs\nWHERE host = 'REPLACE_WITH_HOST_NAME'\n  AND service = 'REPLACE_WITH_SERVICE_NAME'\nORDER BY timestamp DESC\nLIMIT 100"},
+	{Label: "logs at one level", SQL: "SELECT *\nFROM logs\n-- levels: 0=trace  1=debug  2=info  3=warn  4=error  5=fatal\n-- (level >= 4 catches errors AND fatals)\nWHERE level = 4\nORDER BY timestamp DESC\nLIMIT 100"},
 }
 
 var placeholderRe = regexp.MustCompile(`REPLACE_WITH_[A-Z_]+`)

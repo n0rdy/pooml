@@ -353,6 +353,16 @@ func getRequiredDBDir() string {
 	if v == "" {
 		log.Fatal().Msg("POOML_DB_DIR is required")
 	}
+	// shells expand ~, env-var UIs (IDE run configs) don't - a literal "~"
+	// otherwise becomes a directory named "~" inside the working directory
+	if v == "~" || strings.HasPrefix(v, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			log.Fatal().Err(err).Msg("cannot expand ~ in POOML_DB_DIR")
+		}
+		v = filepath.Join(home, strings.TrimPrefix(v, "~"))
+		log.Info().Str("resolved", v).Msg("expanded ~ in POOML_DB_DIR")
+	}
 	abs, err := filepath.Abs(v)
 	if err != nil {
 		log.Fatal().Err(err).Str("path", v).Msg("failed to resolve absolute path for POOML_DB_DIR")

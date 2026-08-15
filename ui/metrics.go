@@ -213,8 +213,13 @@ func (ur *Router) renderExplorer(w http.ResponseWriter, req *http.Request, q, sa
 			view.HasAnyMetrics = n == 1
 		}
 	case "chart", "stat", "table":
+		// save-as-panel targets metrics dashboards only (dashboards are typed)
 		if dashboards, err := ur.Dashboards.ListDashboards(req.Context()); err == nil {
-			view.Dashboards = dashboards
+			for _, d := range dashboards {
+				if d.Type == "metrics" {
+					view.Dashboards = append(view.Dashboards, d)
+				}
+			}
 		}
 	}
 
@@ -380,6 +385,12 @@ func (ur *Router) saveExplorerPanel(w http.ResponseWriter, req *http.Request) {
 		Query:       req.PostFormValue("query"),
 		ChartType:   chartType,
 		Width:       2,
+		// the panel remembers its DSL so editing restores the quick query
+		DSL: strings.TrimSpace(req.PostFormValue("dsl")),
+	}
+	if err := ur.applyPanelDSL(req, &p); err != nil {
+		ur.renderExplorer(w, req, p.Query, err.Error())
+		return
 	}
 	if strings.Contains(p.Query, snippetPlaceholderMarker) {
 		// a placeholder panel would render 0 rows forever; catch it here

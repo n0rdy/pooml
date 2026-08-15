@@ -3,7 +3,9 @@ package ui
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/n0rdy/pooml/query"
 	"github.com/n0rdy/pooml/services"
@@ -33,7 +35,7 @@ func (ur *Router) createDashboard(w http.ResponseWriter, req *http.Request) {
 		http.Redirect(w, req, "/dashboards", http.StatusSeeOther)
 		return
 	}
-	id, err := ur.Dashboards.CreateDashboard(req.Context(), req.PostFormValue("name"), req.PostFormValue("description"))
+	id, err := ur.Dashboards.CreateDashboard(req.Context(), req.PostFormValue("name"), req.PostFormValue("type"), req.PostFormValue("description"))
 	if err != nil {
 		ur.renderDashboardsList(w, req, err.Error(), http.StatusBadRequest)
 		return
@@ -52,8 +54,14 @@ func (ur *Router) deleteDashboard(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
 		return
 	}
-	// full navigation for HTMX callers too; the page they were on is gone
-	w.Header().Set("HX-Redirect", "/dashboards")
+	// full navigation for HTMX callers too; the page they were on is gone.
+	// HX-Redirect must ride a 200: on a real 3xx, XHR follows the Location
+	// transparently and htmx never sees the header (nothing happens).
+	if req.Header.Get("HX-Request") == "true" {
+		w.Header().Set("HX-Redirect", "/dashboards")
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 	http.Redirect(w, req, "/dashboards", http.StatusSeeOther)
 }
 
@@ -78,7 +86,11 @@ func (ur *Router) renderDashboard(w http.ResponseWriter, req *http.Request, errM
 		http.Error(w, "something went sideways; try again", http.StatusInternalServerError)
 		return
 	}
-	ur.render(w, req, status, templates.DashboardPage(d, panels, errMsg, nosurf.Token(req)))
+	var metricNames []string
+	if d.Type == "metrics" {
+		metricNames, _ = ur.metricNames(req) // feeds the quick-query autocomplete
+	}
+	ur.render(w, req, status, templates.DashboardPage(d, panels, metricNames, errMsg, nosurf.Token(req)))
 }
 
 func panelFromForm(req *http.Request, dashboardID int64) (services.Panel, error) {
@@ -93,8 +105,35 @@ func panelFromForm(req *http.Request, dashboardID int64) (services.Panel, error)
 		Query:       req.PostFormValue("query"),
 		ChartType:   req.PostFormValue("chart_type"),
 		Width:       width,
+		DSL:         strings.TrimSpace(req.PostFormValue("dsl")),
+		FTS:         strings.TrimSpace(req.PostFormValue("fts")),
+		Op:          req.PostFormValue("op"),
 	}
 	return p, nil
+}
+
+// applyPanelDSL enforces the same authority rule as the explorer: when the
+// panel carries a DSL expression, the server recompiles it and THAT becomes
+// the stored query - a save inside the client's compile debounce can never
+// persist stale SQL.
+func (ur *Router) applyPanelDSL(req *http.Request, p *services.Panel) error {
+	if p.DSL == "" {
+		return nil
+	}
+	d, err := query.ParseDSL(p.DSL)
+	if err != nil {
+		return fmt.Errorf("quick query: %w", err)
+	}
+	var services []string
+	if d.NeedsServices() {
+		services = ur.servicesForMetric(req, d.Metric)
+	}
+	sql, err := d.SQL(services)
+	if err != nil {
+		return fmt.Errorf("quick query: %w", err)
+	}
+	p.Query = sql
+	return nil
 }
 
 func (ur *Router) createPanel(w http.ResponseWriter, req *http.Request) {
@@ -104,6 +143,9 @@ func (ur *Router) createPanel(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	p, err := panelFromForm(req, id)
+	if err == nil {
+		err = ur.applyPanelDSL(req, &p)
+	}
 	if err == nil {
 		err = ur.Dashboards.CreatePanel(req.Context(), p)
 	}
@@ -124,10 +166,17 @@ func (ur *Router) updatePanel(w http.ResponseWriter, req *http.Request) {
 	p, err := panelFromForm(req, dashboardID)
 	p.ID = panelID
 	if err == nil {
+		err = ur.applyPanelDSL(req, &p)
+	}
+	if err == nil {
 		err = ur.Dashboards.UpdatePanel(req.Context(), p)
 	}
 	if err != nil {
-		ur.render(w, req, http.StatusBadRequest, templates.PanelEditCard(p, err.Error(), nosurf.Token(req)))
+		dtype := "metrics"
+		if d, gerr := ur.Dashboards.GetDashboard(req.Context(), dashboardID); gerr == nil {
+			dtype = d.Type
+		}
+		ur.render(w, req, http.StatusBadRequest, templates.PanelEditCard(p, dtype, err.Error(), nosurf.Token(req)))
 		return
 	}
 	// fresh card; its body reloads via hx-trigger="load"
@@ -165,8 +214,13 @@ func (ur *Router) panelFragment(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
+	d, err := ur.Dashboards.GetDashboard(req.Context(), dashboardID)
+	if err != nil {
+		http.NotFound(w, req)
+		return
+	}
 	if req.URL.Query().Get("edit") == "1" {
-		ur.render(w, req, http.StatusOK, templates.PanelEditCard(p, "", nosurf.Token(req)))
+		ur.render(w, req, http.StatusOK, templates.PanelEditCard(p, d.Type, "", nosurf.Token(req)))
 		return
 	}
 	// edit-cancel restores the whole card
@@ -176,15 +230,60 @@ func (ur *Router) panelFragment(w http.ResponseWriter, req *http.Request) {
 	}
 
 	view := templates.PanelView{Panel: p}
-	v, err := query.ValidateIn(p.Query, query.ScopeOneSignal)
+	v, err := query.ValidateIn(p.Query, services.PanelScope(d.Type))
+	// logs panels combine their stored search text at render, exactly like
+	// the logs page does with the FTS bar
+	var args []any
+	if err == nil && d.Type == "logs" && p.FTS != "" {
+		op := p.Op
+		if op != "or" {
+			op = "and"
+		}
+		if cerr := v.CombineFTS(op); cerr == nil {
+			args = append(args, query.FTSMatch(p.FTS))
+		}
+	}
 	if err != nil {
 		view.ShapedResult = templates.ShapedResult{Kind: "error", ErrMsg: humanizeSQLError(err)}
-	} else if res, execErr := query.Execute(req.Context(), ur.Pools.LogsRead, v.SQL()); execErr != nil {
+	} else if res, execErr := query.Execute(req.Context(), ur.Pools.LogsRead, v.SQL(), args...); execErr != nil {
 		view.ShapedResult = templates.ShapedResult{Kind: "error", ErrMsg: execErr.Error()}
+	} else if d.Type == "logs" && (p.ChartType == "stream" || p.ChartType == "") {
+		// the primary logs panel: latest matching lines, viewer-styled
+		view.Kind = "stream"
+		colIdx := make(map[string]int, len(res.Columns))
+		for i, c := range res.Columns {
+			colIdx[c] = i
+		}
+		for _, row := range res.Rows {
+			if r, ok := rowFromResult(colIdx, row); ok {
+				view.StreamRows = append(view.StreamRows, r)
+			}
+		}
+		// same convention as the log viewer: oldest at the top, newest at
+		// the bottom (the pane bottom-anchors client-side)
+		sort.Slice(view.StreamRows, func(i, j int) bool {
+			a, b := view.StreamRows[i], view.StreamRows[j]
+			if a.Ts != b.Ts {
+				return a.Ts < b.Ts
+			}
+			return a.ID < b.ID
+		})
 	} else {
-		view.ShapedResult = shapeResult(res, p.ChartType, fmt.Sprintf("p%d", p.ID), nil)
+		view.ShapedResult = shapeResult(res, logsKindToChartType(d.Type, p.ChartType), fmt.Sprintf("p%d", p.ID), nil)
 	}
 	ur.render(w, req, http.StatusOK, templates.PanelFragment(view))
+}
+
+// logsKindToChartType maps logs panel kinds onto the shared shaping:
+// chart auto-detects line/bar, number is the stat.
+func logsKindToChartType(dashboardType, kind string) string {
+	if dashboardType != "logs" {
+		return kind
+	}
+	if kind == "number" {
+		return "stat"
+	}
+	return "" // "chart": auto-detect
 }
 
 // chartFill is the exact bucket grid a DSL query asked for, letting the

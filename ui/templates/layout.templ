@@ -173,6 +173,17 @@ templ contrastFixes() {
 			background-color: color-mix(in oklab, var(--color-base-content) 12%, var(--color-base-100));
 			border-color: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-100));
 		}
+		/* primary is a button-background token (58% indigo); as link TEXT on a
+		   25% background it lands near 3:1, and whitening it only yields pale
+		   periwinkle. Links in dark use the info token instead: a real light
+		   blue built for dark surfaces. Hover lifts away from the surface
+		   (DaisyUI's own hover goes toward black). */
+		[data-theme="dark"] .link-primary {
+			color: color-mix(in oklch, var(--color-info) 50%, white);
+		}
+		[data-theme="dark"] .link-primary:hover {
+			color: color-mix(in oklch, var(--color-info) 30%, white);
+		}
 		.table thead th {
 			color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
 		}
@@ -190,8 +201,11 @@ templ contrastFixes() {
 			color: color-mix(in oklab, var(--color-base-content) 45%, transparent) !important;
 			font-style: italic;
 		}
+		/* display, not visibility: a hidden-but-laid-out placeholder still
+		   stretches the line box (italic substitute-font metrics), drawing
+		   the caret off-center in the empty+focused state */
 		.cm-editor.cm-focused .cm-placeholder {
-			visibility: hidden;
+			display: none;
 		}
 	</style>
 }
