@@ -35,6 +35,7 @@ type Deps struct {
 	Notifier      *services.NotificationService
 	ScrapeTargets *services.ScrapeTargetsService
 	Dashboards    *services.DashboardsService
+	Backup        *services.BackupService
 	Pools         *db.Pools
 	Broadcaster   *ingestion.Broadcaster
 	// StreamCtx closes open SSE connections; main cancels it via the UI
@@ -107,6 +108,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Get("/", ur.settingsPage)
 		r.Put("/retention", ur.updateRetentionSettings)
 		r.Put("/backup", ur.updateBackupSettings)
+		r.Post("/backup/run", ur.runBackupNow)
 		r.Post("/api-keys", ur.createApiKey)
 		r.Delete("/api-keys/{id}", ur.deleteApiKey)
 		r.Post("/pushover", ur.savePushover)
@@ -227,14 +229,6 @@ func (ur *Router) homePage(w http.ResponseWriter, req *http.Request) {
 // ui/stream.go.
 
 // Alert handlers live in ui/alerts.go.
-
-// Settings
-func (ur *Router) updateRetentionSettings(w http.ResponseWriter, req *http.Request) {
-	notImplemented(w)
-}
-func (ur *Router) updateBackupSettings(w http.ResponseWriter, req *http.Request) {
-	notImplemented(w)
-}
 
 // Settings handlers (page + api keys here; channels in ui/settings.go).
 

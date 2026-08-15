@@ -173,9 +173,10 @@ func (s *ScrapeTargetsService) RecordScrape(ctx context.Context, id int64, scrap
 }
 
 // EnsureSelfScrape registers pooml's own /metrics endpoint as a scrape target
-// once (matched by URL). The endpoint itself lands in M10; until then the
-// caller gates this on POOML_METRICS_ENABLED.
-func (s *ScrapeTargetsService) EnsureSelfScrape(ctx context.Context, apiAddr string) error {
+// (matched by URL). The auth header is re-stored on every call: the metrics
+// secret lives in the environment, so a rotated secret must overwrite the
+// encrypted copy or self-scrape 401s forever.
+func (s *ScrapeTargetsService) EnsureSelfScrape(ctx context.Context, apiAddr, authHeader string) error {
 	selfURL := fmt.Sprintf("http://%s/metrics", apiAddr)
 	var n int
 	if err := s.metaDB.QueryRowContext(ctx,
@@ -183,12 +184,19 @@ func (s *ScrapeTargetsService) EnsureSelfScrape(ctx context.Context, apiAddr str
 		return err
 	}
 	if n > 0 {
-		return nil
+		stored, err := s.enc.Encrypt(authHeader)
+		if err != nil {
+			return err
+		}
+		_, err = s.metaDB.ExecContext(ctx,
+			"UPDATE scrape_targets SET auth_header = ?, is_auth_encrypted = 1 WHERE url = ?", stored, selfURL)
+		return err
 	}
 	return s.Create(ctx, ScrapeTarget{
 		Service:          "pooml",
 		Host:             "self",
 		URL:              selfURL,
+		AuthHeader:       authHeader,
 		ScrapeIntervalMs: MinScrapeIntervalMs,
 		Enabled:          true,
 	})

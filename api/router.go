@@ -16,6 +16,7 @@ import (
 	"github.com/n0rdy/pooml/services"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,6 +35,7 @@ type Router struct {
 	metricsPipeline   *metrics.Pipeline
 	env               string
 	trustProxyHeaders bool
+	metricsSecret     string
 
 	downcastWarned sync.Map // metric name -> struct{}; once-per-name OTLP downcast warning
 }
@@ -46,6 +48,7 @@ func NewRouter(
 	metricsPipeline *metrics.Pipeline,
 	env string,
 	trustProxyHeaders bool,
+	metricsSecret string, // empty = /metrics disabled
 ) *Router {
 	return &Router{
 		monitoringService: monitoringService,
@@ -55,6 +58,7 @@ func NewRouter(
 		metricsPipeline:   metricsPipeline,
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
+		metricsSecret:     metricsSecret,
 	}
 }
 
@@ -67,6 +71,12 @@ func (ar *Router) NewRouter() *chi.Mux {
 	// Healthcheck must be reachable by load balancers / Coolify probes
 	// without API-key auth.
 	router.Get("/healthcheck", ar.healthcheck)
+
+	if ar.metricsSecret != "" {
+		router.With(metricsSecretAuth(ar.metricsSecret, ar.throttlingService, ar.trustProxyHeaders)).
+			Method(http.MethodGet, "/metrics",
+				promhttp.HandlerFor(services.PromRegistry, promhttp.HandlerOpts{}))
+	}
 
 	router.Route("/api/v1", func(r chi.Router) {
 		r.Use(apiKeyTokenAuth(ar.apiKeysService, ar.throttlingService, ar.trustProxyHeaders))

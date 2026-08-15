@@ -1,0 +1,223 @@
+openapi: 3.0.3
+info:
+  title: pooml API
+  version: 0.0.1
+  license:
+    name: AGPL-3.0
+    url: https://www.gnu.org/licenses/agpl-3.0.html
+  description: |
+    Programmatic API of pooml, a self-hosted single-binary log and metrics
+    server. Covers ingestion and operational endpoints only; the web UI is
+    hypermedia and intentionally undocumented here.
+
+servers:
+  - url: http://localhost:8080
+    description: Local API server (POOML_API_ADDR)
+
+tags:
+  - name: Admin
+    description: Health checks and self-observability
+  - name: Ingestion
+    description: Log and metric ingestion
+
+paths:
+
+  /healthcheck:
+    get:
+      tags:
+        - Admin
+      summary: Check application health
+      description: |
+        Pings all SQLite pools. Unprotected so load balancers and
+        orchestrator probes (Coolify, k8s) can reach it; ideally not exposed
+        to the public internet.
+      operationId: healthcheck
+      security: []
+      responses:
+        204:
+          description: Application is healthy
+        503:
+          description: One or more database pools are unreachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /metrics:
+    get:
+      tags:
+        - Admin
+      summary: Prometheus metrics
+      description: |
+        Pooml's own operational metrics in Prometheus text exposition format.
+        Registered only when POOML_METRICS_ENABLED=true; authenticated with
+        the env-provided POOML_METRICS_AUTH_SECRET (not a UI-minted API key).
+        When enabled, pooml also scrapes this endpoint itself, so its own
+        metrics are queryable and graphable like any other source.
+      operationId: metrics
+      security:
+        - MetricsSecret: []
+      responses:
+        200:
+          description: Prometheus text exposition
+          content:
+            text/plain:
+              schema:
+                type: string
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/ingest/{service}/{host}:
+    post:
+      tags:
+        - Ingestion
+      summary: Ingest log lines
+      description: |
+        Accepts a raw payload of log lines and returns immediately; parsing
+        happens asynchronously. Line formats are auto-detected per line:
+        FluentBit JSON arrays, plain JSON objects (including nested and
+        line-delimited), Common Log Format, and plain text all work. Payloads
+        are capped at 2 MiB. A 429 means the ingestion pipeline is saturated;
+        retry with backoff (FluentBit's default retry behavior is fine).
+      operationId: ingestLogs
+      security:
+        - ApiKey: []
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Service name stamped on every log line (max 200 chars)
+          schema:
+            type: string
+            maxLength: 200
+        - name: host
+          in: path
+          required: true
+          description: Host name stamped on every log line (max 200 chars)
+          schema:
+            type: string
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          '*/*':
+            schema:
+              type: string
+              format: binary
+      responses:
+        204:
+          description: Payload accepted for asynchronous processing
+        400:
+          description: Bad request (empty payload, oversized path params)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        413:
+          description: Payload exceeds 2 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/otlp/v1/metrics:
+    post:
+      tags:
+        - Ingestion
+      summary: Ingest metrics (OTLP/HTTP)
+      description: |
+        OTLP/HTTP metrics export endpoint. Accepts both binary protobuf
+        (application/x-protobuf) and JSON (application/json) encodings of
+        ExportMetricsServiceRequest. Gauges and monotonic sums are stored;
+        histograms and exponential histograms are downcast to their _sum and
+        _count series (typed as counters). Payloads are capped at 2 MiB.
+      operationId: otlpMetrics
+      security:
+        - ApiKey: []
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: string
+              format: binary
+          application/json:
+            schema:
+              type: object
+      responses:
+        200:
+          description: >
+            Accepted. Empty ExportMetricsServiceResponse in the request's
+            encoding (zero bytes for protobuf, `{}` for JSON).
+        400:
+          description: Undecodable payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        413:
+          description: Payload exceeds 2 MiB
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        415:
+          description: Content-Type is neither protobuf nor JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key minted in the pooml UI (Settings > API keys).
+    MetricsSecret:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: The POOML_METRICS_AUTH_SECRET value from the environment.
+
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    TooManyRequests:
+      description: Throttled (auth failures) or ingestion pipeline saturated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  schemas:
+    Error:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          enum:
+            - unauthorized
+            - too_many_requests
+            - internal
+            - service_unhealthy
+            - bad_request
+            - empty_payload
+            - payload_too_large

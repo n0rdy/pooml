@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -27,16 +29,150 @@ func (ur *Router) settingsView(req *http.Request, newKey, errMsg string) (templa
 		log.Error().Err(err).Msg("list scrape targets")
 		return templates.SettingsView{}, err
 	}
+	logsDays, metricsDays, firingsDays := ur.retentionDays(ctx)
 	return templates.SettingsView{
 		Keys:   keys,
 		NewKey: newKey,
 		ErrMsg: errMsg,
 		PushoverConfigured: ur.Settings.IsSet(ctx, services.SettingPushoverAppToken) &&
 			ur.Settings.IsSet(ctx, services.SettingPushoverUserKey),
-		CampfireBaseURL: base,
-		CampfireKeySet:  ur.Settings.IsSet(ctx, services.SettingCampfireBotKey),
-		ScrapeTargets:   targets,
+		CampfireBaseURL:      base,
+		CampfireKeySet:       ur.Settings.IsSet(ctx, services.SettingCampfireBotKey),
+		ScrapeTargets:        targets,
+		RetentionLogsDays:    logsDays,
+		RetentionMetricsDays: metricsDays,
+		RetentionFiringsDays: firingsDays,
+		Backup:               ur.backupView(ctx),
 	}, nil
+}
+
+func (ur *Router) retentionDays(ctx context.Context) (int, int, int) {
+	return services.RetentionDays(ctx, ur.Settings, services.SettingRetentionLogsDays, services.RetentionDefaultLogsDays),
+		services.RetentionDays(ctx, ur.Settings, services.SettingRetentionMetricsDays, services.RetentionDefaultMetricsDays),
+		services.RetentionDays(ctx, ur.Settings, services.SettingRetentionFiringsDays, services.RetentionDefaultFiringsDays)
+}
+
+func (ur *Router) backupView(ctx context.Context) templates.BackupView {
+	get := func(key string) string { v, _ := ur.Settings.Get(ctx, key); return v }
+	enabled, _ := strconv.ParseBool(get(services.SettingBackupEnabled))
+	lastRun, _ := strconv.ParseInt(get(services.SettingBackupLastRunAt), 10, 64)
+	schedule := get(services.SettingBackupSchedule)
+	if schedule == "" {
+		schedule = services.BackupDefaultSchedule
+	}
+	return templates.BackupView{
+		Enabled:    enabled,
+		Schedule:   schedule,
+		Endpoint:   get(services.SettingBackupEndpoint),
+		Region:     get(services.SettingBackupRegion),
+		Bucket:     get(services.SettingBackupBucket),
+		Prefix:     get(services.SettingBackupPrefix),
+		CredsSet:   ur.Settings.IsSet(ctx, services.SettingBackupAccessKey) && ur.Settings.IsSet(ctx, services.SettingBackupSecretKey),
+		LastRunAt:  lastRun,
+		LastResult: get(services.SettingBackupLastResult),
+	}
+}
+
+// PUT /settings/backup - saves S3 + schedule config, re-renders the section.
+func (ur *Router) updateBackupSettings(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	render := func(v templates.BackupView, msg string, ok bool) {
+		ur.render(w, req, http.StatusOK, templates.BackupSection(v, msg, ok, nosurf.Token(req)))
+	}
+	if err := req.ParseForm(); err != nil {
+		render(ur.backupView(ctx), "That didn't come through right. Try again.", false)
+		return
+	}
+	schedule := strings.TrimSpace(req.PostFormValue("schedule"))
+	if schedule == "" {
+		schedule = services.BackupDefaultSchedule
+	}
+	if err := services.ValidateCron(schedule); err != nil {
+		render(ur.backupView(ctx), fmt.Sprintf("That's not a cron expression: %v", err), false)
+		return
+	}
+
+	plain := map[string]string{
+		services.SettingBackupEnabled:  strconv.FormatBool(req.PostFormValue("enabled") != ""),
+		services.SettingBackupSchedule: schedule,
+		services.SettingBackupEndpoint: strings.TrimSpace(req.PostFormValue("endpoint")),
+		services.SettingBackupRegion:   strings.TrimSpace(req.PostFormValue("region")),
+		services.SettingBackupBucket:   strings.TrimSpace(req.PostFormValue("bucket")),
+		services.SettingBackupPrefix:   strings.Trim(strings.TrimSpace(req.PostFormValue("prefix")), "/"),
+	}
+	for key, val := range plain {
+		if err := ur.Settings.Set(ctx, key, val, false); err != nil {
+			log.Error().Err(err).Str("key", key).Msg("save backup setting")
+			render(ur.backupView(ctx), "Saving failed - check the logs.", false)
+			return
+		}
+	}
+	// blank secret fields keep the stored values (same rule as Pushover)
+	for key, form := range map[string]string{
+		services.SettingBackupAccessKey: "access_key",
+		services.SettingBackupSecretKey: "secret_key",
+	} {
+		if v := strings.TrimSpace(req.PostFormValue(form)); v != "" {
+			if err := ur.Settings.Set(ctx, key, v, true); err != nil {
+				log.Error().Err(err).Str("key", key).Msg("save backup secret")
+				render(ur.backupView(ctx), "Saving failed - check the logs.", false)
+				return
+			}
+		}
+	}
+	render(ur.backupView(ctx), "Saved.", true)
+}
+
+// POST /settings/backup/run - one manual backup, outcome inline.
+func (ur *Router) runBackupNow(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	msg, ok := "Backup uploaded.", true
+	if err := ur.Backup.RunNow(ctx); err != nil {
+		msg, ok = "Backup failed: "+err.Error(), false
+	}
+	ur.render(w, req, http.StatusOK, templates.BackupSection(ur.backupView(ctx), msg, ok, nosurf.Token(req)))
+}
+
+// PUT /settings/retention - saves all three day counts, re-renders the section.
+func (ur *Router) updateRetentionSettings(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	render := func(logs, metrics, firings int, msg string, ok bool) {
+		ur.render(w, req, http.StatusOK,
+			templates.RetentionSection(logs, metrics, firings, msg, ok, nosurf.Token(req)))
+	}
+	curLogs, curMetrics, curFirings := ur.retentionDays(ctx)
+
+	if err := req.ParseForm(); err != nil {
+		render(curLogs, curMetrics, curFirings, "That didn't come through right. Try again.", false)
+		return
+	}
+	fields := []struct {
+		form string
+		key  string
+	}{
+		{"logs_days", services.SettingRetentionLogsDays},
+		{"metrics_days", services.SettingRetentionMetricsDays},
+		{"alert_firings_days", services.SettingRetentionFiringsDays},
+	}
+	values := make([]int, len(fields))
+	for i, f := range fields {
+		n, err := strconv.Atoi(strings.TrimSpace(req.PostFormValue(f.form)))
+		if err != nil || n < services.RetentionMinDays || n > services.RetentionMaxDays {
+			render(curLogs, curMetrics, curFirings,
+				fmt.Sprintf("Each value must be a whole number of days between %d and %d.",
+					services.RetentionMinDays, services.RetentionMaxDays), false)
+			return
+		}
+		values[i] = n
+	}
+	for i, f := range fields {
+		if err := ur.Settings.Set(ctx, f.key, strconv.Itoa(values[i]), false); err != nil {
+			log.Error().Err(err).Str("key", f.key).Msg("save retention setting")
+			render(curLogs, curMetrics, curFirings, "Saving failed - check the logs.", false)
+			return
+		}
+	}
+	render(values[0], values[1], values[2], "Saved. The next hourly sweep uses these values.", true)
 }
 
 // savePushover stores credentials; blank fields keep existing values so a

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 
@@ -47,6 +48,28 @@ func apiKeyTokenAuth(keys apiKeyVerifier, throttlingService *services.Throttling
 			if key == "" || !keys.Verify(req.Context(), key) {
 				throttlingService.RecordFailure(ip)
 				log.Warn().Str("ip", ip).Msg("invalid API key")
+				sendUnauthorizedErrorResponse(w)
+				return
+			}
+			next.ServeHTTP(w, req)
+		})
+	}
+}
+
+// metricsSecretAuth guards /metrics: one env-provided secret (not a UI-minted
+// API key) in X-API-Key, constant-time compared. Same throttling as the API.
+func metricsSecretAuth(secret string, throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ip := utils.ClientIP(req, trustProxyHeaders)
+			if throttlingService.IsLocked(ip) {
+				sendTooManyRequestsResponse(w)
+				return
+			}
+			key := req.Header.Get("X-API-Key")
+			if subtle.ConstantTimeCompare([]byte(key), []byte(secret)) != 1 {
+				throttlingService.RecordFailure(ip)
+				log.Warn().Str("ip", ip).Msg("invalid metrics secret")
 				sendUnauthorizedErrorResponse(w)
 				return
 			}

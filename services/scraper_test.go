@@ -263,10 +263,10 @@ func TestEnsureSelfScrapeIdempotent(t *testing.T) {
 	store, _, _ := scrapeSetup(t)
 	ctx := context.Background()
 
-	if err := store.EnsureSelfScrape(ctx, "localhost:8080"); err != nil {
+	if err := store.EnsureSelfScrape(ctx, "localhost:8080", "X-API-Key: first-secret"); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.EnsureSelfScrape(ctx, "localhost:8080"); err != nil {
+	if err := store.EnsureSelfScrape(ctx, "localhost:8080", "X-API-Key: rotated-secret"); err != nil {
 		t.Fatal(err)
 	}
 	targets, err := store.List(ctx)
@@ -278,5 +278,9 @@ func TestEnsureSelfScrapeIdempotent(t *testing.T) {
 	}
 	if targets[0].Service != "pooml" || targets[0].Host != "self" {
 		t.Fatalf("self target identity wrong: %+v", targets[0])
+	}
+	// second call refreshed the stored (encrypted) header: env rotation sticks
+	if targets[0].AuthHeader != "X-API-Key: rotated-secret" {
+		t.Fatalf("auth header not refreshed: %q", targets[0].AuthHeader)
 	}
 }

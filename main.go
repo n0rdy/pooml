@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"net/http"
 	"os"
@@ -88,9 +89,19 @@ func main() {
 
 	scraper := services.NewScraper(scrapeTargetsService, metricsPipeline)
 
+	retentionService := services.NewRetentionService(settingsService, pools.LogsWrite, pools.Metrics, pools.Meta)
+
 	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
 	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
 	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
+	startJob(appCtx, &jobsWG, "retention-sweeper", retentionService.Run)
+	backupService := services.NewBackupService(settingsService, pools.LogsWrite, pools.Metrics, pools.Meta)
+	startJob(appCtx, &jobsWG, "backup", backupService.Run)
+	startJob(appCtx, &jobsWG, "db-optimizer", func(ctx context.Context) {
+		services.RunOptimizer(ctx, map[string]*sql.DB{
+			"logs": pools.LogsWrite, "metrics": pools.Metrics, "meta": pools.Meta,
+		})
+	})
 
 	// The scraper produces into the metrics pipeline, so it lives on its own
 	// context and WaitGroup: it must be fully stopped BEFORE stage 3 drains
@@ -100,10 +111,12 @@ func main() {
 	var scraperWG sync.WaitGroup
 	startJob(scraperCtx, &scraperWG, "prometheus-scraper", scraper.Run)
 
-	// Self-scrape registration only; the /metrics endpoint itself lands in
-	// M10, so the flag stays off until then. See CONTEXT.md > Metrics.
-	if getMetricsEnabled() {
-		if err := scrapeTargetsService.EnsureSelfScrape(appCtx, apiAddr); err != nil {
+	// Self-scrape: pooml consumes its own /metrics like any other target.
+	// The auth header is refreshed every boot so env-secret rotation sticks.
+	metricsEnabled, metricsSecret := getMetricsConfigs()
+	if metricsEnabled {
+		services.RegisterDBSizeMetrics(dbDir)
+		if err := scrapeTargetsService.EnsureSelfScrape(appCtx, apiAddr, "X-API-Key: "+metricsSecret); err != nil {
 			log.Error().Err(err).Msg("failed to register self-scrape target")
 		}
 	}
@@ -114,7 +127,7 @@ func main() {
 	defer sseCancel()
 
 	// Routers
-	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders)
+	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders, metricsSecret)
 	uiRouter := ui.NewRouter(ui.Deps{
 		Sessions:          sessionsService,
 		Throttling:        throttlingService,
@@ -124,6 +137,7 @@ func main() {
 		Notifier:          notifier,
 		ScrapeTargets:     scrapeTargetsService,
 		Dashboards:        services.NewDashboardsService(pools.Meta),
+		Backup:            backupService,
 		Pools:             pools,
 		Broadcaster:       broadcaster,
 		StreamCtx:         sseCtx,
@@ -402,16 +416,28 @@ func getTrustProxyHeaders() bool {
 	return trust
 }
 
-func getMetricsEnabled() bool {
+// getMetricsConfigs mirrors forq: metrics are off by default, and enabling
+// them requires a dedicated auth secret (env-only, never stored in meta.db).
+func getMetricsConfigs() (bool, string) {
 	v := os.Getenv("POOML_METRICS_ENABLED")
 	if v == "" {
-		return false
+		return false, ""
 	}
 	enabled, err := strconv.ParseBool(v)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to parse POOML_METRICS_ENABLED")
 	}
-	return enabled
+	if !enabled {
+		return false, ""
+	}
+	secret := os.Getenv("POOML_METRICS_AUTH_SECRET")
+	if secret == "" {
+		log.Fatal().Msg("POOML_METRICS_AUTH_SECRET is required when POOML_METRICS_ENABLED=true")
+	}
+	if len(secret) < minSecretLength {
+		log.Fatal().Msgf("POOML_METRICS_AUTH_SECRET is too short: must be at least %d characters", minSecretLength)
+	}
+	return true, secret
 }
 
 func getShutdownTimeout() time.Duration {

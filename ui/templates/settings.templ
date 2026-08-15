@@ -2,6 +2,7 @@ package templates
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/n0rdy/pooml/services"
@@ -18,6 +19,24 @@ type SettingsView struct {
 
 	ScrapeTargets []services.ScrapeTarget
 	ScrapeErrMsg  string
+
+	RetentionLogsDays    int
+	RetentionMetricsDays int
+	RetentionFiringsDays int
+
+	Backup BackupView
+}
+
+type BackupView struct {
+	Enabled    bool
+	Schedule   string
+	Endpoint   string
+	Region     string
+	Bucket     string
+	Prefix     string
+	CredsSet   bool
+	LastRunAt  int64
+	LastResult string
 }
 
 templ SettingsPage(v SettingsView, csrfToken string) {
@@ -27,7 +46,8 @@ templ SettingsPage(v SettingsView, csrfToken string) {
 			@PushoverSection(v.PushoverConfigured, csrfToken)
 			@CampfireSection(v.CampfireBaseURL, v.CampfireKeySet, csrfToken)
 			@ScrapeTargetsSection(v.ScrapeTargets, v.ScrapeErrMsg, csrfToken)
-			@comingLater("Retention & backup", "Cleanup schedules and S3 backup land in M10.")
+			@RetentionSection(v.RetentionLogsDays, v.RetentionMetricsDays, v.RetentionFiringsDays, "", false, csrfToken)
+			@BackupSection(v.Backup, "", false, csrfToken)
 		</div>
 		@homeScript()
 	}
@@ -298,6 +318,121 @@ templ scrapeTargetStatus(t services.ScrapeTarget) {
 	if t.LastScrapedAt.Valid {
 		<div class="text-sm opacity-60" data-reltime={ msString(t.LastScrapedAt.Int64) }>{ utcTime(t.LastScrapedAt.Int64) }</div>
 	}
+}
+
+templ RetentionSection(logsDays, metricsDays, firingsDays int, msg string, ok bool, csrfToken string) {
+	<section id="retention-section" class="card bg-base-100">
+		<div class="card-body py-4 flex flex-col gap-3">
+			<h2 class="card-title">Retention</h2>
+			<p class="text-sm opacity-80">How long each signal is kept. Cleanup runs hourly in small batches, so ingestion never stalls.</p>
+			<form hx-put="/settings/retention" hx-target="#retention-section" hx-swap="outerHTML" class="flex items-end gap-3 flex-wrap">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				@retentionField("logs_days", "logs", logsDays)
+				@retentionField("metrics_days", "metrics", metricsDays)
+				@retentionField("alert_firings_days", "alert history", firingsDays)
+				<button type="submit" class="btn btn-primary btn-sm">Save</button>
+			</form>
+			if msg != "" {
+				if ok {
+					<p class="text-sm text-success">{ msg }</p>
+				} else {
+					<p class="text-sm text-error">{ msg }</p>
+				}
+			}
+		</div>
+	</section>
+}
+
+templ retentionField(name, label string, days int) {
+	<label class="flex flex-col gap-1">
+		<span class="text-sm opacity-60">{ label } (days)</span>
+		<input type="number" name={ name } min="1" max="3650" required value={ strconv.Itoa(days) } class="input input-bordered input-sm w-28"/>
+	</label>
+}
+
+templ BackupSection(b BackupView, msg string, ok bool, csrfToken string) {
+	<section id="backup-section" class="card bg-base-100">
+		<div class="card-body py-4 flex flex-col gap-3">
+			<h2 class="card-title">Backup</h2>
+			<p class="text-sm opacity-80">
+				Scheduled copies of all three databases to S3-compatible storage (AWS, R2, MinIO, B2).
+				Pooml only ever uploads; expire old backups with a bucket lifecycle rule.
+			</p>
+			<form hx-put="/settings/backup" hx-target="#backup-section" hx-swap="outerHTML" class="flex flex-col gap-3">
+				<input type="hidden" name="csrf_token" value={ csrfToken }/>
+				<div class="flex items-end gap-3 flex-wrap">
+					@backupField("bucket", "bucket", b.Bucket, "my-backups", "text")
+					@backupField("prefix", "prefix (optional)", b.Prefix, "pooml", "text")
+					@backupField("region", "region", b.Region, "auto", "text")
+				</div>
+				<div class="flex items-end gap-3 flex-wrap">
+					<label class="flex flex-col gap-1 grow">
+						<span class="text-sm opacity-60">endpoint (empty for AWS S3)</span>
+						<input type="url" name="endpoint" value={ b.Endpoint } placeholder="https://minio.example.com" class="input input-bordered input-sm w-full max-w-96"/>
+					</label>
+					@backupField("schedule", "schedule (cron, UTC)", b.Schedule, "0 3 * * *", "text")
+				</div>
+				<div class="flex items-end gap-3 flex-wrap">
+					<label class="flex flex-col gap-1">
+						<span class="text-sm opacity-60">access key</span>
+						<input type="password" name="access_key" placeholder={ secretPlaceholder(b.CredsSet) } autocomplete="off" class="input input-bordered input-sm w-52"/>
+					</label>
+					<label class="flex flex-col gap-1">
+						<span class="text-sm opacity-60">secret key</span>
+						<input type="password" name="secret_key" placeholder={ secretPlaceholder(b.CredsSet) } autocomplete="off" class="input input-bordered input-sm w-52"/>
+					</label>
+					<label class="flex items-center gap-2 text-sm mb-1 cursor-pointer">
+						<input type="checkbox" name="enabled" class="checkbox checkbox-sm" checked?={ b.Enabled }/>
+						enabled
+					</label>
+				</div>
+				<div class="flex items-center gap-3">
+					<button type="submit" class="btn btn-primary btn-sm">Save</button>
+					<button
+						type="button"
+						class="btn btn-sm"
+						hx-post="/settings/backup/run"
+						hx-target="#backup-section"
+						hx-swap="outerHTML"
+						hx-headers={ csrfHeader(csrfToken) }
+						hx-disabled-elt="this"
+					>Back up now</button>
+					@backupLastRun(b)
+				</div>
+			</form>
+			if msg != "" {
+				if ok {
+					<p class="text-sm text-success">{ msg }</p>
+				} else {
+					<p class="text-sm text-error break-words">{ msg }</p>
+				}
+			}
+		</div>
+	</section>
+}
+
+templ backupField(name, label, value, placeholder, typ string) {
+	<label class="flex flex-col gap-1">
+		<span class="text-sm opacity-60">{ label }</span>
+		<input type={ typ } name={ name } value={ value } placeholder={ placeholder } class="input input-bordered input-sm w-44"/>
+	</label>
+}
+
+templ backupLastRun(b BackupView) {
+	if b.LastRunAt > 0 {
+		<span class="text-sm opacity-60">
+			last run { time.UnixMilli(b.LastRunAt).UTC().Format("2006-01-02 15:04") } UTC:
+			if b.LastResult == "ok" {
+				<span class="text-success">ok</span>
+			} else {
+				<span class="text-error" title={ b.LastResult }>failed</span>
+			}
+		</span>
+	}
+}
+
+func csrfHeader(token string) string {
+	return fmt.Sprintf(`{"X-CSRF-Token": %q}`, token)
 }
 
 templ comingLater(title string, note string) {
