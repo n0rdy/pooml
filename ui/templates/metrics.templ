@@ -22,6 +22,16 @@ type MetricsExplorerView struct {
 	Dashboards []services.Dashboard
 	// clickable examples of the hard patterns, prefilled from the catalog
 	Snippets []QuerySnippet
+	// landing catalog: each metric links to a type-appropriate DSL query
+	Catalog []CatalogRow
+}
+
+type CatalogRow struct {
+	Name       string
+	Service    string
+	Points     int64
+	LastSeenMs int64
+	DSL        string // "" = name not linkable
 }
 
 type QuerySnippet struct {
@@ -156,7 +166,42 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 			if v.SaveErr != "" {
 				<div role="alert" class="alert alert-error text-sm">Saving the panel failed: { v.SaveErr }</div>
 			}
-			switch v.Shaped.Kind {
+			if len(v.Catalog) > 0 {
+				<div class="card bg-base-100">
+					<div class="card-body py-3 gap-2">
+						<span class="text-sm opacity-70">{ strconv.Itoa(len(v.Catalog)) } metrics - click one to chart it (the verb follows its type: counters get increase, gauges get avg)</span>
+						<div class="overflow-x-auto max-h-[70vh]">
+							<table class="table table-sm">
+								<thead>
+									<tr>
+										<th>metric</th>
+										<th>service</th>
+										<th>datapoints</th>
+										<th>last seen</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, c := range v.Catalog {
+										<tr>
+											<td>
+												if c.DSL != "" {
+													<a href={ templ.SafeURL(catalogDSLURL(c.DSL)) } class="link link-primary font-mono">{ c.Name }</a>
+												} else {
+													<span class="font-mono">{ c.Name }</span>
+												}
+											</td>
+											<td class="font-mono">{ c.Service }</td>
+											<td>{ strconv.FormatInt(c.Points, 10) }</td>
+											<td class="opacity-70"><span data-reltime={ msString(c.LastSeenMs) }>{ utcTime(c.LastSeenMs) }</span></td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			} else {
+				switch v.Shaped.Kind {
 				case "error":
 					<div role="alert" class="alert alert-error text-sm">{ v.Shaped.ErrMsg }</div>
 				case "empty":
@@ -207,12 +252,14 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 						</div>
 					</div>
 					@saveAsPanel(v, csrfToken)
+				}
 			}
 		</div>
 		@templ.JSONScript("metric-names", v.MetricNames)
 		@sqlEditorModule()
 		@chartScripts()
 		@dslScript()
+		@homeScript()
 	}
 }
 

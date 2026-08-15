@@ -126,6 +126,18 @@ func TestMetricsExplorer(t *testing.T) {
 		t.Error("landing catalog must not render a chart")
 	}
 
+	// catalog names link to type-appropriate DSL queries
+	if !strings.Contains(body, "dsl=increase%28orders_total%29") {
+		t.Error("counter catalog link should use increase()")
+	}
+	if !strings.Contains(body, "dsl=avg%28queue_depth%29") {
+		t.Error("gauge catalog link should use avg()")
+	}
+	// and the link round-trips into a working page
+	if status, _ := cl.get("/metrics-explorer?dsl=" + url.QueryEscape("increase(orders_total) per 1h last 24h")); status != http.StatusOK {
+		t.Fatalf("catalog link round trip: %d", status)
+	}
+
 	// the same catalog run explicitly auto-shapes to a bar, and the epoch-ms
 	// last_seen column is excluded from the series
 	status, body = cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT name, service, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics GROUP BY name, service"))
@@ -252,8 +264,9 @@ func TestExplorerSaveAsPanel(t *testing.T) {
 	cl.login(testSecret, cl.csrfToken())
 	seedMetrics(cl)
 
-	// no dashboards yet: the save row offers creating one instead
-	status, body := cl.get("/metrics-explorer")
+	// no dashboards yet: the save row offers creating one instead (on a
+	// query result - the landing catalog has no save row by design)
+	status, body := cl.get("/metrics-explorer?q=" + url.QueryEscape("SELECT value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp"))
 	if status != http.StatusOK || !strings.Contains(body, "Create a dashboard") {
 		t.Fatalf("save row without dashboards wrong: %d", status)
 	}
@@ -520,6 +533,38 @@ func TestSnippetDSLEquivalents(t *testing.T) {
 	// and the formatter is pinned in the import map
 	if !strings.Contains(body, "sql-formatter@15.8.2") {
 		t.Error("sql-formatter missing from the import map")
+	}
+}
+
+// The Home ingest-health fragment reports facts: failing scrapers, last
+// datapoint, 24h volume - never metric values (those need thresholds).
+func TestHomeMetricsIngestFragment(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+
+	// nothing ingested, nothing failing: onboarding note
+	_, body := cl.get("/home/metrics")
+	if !strings.Contains(body, "No metrics yet") {
+		t.Fatalf("empty ingest state wrong: %.200s", body)
+	}
+
+	// recent data + a failing scrape target
+	now := time.Now().UnixMilli()
+	if _, err := cl.pools.Metrics.Exec(
+		"INSERT INTO metrics(timestamp, name, type, value, service, host) VALUES (?, 'queue_depth', 1, 7, 'shop', 'h1')", now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cl.pools.Meta.Exec(
+		`INSERT INTO scrape_targets (service, host, url, scrape_interval_ms, enabled, last_error, last_error_at, created_at)
+		 VALUES ('broken-exporter', 'h9', 'http://down:1/metrics', 30000, 1, 'HTTP 500', ?, ?)`, now, now); err != nil {
+		t.Fatal(err)
+	}
+
+	_, body = cl.get("/home/metrics")
+	for _, want := range []string{"1 failing", "broken-exporter", "HTTP 500", "1 datapoints", "data-reltime"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("ingest fragment missing %q: %.300s", want, body)
+		}
 	}
 }
 

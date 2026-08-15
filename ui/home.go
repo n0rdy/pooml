@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -114,6 +115,49 @@ func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Reque
 		return
 	}
 	ur.render(w, req, http.StatusOK, templates.HomeServices(out))
+}
+
+// homePageMetricsSegment is ingest HEALTH, not metric values: values need
+// user-defined thresholds to mean "on fire" (that's what alerts are for);
+// failing scrapers and silent pipelines are facts.
+func (ur *Router) homePageMetricsSegment(w http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
+	defer cancel()
+
+	var view templates.HomeMetricsView
+
+	rows, err := ur.Pools.Meta.QueryContext(ctx,
+		"SELECT service, last_error FROM scrape_targets WHERE enabled = 1 AND last_error IS NOT NULL ORDER BY last_error_at DESC LIMIT 5")
+	if err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var t templates.FailingTarget
+		if err := rows.Scan(&t.Service, &t.Error); err != nil {
+			ur.homeFragmentError(w, req, err)
+			return
+		}
+		view.FailingTargets = append(view.FailingTargets, t)
+	}
+	if err := rows.Err(); err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+
+	var lastTs sql.NullInt64
+	if err := ur.Pools.LogsRead.QueryRowContext(ctx, "SELECT MAX(timestamp) FROM metrics").Scan(&lastTs); err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	view.LastSeenMs = lastTs.Int64
+	if err := ur.Pools.LogsRead.QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM metrics WHERE timestamp > ?", time.Now().UnixMilli()-24*60*60*1000).Scan(&view.Points24h); err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	ur.render(w, req, http.StatusOK, templates.HomeMetrics(view))
 }
 
 func (ur *Router) homeFragmentError(w http.ResponseWriter, req *http.Request, err error) {

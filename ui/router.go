@@ -77,6 +77,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Get("/volume", ur.homePageVolumeSegment)
 		r.Get("/errors", ur.homePageErrorsSegment)
 		r.Get("/services", ur.homePageServicesSegment)
+		r.Get("/metrics", ur.homePageMetricsSegment)
 	})
 
 	router.Route("/logs", func(r chi.Router) {

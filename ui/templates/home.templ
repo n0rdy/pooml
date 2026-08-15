@@ -18,7 +18,7 @@ templ HomePage(csrfToken string) {
 			<div class="grid md:grid-cols-2 gap-6">
 				<div class="card bg-base-100 md:col-span-2 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title">Volume - last hour</h3>
+						<h3 class="card-title">Log volume - last hour</h3>
 						<div hx-get="/home/volume" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
@@ -26,7 +26,7 @@ templ HomePage(csrfToken string) {
 				</div>
 				<div class="card bg-base-100 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title">Errors - last 24h</h3>
+						<h3 class="card-title">Log errors - last 24h</h3>
 						<div hx-get="/home/errors" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
@@ -34,8 +34,16 @@ templ HomePage(csrfToken string) {
 				</div>
 				<div class="card bg-base-100 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title">Services</h3>
+						<h3 class="card-title">Services sending logs</h3>
 						<div hx-get="/home/services" hx-trigger="load, every 30s" hx-swap="innerHTML">
+							<span class="loading loading-dots loading-sm opacity-40"></span>
+						</div>
+					</div>
+				</div>
+				<div class="card bg-base-100 md:col-span-2 min-w-0">
+					<div class="card-body py-4">
+						<h3 class="card-title">Metrics ingest</h3>
+						<div hx-get="/home/metrics" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
 					</div>
@@ -94,6 +102,45 @@ templ HomeServices(rows []HomeServiceRow) {
 				</li>
 			}
 		</ul>
+	}
+}
+
+type FailingTarget struct {
+	Service string
+	Error   string
+}
+
+// HomeMetricsView is ingest health, not metric values: facts only.
+type HomeMetricsView struct {
+	FailingTargets []FailingTarget
+	LastSeenMs     int64 // 0 = nothing ingested yet
+	Points24h      int64
+}
+
+templ HomeMetrics(v HomeMetricsView) {
+	if v.LastSeenMs == 0 && len(v.FailingTargets) == 0 {
+		<p class="text-sm opacity-60 italic py-2">
+			No metrics yet. Add a scrape target in <a href="/settings" class="link link-primary">Settings</a>
+			or push OTLP to <code class="font-mono">/api/v1/otlp/v1/metrics</code>.
+		</p>
+	} else {
+		<div class="flex items-center gap-4 flex-wrap text-sm">
+			if len(v.FailingTargets) == 0 {
+				<span class="badge badge-sm badge-soft badge-success">scrapes ok</span>
+			} else {
+				<span class="badge badge-sm badge-soft badge-error">{ strconv.Itoa(len(v.FailingTargets)) } failing</span>
+			}
+			if v.LastSeenMs > 0 {
+				<span class="opacity-70">last datapoint <span data-reltime={ msString(v.LastSeenMs) }>{ utcTime(v.LastSeenMs) }</span></span>
+			}
+			<span class="opacity-70">{ strconv.FormatInt(v.Points24h, 10) } datapoints · 24h</span>
+			<a href="/metrics-explorer" class="link link-hover opacity-70 ml-auto">explore →</a>
+		</div>
+		for _, t := range v.FailingTargets {
+			<div class="text-sm text-error truncate" title={ t.Error }>
+				<a href="/settings" class="link">{ t.Service }</a>: { t.Error }
+			</div>
+		}
 	}
 }
 

@@ -142,6 +142,19 @@ func (ur *Router) renderExplorer(w http.ResponseWriter, req *http.Request, q, sa
 		view.MetricNames = names
 	}
 
+	// the landing catalog is clickable: each metric links to a DSL query
+	// with the verb picked by its STORED TYPE (counter - increase, gauge -
+	// avg) - data-driven, so you never chart a counter's raw climb by
+	// accident. Empty catalog falls through to the onboarding empty state.
+	if landing {
+		if catalog := ur.metricsCatalog(req); len(catalog) > 0 {
+			view.Catalog = catalog
+			view.Snippets = explorerSnippets
+			ur.render(w, req, http.StatusOK, templates.MetricsExplorerPage(view, nosurf.Token(req)))
+			return
+		}
+	}
+
 	// dsl is authoritative when present: recompile it server-side so a Run
 	// landing inside the client's compile debounce window can never submit
 	// stale SQL (the "unchecked by service but the pivot survived" race).
@@ -303,6 +316,32 @@ func (ur *Router) servicesForMetric(req *http.Request, metric string) []string {
 		}
 	}
 	return services
+}
+
+func (ur *Router) metricsCatalog(req *http.Request) []templates.CatalogRow {
+	res, err := query.Execute(req.Context(), ur.Pools.LogsRead,
+		"SELECT name, MIN(type) AS type, service, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics GROUP BY name, service ORDER BY last_seen DESC LIMIT 100")
+	if err != nil {
+		return nil
+	}
+	out := make([]templates.CatalogRow, 0, len(res.Rows))
+	for _, row := range res.Rows {
+		c := templates.CatalogRow{
+			Name:       cellString(row[0]),
+			Service:    cellString(row[2]),
+			Points:     asInt64(row[3]),
+			LastSeenMs: asInt64(row[4]),
+		}
+		if !strings.Contains(c.Name, ")") { // a ')' would break the DSL head
+			if asInt64(row[1]) == 0 {
+				c.DSL = "increase(" + c.Name + ") per 1h last 24h"
+			} else {
+				c.DSL = "avg(" + c.Name + ") per 10m last 24h"
+			}
+		}
+		out = append(out, c)
+	}
+	return out
 }
 
 // metricNames feeds the DSL autocomplete: offering the catalog for the USER

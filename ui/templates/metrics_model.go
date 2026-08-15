@@ -7,6 +7,10 @@ func metricsExportURL(q, format string) string {
 	return "/metrics-explorer/export?" + vals.Encode()
 }
 
+func catalogDSLURL(dsl string) string {
+	return "/metrics-explorer?" + url.Values{"dsl": {dsl}}.Encode()
+}
+
 func metricsViewURL(q, dsl, view string) string {
 	vals := url.Values{"q": {q}, "view": {view}}
 	if dsl != "" {
