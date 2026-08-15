@@ -36,7 +36,7 @@ templ AlertsRegion(v AlertsView) {
 			<div class="overflow-x-auto border border-base-content/15 rounded-box bg-base-100">
 				<table class="table">
 					<thead>
-						<tr class="text-xs text-center">
+						<tr class="text-sm text-center">
 							<th class="text-left">alert</th>
 							<th>every</th>
 							<th>target</th>
@@ -59,7 +59,7 @@ templ alertRow(a services.Alert) {
 	<tr>
 		<td>
 			<div class="font-semibold">{ a.Name }</div>
-			<div class="font-mono text-xs opacity-60 max-w-md truncate" title={ a.Query }>{ a.Query }</div>
+			<div class="font-mono text-sm opacity-60 max-w-md truncate" title={ a.Query }>{ a.Query }</div>
 		</td>
 		<td class="text-center whitespace-nowrap text-sm">{ humanMs(a.CheckIntervalMs) }</td>
 		<td class="text-center"><span class="badge badge-sm badge-outline font-mono">{ targetSummary(a.Target) }</span></td>
@@ -68,19 +68,19 @@ templ alertRow(a services.Alert) {
 		</td>
 		<td class="text-right whitespace-nowrap">
 			<button
-				class="btn btn-ghost btn-xs"
+				class="btn btn-ghost btn-sm"
 				hx-post={ fmt.Sprintf("/alerts/%d/test", a.ID) }
 				hx-target="#dry-run"
 				hx-swap="innerHTML"
 			>Test</button>
 			<button
-				class="btn btn-ghost btn-xs"
+				class="btn btn-ghost btn-sm"
 				hx-get={ fmt.Sprintf("/alerts/%d/edit", a.ID) }
 				hx-target="closest tr"
 				hx-swap="outerHTML"
 			>Edit</button>
 			<button
-				class="btn btn-ghost btn-xs text-error"
+				class="btn btn-ghost btn-sm text-error"
 				hx-delete={ fmt.Sprintf("/alerts/%d", a.ID) }
 				hx-target="#alerts-region"
 				hx-swap="outerHTML"
@@ -92,25 +92,25 @@ templ alertRow(a services.Alert) {
 
 templ alertStatus(a services.Alert) {
 	if !a.Enabled {
-		<span class="badge badge-sm badge-ghost">disabled</span>
+		<span class="badge badge-sm badge-soft">disabled</span>
 	} else if a.CurrentlyFiring {
 		<span class="badge badge-sm badge-error font-semibold">FIRING</span>
 	} else {
 		<span class="badge badge-sm badge-soft badge-success">quiet</span>
 	}
 	if a.LastError.Valid {
-		<div class="text-xs text-error max-w-40 truncate" title={ a.LastError.String }>{ a.LastError.String }</div>
+		<div class="text-sm text-error max-w-40 truncate" title={ a.LastError.String }>{ a.LastError.String }</div>
 	}
 	if a.LastCheckedAt.Valid {
-		<div class="text-xs opacity-50" data-reltime={ msString(a.LastCheckedAt.Int64) }>{ utcTime(a.LastCheckedAt.Int64) }</div>
+		<div class="text-sm opacity-60" data-reltime={ msString(a.LastCheckedAt.Int64) }>{ utcTime(a.LastCheckedAt.Int64) }</div>
 	}
 }
 
 templ alertCreateCard(v AlertsView, csrfToken string) {
-	<div class="card bg-base-100 border border-base-content/15">
+	<div class="card bg-base-100">
 		<div class="card-body py-4">
-			<h3 class="card-title text-base">New alert</h3>
-			<p class="text-xs opacity-60 -mt-1">If the query returns rows, the alert fires. Level-triggered, with a cooldown between notifications.</p>
+			<h3 class="card-title">New alert</h3>
+			<p class="text-sm opacity-60 -mt-1">If the query returns rows, the alert fires. Level-triggered, with a cooldown between notifications.</p>
 			if v.ErrMsg != "" {
 				<div role="alert" class="alert alert-error text-sm">{ v.ErrMsg }</div>
 			}
@@ -141,22 +141,22 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, cs
 	<input type="hidden" name="csrf_token" value={ csrfToken }/>
 	<div class="grid gap-3 md:grid-cols-3">
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Name</span>
+			<span class="text-sm opacity-80">Name</span>
 			<input type="text" name="name" value={ a.Name } class="input input-bordered input-sm" maxlength="100" required/>
 		</label>
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Check every (seconds, min 30)</span>
+			<span class="text-sm opacity-80">Check every (seconds, min 30)</span>
 			<input type="number" name="interval_s" value={ strconv.FormatInt(a.CheckIntervalMs/1000, 10) } min="30" class="input input-bordered input-sm" required/>
 		</label>
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Cooldown between notifications (minutes)</span>
+			<span class="text-sm opacity-80">Cooldown between notifications (minutes)</span>
 			<input type="number" name="cooldown_m" value={ strconv.FormatInt(a.CooldownMs/60000, 10) } min="0" class="input input-bordered input-sm" required/>
 		</label>
 	</div>
 	<div class="flex flex-col gap-1">
 		<span class="flex items-center justify-between">
-			<span class="text-xs opacity-80">Query (fires when it returns rows)</span>
-			<button type="button" class="open-in-logs link link-primary text-xs" title="Run this query on the logs page (new tab)">open in logs ↗</button>
+			<span class="text-sm opacity-80">Query (fires when it returns rows)</span>
+			<button type="button" class="open-in-logs link link-primary text-sm" title="Run this query on the logs page (new tab)">open in logs ↗</button>
 		</span>
 		<textarea name="query" class="hidden">{ a.Query }</textarea>
 		<div class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors" style={ sqlEditorReserve(a.Query) }></div>
@@ -168,33 +168,40 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, cs
 	}
 	<div class="grid gap-3 md:grid-cols-3 items-start">
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Notify via</span>
-			<select name="target_type" class="select select-bordered select-sm">
-				if poConfigured || targetType(a.Target) == "pushover" {
-					<option value="pushover" selected?={ targetType(a.Target) == "pushover" }>{ channelLabel("Pushover", poConfigured) }</option>
-				}
-				if cfConfigured || targetType(a.Target) == "campfire" {
-					<option value="campfire" selected?={ targetType(a.Target) == "campfire" }>{ channelLabel("Campfire", cfConfigured) }</option>
-				}
-			</select>
+			<span class="text-sm opacity-80">Notify via</span>
+			if !poConfigured && !cfConfigured && targetType(a.Target) == "" {
+				// an empty select looks broken; a disabled one explains itself
+				<select name="target_type" class="select select-bordered select-sm" disabled>
+					<option value="">no channels configured yet</option>
+				</select>
+			} else {
+				<select name="target_type" class="select select-bordered select-sm">
+					if poConfigured || targetType(a.Target) == "pushover" {
+						<option value="pushover" selected?={ targetType(a.Target) == "pushover" }>{ channelLabel("Pushover", poConfigured) }</option>
+					}
+					if cfConfigured || targetType(a.Target) == "campfire" {
+						<option value="campfire" selected?={ targetType(a.Target) == "campfire" }>{ channelLabel("Campfire", cfConfigured) }</option>
+					}
+				</select>
+			}
 		</label>
 		<div class={ "target-campfire", templ.KV("hidden", targetType(a.Target) != "campfire") }>
 			<label class="flex flex-col gap-1">
-				<span class="text-xs opacity-80">Room id</span>
+				<span class="text-sm opacity-80">Room id</span>
 				<input type="number" name="cf_room_id" value={ roomIDValue(a.Target) } class="input input-bordered input-sm w-32"/>
 			</label>
 		</div>
 		<div class={ "target-pushover md:col-span-2 grid grid-cols-3 gap-2", templ.KV("hidden", targetType(a.Target) != "pushover") }>
 			<label class="flex flex-col gap-1">
-				<span class="text-xs opacity-80">Device (optional)</span>
+				<span class="text-sm opacity-80">Device (optional)</span>
 				<input type="text" name="po_device" value={ targetOf(a.Target).Device } class="input input-bordered input-sm"/>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-xs opacity-80">Priority (-2..2)</span>
+				<span class="text-sm opacity-80">Priority (-2..2)</span>
 				<input type="number" name="po_priority" value={ strconv.Itoa(targetOf(a.Target).Priority) } min="-2" max="2" class="input input-bordered input-sm"/>
 			</label>
 			<label class="flex flex-col gap-1">
-				<span class="text-xs opacity-80">Sound (optional)</span>
+				<span class="text-sm opacity-80">Sound (optional)</span>
 				<input type="text" name="po_sound" value={ targetOf(a.Target).Sound } class="input input-bordered input-sm"/>
 			</label>
 		</div>
@@ -239,7 +246,7 @@ templ DryRunResult(name string, columns []string, cells [][]string, errMsg strin
 		} else {
 			<span><b>{ name }</b>: { strconv.Itoa(len(cells)) } row(s) - this WOULD fire (no notification sent).</span>
 			<div class="overflow-x-auto w-full max-h-48">
-				<table class="table table-xs font-mono">
+				<table class="table table-sm font-mono">
 					<thead><tr>
 						for _, c := range columns {
 							<th>{ c }</th>

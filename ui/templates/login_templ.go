@@ -44,7 +44,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"min-h-screen flex items-center justify-center p-4\"><div class=\"card bg-base-100 w-full max-w-sm shadow-xl\"><div class=\"card-body\"><h1 class=\"text-4xl font-bold tracking-tight\">pooml</h1><p class=\"text-sm opacity-60 -mt-1\">don't panic.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"min-h-screen flex items-center justify-center p-4\"><div class=\"card bg-base-100 w-full max-w-sm\"><div class=\"card-body\"><h1 class=\"text-4xl font-bold tracking-tight\">pooml</h1><p class=\"text-sm opacity-60 -mt-1\">don't panic.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

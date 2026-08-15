@@ -46,7 +46,7 @@ func HomePage(csrfToken string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-5xl mx-auto flex flex-col gap-6\"><div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body items-center text-center py-8\"><h2 class=\"text-xl font-bold\">Something on fire?</h2><p class=\"text-sm opacity-70 -mt-1\">Errors and fatals from the last hour, live tail already running.</p><a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-5xl mx-auto flex flex-col gap-6\"><div class=\"card bg-base-100\"><div class=\"card-body items-center text-center py-8\"><h2 class=\"text-xl font-bold\">Something on fire?</h2><p class=\"text-sm opacity-70 -mt-1\">Errors and fatals from the last hour, live tail already running.</p><a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -59,7 +59,7 @@ func HomePage(csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"btn btn-error btn-wide mt-2 text-lg\">Triage</a></div></div><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"card bg-base-100 border border-base-content/15 md:col-span-2 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Volume - last hour</h3><div hx-get=\"/home/volume\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 border border-base-content/15 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Errors - last 24h</h3><div hx-get=\"/home/errors\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 border border-base-content/15 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title text-base\">Services</h3><div hx-get=\"/home/services\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"btn btn-error btn-wide mt-2 text-lg\">Triage</a></div></div><div class=\"grid md:grid-cols-2 gap-6\"><div class=\"card bg-base-100 md:col-span-2 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title\">Volume - last hour</h3><div hx-get=\"/home/volume\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title\">Errors - last 24h</h3><div hx-get=\"/home/errors\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div><div class=\"card bg-base-100 min-w-0\"><div class=\"card-body py-4\"><h3 class=\"card-title\">Services</h3><div hx-get=\"/home/services\" hx-trigger=\"load, every 30s\" hx-swap=\"innerHTML\"><span class=\"loading loading-dots loading-sm opacity-40\"></span></div></div></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -140,7 +140,7 @@ func HomeVolume(v HomeVolumeView) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><p class=\"text-xs opacity-60 pt-1\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div><p class=\"text-sm opacity-60 pt-1\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -207,7 +207,7 @@ func HomeErrors(rows []HomeErrorRow) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate min-w-0\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate min-w-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -292,7 +292,7 @@ func HomeServices(rows []HomeServiceRow) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate min-w-0\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-1\"><span class=\"font-mono text-sm truncate min-w-0\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -305,7 +305,7 @@ func HomeServices(rows []HomeServiceRow) templ.Component {
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</span> <span class=\"text-xs opacity-60 whitespace-nowrap\" data-reltime=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</span> <span class=\"text-sm opacity-60 whitespace-nowrap\" data-reltime=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

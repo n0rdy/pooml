@@ -8,7 +8,7 @@ import "strconv"
 templ HomePage(csrfToken string) {
 	@Shell("pooml", "home", csrfToken) {
 		<div class="max-w-5xl mx-auto flex flex-col gap-6">
-			<div class="card bg-base-100 border border-base-content/15">
+			<div class="card bg-base-100">
 				<div class="card-body items-center text-center py-8">
 					<h2 class="text-xl font-bold">Something on fire?</h2>
 					<p class="text-sm opacity-70 -mt-1">Errors and fatals from the last hour, live tail already running.</p>
@@ -16,25 +16,25 @@ templ HomePage(csrfToken string) {
 				</div>
 			</div>
 			<div class="grid md:grid-cols-2 gap-6">
-				<div class="card bg-base-100 border border-base-content/15 md:col-span-2 min-w-0">
+				<div class="card bg-base-100 md:col-span-2 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title text-base">Volume - last hour</h3>
+						<h3 class="card-title">Volume - last hour</h3>
 						<div hx-get="/home/volume" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
 					</div>
 				</div>
-				<div class="card bg-base-100 border border-base-content/15 min-w-0">
+				<div class="card bg-base-100 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title text-base">Errors - last 24h</h3>
+						<h3 class="card-title">Errors - last 24h</h3>
 						<div hx-get="/home/errors" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
 					</div>
 				</div>
-				<div class="card bg-base-100 border border-base-content/15 min-w-0">
+				<div class="card bg-base-100 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title text-base">Services</h3>
+						<h3 class="card-title">Services</h3>
 						<div hx-get="/home/services" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
@@ -59,7 +59,7 @@ templ HomeVolume(v HomeVolumeView) {
 				></div>
 			}
 		</div>
-		<p class="text-xs opacity-60 pt-1">{ strconv.FormatInt(v.Total, 10) } logs, 5-minute buckets</p>
+		<p class="text-sm opacity-60 pt-1">{ strconv.FormatInt(v.Total, 10) } logs, 5-minute buckets</p>
 	}
 }
 
@@ -70,7 +70,7 @@ templ HomeErrors(rows []HomeErrorRow) {
 		<ul class="flex flex-col gap-1">
 			for _, r := range rows {
 				<li>
-					<a href={ templ.SafeURL(serviceErrorsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1">
+					<a href={ templ.SafeURL(serviceErrorsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-1">
 						<span class="font-mono text-sm truncate min-w-0">{ r.Service }</span>
 						<span class="badge badge-sm badge-soft badge-error font-mono">{ strconv.FormatInt(r.Count, 10) }</span>
 					</a>
@@ -87,9 +87,9 @@ templ HomeServices(rows []HomeServiceRow) {
 		<ul class="flex flex-col gap-1">
 			for _, r := range rows {
 				<li>
-					<a href={ templ.SafeURL(serviceLogsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-1">
+					<a href={ templ.SafeURL(serviceLogsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-1">
 						<span class="font-mono text-sm truncate min-w-0">{ r.Service }</span>
-						<span class="text-xs opacity-60 whitespace-nowrap" data-reltime={ msString(r.LastSeenMs) }>{ utcTime(r.LastSeenMs) }</span>
+						<span class="text-sm opacity-60 whitespace-nowrap" data-reltime={ msString(r.LastSeenMs) }>{ utcTime(r.LastSeenMs) }</span>
 					</a>
 				</li>
 			}

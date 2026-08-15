@@ -29,18 +29,21 @@ templ LogsPage(v LogsView, csrfToken string) {
 					<button type="button" id="sql-toggle" class="btn btn-sm sm:hidden">SQL</button>
 					<div class="join hidden sm:flex" title="How the search combines with the SQL below">
 						if v.Op == "or" {
-							<input class="join-item btn btn-xs" type="radio" name="op" value="and" aria-label="AND"/>
-							<input class="join-item btn btn-xs" type="radio" name="op" value="or" aria-label="OR" checked/>
+							<input class="join-item btn btn-sm" type="radio" name="op" value="and" aria-label="AND"/>
+							<input class="join-item btn btn-sm" type="radio" name="op" value="or" aria-label="OR" checked/>
 						} else {
-							<input class="join-item btn btn-xs" type="radio" name="op" value="and" aria-label="AND" checked/>
-							<input class="join-item btn btn-xs" type="radio" name="op" value="or" aria-label="OR"/>
+							<input class="join-item btn btn-sm" type="radio" name="op" value="and" aria-label="AND" checked/>
+							<input class="join-item btn btn-sm" type="radio" name="op" value="or" aria-label="OR"/>
 						}
 					</div>
 				</div>
 				<div id="sql-block" class="hidden sm:flex flex-col gap-2">
 				<div class="flex items-center justify-between px-1">
-					<span class="text-xs font-semibold opacity-80">SQL query</span>
-					<span class="text-xs opacity-60 hidden sm:inline">Cmd/Ctrl + Enter runs</span>
+					<span class="text-sm font-semibold opacity-80">SQL query</span>
+					<span class="text-sm opacity-60 hidden sm:flex items-center gap-3">
+						<button type="button" id="fmt-sql-logs" class="link link-primary" title="Format the SQL (Cmd/Ctrl+Shift+F)">format</button>
+						<span>Cmd/Ctrl + Enter runs</span>
+					</span>
 				</div>
 				<div
 					id="sql-editor"
@@ -48,6 +51,19 @@ templ LogsPage(v LogsView, csrfToken string) {
 					style={ logsEditorReserve(v.Q) }
 					class="border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden focus-within:border-primary transition-colors"
 				></div>
+				if len(v.Snippets) > 0 {
+					<div class="flex items-center gap-1.5 flex-wrap">
+						<span class="text-sm opacity-60">examples:</span>
+						for _, s := range v.Snippets {
+							<button
+								type="button"
+								class="btn btn-sm btn-ghost border border-base-content/15 font-normal"
+								data-snippet={ s.SQL }
+								title="Load into the editor (nothing runs until you hit Run)"
+							>{ s.Label }</button>
+						}
+					</div>
+				}
 				<div class="flex items-center gap-2">
 					<button type="submit" class="btn btn-primary btn-sm">Run</button>
 					<button type="button" id="reset-query" class="btn btn-ghost btn-sm" title="Back to the default query, filters cleared">Reset</button>
@@ -80,8 +96,8 @@ templ LogsResults(v LogsView) {
 
 templ resultsToolbar(count int, truncated bool, v LogsView) {
 	<div class="flex items-center justify-between shrink-0 pb-1">
-		<span class="text-xs opacity-70">{ rowsLabel(count, truncated) }</span>
-		<label class="flex items-center gap-1 cursor-pointer text-xs" title="Wrap long lines instead of truncating">
+		<span class="text-sm opacity-70">{ rowsLabel(count, truncated) }</span>
+		<label class="flex items-center gap-1 cursor-pointer text-sm" title="Wrap long lines instead of truncating">
 			<input type="checkbox" id="wrap-toggle" class="toggle toggle-xs"/>
 			wrap
 		</label>
@@ -89,7 +105,7 @@ templ resultsToolbar(count int, truncated bool, v LogsView) {
 }
 
 templ exportFooter(v LogsView) {
-	<div class="flex justify-end gap-3 text-xs shrink-0 pt-1">
+	<div class="flex justify-end gap-3 text-sm shrink-0 pt-1">
 		<span class="opacity-60">export:</span>
 		<a href={ templ.SafeURL(exportURL(v, "csv")) } class="link link-hover">CSV</a>
 		<a href={ templ.SafeURL(exportURL(v, "json")) } class="link link-hover">JSON</a>
@@ -108,7 +124,7 @@ templ logViewer(v LogsView) {
 	>
 		<table class="table font-mono">
 			<thead class="sticky top-0 bg-base-100 z-10">
-				<tr class="text-xs text-center">
+				<tr class="text-sm text-center">
 					<th class="w-32">time</th>
 					<th class="w-16">level</th>
 					<th class="w-28 hidden sm:table-cell">service</th>
@@ -121,7 +137,7 @@ templ logViewer(v LogsView) {
 					@logRowTr(r, v.Q)
 				}
 				if len(v.Rows) == 0 {
-					<tr><td colspan="4" class="text-center py-8 opacity-50 italic">Nothing matches. All quiet, or too quiet?</td></tr>
+					<tr><td colspan="4" class="text-center py-8 opacity-60 italic">Nothing matches. All quiet, or too quiet?</td></tr>
 				}
 			</tbody>
 		</table>
@@ -148,19 +164,19 @@ templ pageSentinel(v LogsView) {
 			hx-trigger="intersect root:#log-scroll"
 			hx-swap="outerHTML"
 		>
-			<td colspan="4" class="text-center py-2 opacity-40 text-xs">
+			<td colspan="4" class="text-center py-2 opacity-40 text-sm">
 				<span class="loading loading-dots loading-xs"></span> reaching further back
 			</td>
 		</tr>
 	} else if v.AtStart {
-		<tr><td colspan="4" class="text-center py-2 opacity-30 text-xs">beginning of history</td></tr>
+		<tr><td colspan="4" class="text-center py-2 opacity-30 text-sm">beginning of history</td></tr>
 	}
 }
 
 templ logRowTr(r LogRow, q string) {
 	// color budget: hue is reserved for levels (semantic); service is a
 	// monochrome outline tag - clickability comes from shape + hover, not color
-	<tr class="log-row hover:bg-base-200 cursor-pointer" data-id={ rowID(r.ID) }>
+	<tr class="log-row hover:bg-base-content/5 cursor-pointer" data-id={ rowID(r.ID) }>
 		<td class="whitespace-nowrap opacity-80"><span data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span></td>
 		<td class="text-center">
 			if r.Level != nil {
@@ -196,7 +212,7 @@ templ StreamRow(r LogRow, q string) {
 templ LogDetailRow(d LogDetail) {
 	<tr class="detail-row bg-base-300/40">
 		<td colspan="4" class="p-3">
-			<div class="flex flex-col gap-2 text-xs font-mono">
+			<div class="flex flex-col gap-2 text-sm font-mono">
 				<div class="flex gap-4 opacity-80">
 					<span>id { rowID(d.ID) }</span>
 					<span>event <span data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
@@ -218,7 +234,7 @@ templ genericTable(v LogsView) {
 	<div id="log-scroll" class="flex-1 min-h-0 overflow-y-auto overflow-x-auto border border-base-content/15 rounded-box bg-base-100">
 		<table class="table font-mono">
 			<thead class="sticky top-0 bg-base-100 z-10">
-				<tr class="text-xs text-center">
+				<tr class="text-sm text-center">
 					for _, c := range v.Columns {
 						<th>{ c }</th>
 					}
@@ -233,7 +249,7 @@ templ genericTable(v LogsView) {
 					</tr>
 				}
 				if len(v.Cells) == 0 {
-					<tr><td colspan="99" class="text-center py-8 opacity-50 italic">Zero rows. The query ran fine; there's just nothing there.</td></tr>
+					<tr><td colspan="99" class="text-center py-8 opacity-60 italic">Zero rows. The query ran fine; there's just nothing there.</td></tr>
 				}
 			</tbody>
 		</table>
@@ -334,8 +350,21 @@ templ logsScript() {
 		import { LanguageSupport, syntaxTree } from "@codemirror/language";
 		import { linter, setDiagnostics } from "@codemirror/lint";
 		import { oneDark } from "@codemirror/theme-one-dark";
+		import { format } from "sql-formatter";
 
 		const { fmtTimes, applyWrap, anchorBottom, pane } = window.poomlView;
+
+		// formatting survives until the next Run: the server canonicalizes q
+		// through the serializer when merging filters/FTS (see CONTEXT.md)
+		function fmtDoc(v) {
+			try {
+				const pretty = format(v.state.doc.toString(), { language: "sqlite", keywordCase: "upper" });
+				if (pretty !== v.state.doc.toString()) {
+					v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: pretty } });
+				}
+			} catch (e) { /* unparseable mid-edit SQL: leave it alone */ }
+			return true;
+		}
 
 		const host = document.getElementById("sql-editor");
 
@@ -413,6 +442,7 @@ templ logsScript() {
 				Prec.highest(keymap.of([
 					{ key: "Tab", run: acceptCompletion },
 					{ key: "Enter", run: acceptCompletion },
+					{ key: "Mod-Shift-f", run: fmtDoc },
 				])),
 				basicSetup,
 				editorTheme.of(isLight() ? [] : oneDark),
@@ -474,6 +504,17 @@ templ logsScript() {
 		new MutationObserver(() => {
 			view.dispatch({ effects: editorTheme.reconfigure(isLight() ? [] : oneDark) });
 		}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+		// snippet chips load their SQL into the editor - never run it
+		document.addEventListener("click", (e) => {
+			const chip = e.target.closest("[data-snippet]");
+			if (!chip) return;
+			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: chip.dataset.snippet } });
+			view.focus();
+		});
+
+		const fmtBtn = document.getElementById("fmt-sql-logs");
+		if (fmtBtn) fmtBtn.addEventListener("click", () => fmtDoc(view));
 
 		// re-anchor once the editor is mounted: the reserved min-height keeps
 		// this a no-op unless the line estimate was slightly off

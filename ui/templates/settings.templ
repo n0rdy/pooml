@@ -37,7 +37,7 @@ templ configuredBadge(ok bool) {
 	if ok {
 		<span class="badge badge-sm badge-soft badge-success">configured</span>
 	} else {
-		<span class="badge badge-sm badge-ghost">not configured</span>
+		<span class="badge badge-sm badge-soft">not configured</span>
 	}
 }
 
@@ -50,13 +50,13 @@ templ ChannelTestResult(errMsg string) {
 }
 
 templ PushoverSection(configured bool, csrfToken string) {
-	<section class="card bg-base-100 shadow">
+	<section class="card bg-base-100">
 		<div class="card-body py-4 gap-3">
-			<h2 class="card-title text-base">
+			<h2 class="card-title">
 				Pushover
 				@configuredBadge(configured)
 			</h2>
-			<p class="text-xs opacity-60 -mt-2">
+			<p class="text-sm opacity-60 -mt-2">
 				<a href="https://pushover.net" target="_blank" rel="noopener" class="link link-hover">Pushover</a>
 				is a simple push-notification app for your phone: one-time purchase, no subscription, made for exactly
 				this kind of alerting. Credentials are encrypted at rest; blank fields keep current values.
@@ -64,11 +64,11 @@ templ PushoverSection(configured bool, csrfToken string) {
 			<form method="post" action="/settings/pushover" class="flex gap-3 items-end flex-wrap">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">App token</span>
+					<span class="text-sm opacity-80">App token</span>
 					<input type="password" name="app_token" placeholder={ secretPlaceholder(configured) } class="input input-bordered input-sm"/>
 				</label>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">User key</span>
+					<span class="text-sm opacity-80">User key</span>
 					<input type="password" name="user_key" placeholder={ secretPlaceholder(configured) } class="input input-bordered input-sm"/>
 				</label>
 				<button type="submit" class="btn btn-primary btn-sm">Save</button>
@@ -88,13 +88,13 @@ templ PushoverSection(configured bool, csrfToken string) {
 }
 
 templ CampfireSection(baseURL string, keySet bool, csrfToken string) {
-	<section class="card bg-base-100 shadow">
+	<section class="card bg-base-100">
 		<div class="card-body py-4 gap-3">
-			<h2 class="card-title text-base">
+			<h2 class="card-title">
 				Campfire
 				@configuredBadge(baseURL != "" && keySet)
 			</h2>
-			<p class="text-xs opacity-60 -mt-2">
+			<p class="text-sm opacity-60 -mt-2">
 				<a href="https://once.com/campfire" target="_blank" rel="noopener" class="link link-hover">Once Campfire</a>
 				is 37signals' self-hosted chat: buy once, run it on your own box - a natural fit next to pooml.
 				Alerts post to a room via a bot. The bot key is encrypted at rest.
@@ -102,11 +102,11 @@ templ CampfireSection(baseURL string, keySet bool, csrfToken string) {
 			<form method="post" action="/settings/campfire" class="flex gap-3 items-end flex-wrap">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
 				<label class="flex flex-col gap-1 flex-1 min-w-48">
-					<span class="text-xs opacity-80">Base URL</span>
+					<span class="text-sm opacity-80">Base URL</span>
 					<input type="url" name="base_url" value={ baseURL } placeholder="https://chat.example.com" class="input input-bordered input-sm w-full"/>
 				</label>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">Bot key</span>
+					<span class="text-sm opacity-80">Bot key</span>
 					<input type="password" name="bot_key" placeholder={ secretPlaceholder(keySet) } class="input input-bordered input-sm"/>
 				</label>
 				<button type="submit" class="btn btn-primary btn-sm">Save</button>
@@ -114,7 +114,7 @@ templ CampfireSection(baseURL string, keySet bool, csrfToken string) {
 			<form class="flex gap-3 items-end border-t border-base-content/10 pt-3" hx-post="/settings/campfire/test" hx-target="#campfire-test-result" hx-swap="innerHTML">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">Test room id</span>
+					<span class="text-sm opacity-80">Test room id</span>
 					<input type="number" name="room_id" class="input input-bordered input-sm w-28"/>
 				</label>
 				<button type="submit" class="btn btn-ghost btn-sm">Send test</button>
@@ -126,7 +126,7 @@ templ CampfireSection(baseURL string, keySet bool, csrfToken string) {
 
 // ApiKeysSection is also served as an HTMX fragment after a revoke.
 templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfToken string) {
-	<section id="api-keys" class="card bg-base-100 shadow">
+	<section id="api-keys" class="card bg-base-100">
 		<div class="card-body">
 			<h2 class="card-title">API keys</h2>
 			<p class="text-sm opacity-60">
@@ -162,7 +162,7 @@ templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfT
 								<td class="opacity-60">{ formatMs(k.CreatedAt) }</td>
 								<td class="text-right">
 									<button
-										class="btn btn-ghost btn-xs text-error"
+										class="btn btn-ghost btn-sm text-error"
 										hx-delete={ fmt.Sprintf("/settings/api-keys/%d", k.ID) }
 										hx-target="#api-keys"
 										hx-swap="outerHTML"
@@ -177,7 +177,7 @@ templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfT
 			<form method="post" action="/settings/api-keys" class="flex gap-2 items-end mt-2">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
 				<label class="flex flex-col gap-1 flex-1">
-					<span class="text-xs opacity-80">Label</span>
+					<span class="text-sm opacity-80">Label</span>
 					<input
 						type="text"
 						name="label"
@@ -195,10 +195,10 @@ templ ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfT
 
 // ScrapeTargetsSection is also served as an HTMX fragment after toggle/delete.
 templ ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfToken string) {
-	<section id="scrape-targets" class="card bg-base-100 shadow">
+	<section id="scrape-targets" class="card bg-base-100">
 		<div class="card-body py-4 gap-3">
-			<h2 class="card-title text-base">Scrape targets</h2>
-			<p class="text-xs opacity-60 -mt-2">
+			<h2 class="card-title">Scrape targets</h2>
+			<p class="text-sm opacity-60 -mt-2">
 				Prometheus-format <code class="font-mono">/metrics</code> endpoints pooml pulls on a schedule.
 				Every scraped value is stamped with the service and host you set here.
 				Prefer push? Point an OTLP/HTTP exporter at <code class="font-mono">/api/v1/otlp/v1/metrics</code> instead.
@@ -224,14 +224,14 @@ templ ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfT
 							for _, t := range targets {
 								<tr class={ templ.KV("opacity-50", !t.Enabled) }>
 									<td class="font-mono">{ t.Service }</td>
-									<td class="font-mono text-xs max-w-60 truncate" title={ t.URL }>{ t.URL }</td>
+									<td class="font-mono text-sm max-w-60 truncate" title={ t.URL }>{ t.URL }</td>
 									<td class="whitespace-nowrap">{ humanMs(t.ScrapeIntervalMs) }</td>
 									<td>
 										@scrapeTargetStatus(t)
 									</td>
 									<td class="text-right whitespace-nowrap">
 										<button
-											class="btn btn-ghost btn-xs"
+											class="btn btn-ghost btn-sm"
 											hx-post={ fmt.Sprintf("/settings/scrape-targets/%d/toggle", t.ID) }
 											hx-target="#scrape-targets"
 											hx-swap="outerHTML"
@@ -243,7 +243,7 @@ templ ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfT
 											}
 										</button>
 										<button
-											class="btn btn-ghost btn-xs text-error"
+											class="btn btn-ghost btn-sm text-error"
 											hx-delete={ fmt.Sprintf("/settings/scrape-targets/%d", t.ID) }
 											hx-target="#scrape-targets"
 											hx-swap="outerHTML"
@@ -259,23 +259,23 @@ templ ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfT
 			<form method="post" action="/settings/scrape-targets" class="flex gap-3 items-end flex-wrap border-t border-base-content/10 pt-3">
 				<input type="hidden" name="csrf_token" value={ csrfToken }/>
 				<label class="flex flex-col gap-1 flex-1 min-w-56">
-					<span class="text-xs opacity-80">URL</span>
+					<span class="text-sm opacity-80">URL</span>
 					<input type="url" name="url" placeholder="http://localhost:9100/metrics" class="input input-bordered input-sm w-full" required/>
 				</label>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">Service</span>
+					<span class="text-sm opacity-80">Service</span>
 					<input type="text" name="service" placeholder="node-exporter" class="input input-bordered input-sm w-36" maxlength="200" required/>
 				</label>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">Host</span>
+					<span class="text-sm opacity-80">Host</span>
 					<input type="text" name="host" placeholder="auto from URL" class="input input-bordered input-sm w-32" maxlength="200"/>
 				</label>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">Auth header (optional)</span>
+					<span class="text-sm opacity-80">Auth header (optional)</span>
 					<input type="password" name="auth_header" placeholder="X-API-Key: ..." class="input input-bordered input-sm w-40"/>
 				</label>
 				<label class="flex flex-col gap-1">
-					<span class="text-xs opacity-80">Every (seconds)</span>
+					<span class="text-sm opacity-80">Every (seconds)</span>
 					<input type="number" name="interval_s" value="30" min="30" max="3600" class="input input-bordered input-sm w-24" required/>
 				</label>
 				<button type="submit" class="btn btn-primary btn-sm">Add target</button>
@@ -286,24 +286,24 @@ templ ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfT
 
 templ scrapeTargetStatus(t services.ScrapeTarget) {
 	if !t.Enabled {
-		<span class="badge badge-sm badge-ghost">paused</span>
+		<span class="badge badge-sm badge-soft">paused</span>
 	} else if t.LastError.Valid {
 		<span class="badge badge-sm badge-soft badge-error" title={ t.LastError.String }>error</span>
-		<div class="text-xs text-error max-w-48 truncate" title={ t.LastError.String }>{ t.LastError.String }</div>
+		<div class="text-sm text-error max-w-48 truncate" title={ t.LastError.String }>{ t.LastError.String }</div>
 	} else if t.LastScrapedAt.Valid {
 		<span class="badge badge-sm badge-soft badge-success">ok</span>
 	} else {
-		<span class="badge badge-sm badge-ghost">waiting</span>
+		<span class="badge badge-sm badge-soft">waiting</span>
 	}
 	if t.LastScrapedAt.Valid {
-		<div class="text-xs opacity-50" data-reltime={ msString(t.LastScrapedAt.Int64) }>{ utcTime(t.LastScrapedAt.Int64) }</div>
+		<div class="text-sm opacity-60" data-reltime={ msString(t.LastScrapedAt.Int64) }>{ utcTime(t.LastScrapedAt.Int64) }</div>
 	}
 }
 
 templ comingLater(title string, note string) {
-	<section class="card bg-base-100 shadow opacity-50">
+	<section class="card bg-base-100 opacity-50">
 		<div class="card-body py-4">
-			<h2 class="card-title text-base">{ title }</h2>
+			<h2 class="card-title">{ title }</h2>
 			<p class="text-sm">{ note }</p>
 		</div>
 	</section>

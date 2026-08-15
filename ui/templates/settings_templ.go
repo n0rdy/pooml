@@ -130,7 +130,7 @@ func configuredBadge(ok bool) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<span class=\"badge badge-sm badge-ghost\">not configured</span>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<span class=\"badge badge-sm badge-soft\">not configured</span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -209,7 +209,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<section class=\"card bg-base-100 shadow\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title text-base\">Pushover")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<section class=\"card bg-base-100\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title\">Pushover")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -217,7 +217,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</h2><p class=\"text-xs opacity-60 -mt-2\"><a href=\"https://pushover.net\" target=\"_blank\" rel=\"noopener\" class=\"link link-hover\">Pushover</a> is a simple push-notification app for your phone: one-time purchase, no subscription, made for exactly this kind of alerting. Credentials are encrypted at rest; blank fields keep current values.</p><form method=\"post\" action=\"/settings/pushover\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</h2><p class=\"text-sm opacity-60 -mt-2\"><a href=\"https://pushover.net\" target=\"_blank\" rel=\"noopener\" class=\"link link-hover\">Pushover</a> is a simple push-notification app for your phone: one-time purchase, no subscription, made for exactly this kind of alerting. Credentials are encrypted at rest; blank fields keep current values.</p><form method=\"post\" action=\"/settings/pushover\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -230,7 +230,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">App token</span> <input type=\"password\" name=\"app_token\" placeholder=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">App token</span> <input type=\"password\" name=\"app_token\" placeholder=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -243,7 +243,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" class=\"input input-bordered input-sm\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">User key</span> <input type=\"password\" name=\"user_key\" placeholder=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" class=\"input input-bordered input-sm\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">User key</span> <input type=\"password\" name=\"user_key\" placeholder=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -285,7 +285,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<section class=\"card bg-base-100 shadow\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title text-base\">Campfire")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<section class=\"card bg-base-100\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title\">Campfire")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -293,7 +293,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</h2><p class=\"text-xs opacity-60 -mt-2\"><a href=\"https://once.com/campfire\" target=\"_blank\" rel=\"noopener\" class=\"link link-hover\">Once Campfire</a> is 37signals' self-hosted chat: buy once, run it on your own box - a natural fit next to pooml. Alerts post to a room via a bot. The bot key is encrypted at rest.</p><form method=\"post\" action=\"/settings/campfire\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</h2><p class=\"text-sm opacity-60 -mt-2\"><a href=\"https://once.com/campfire\" target=\"_blank\" rel=\"noopener\" class=\"link link-hover\">Once Campfire</a> is 37signals' self-hosted chat: buy once, run it on your own box - a natural fit next to pooml. Alerts post to a room via a bot. The bot key is encrypted at rest.</p><form method=\"post\" action=\"/settings/campfire\" class=\"flex gap-3 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -306,7 +306,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"> <label class=\"flex flex-col gap-1 flex-1 min-w-48\"><span class=\"text-xs opacity-80\">Base URL</span> <input type=\"url\" name=\"base_url\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\"> <label class=\"flex flex-col gap-1 flex-1 min-w-48\"><span class=\"text-sm opacity-80\">Base URL</span> <input type=\"url\" name=\"base_url\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -319,7 +319,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" placeholder=\"https://chat.example.com\" class=\"input input-bordered input-sm w-full\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Bot key</span> <input type=\"password\" name=\"bot_key\" placeholder=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" placeholder=\"https://chat.example.com\" class=\"input input-bordered input-sm w-full\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Bot key</span> <input type=\"password\" name=\"bot_key\" placeholder=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -345,7 +345,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Test room id</span> <input type=\"number\" name=\"room_id\" class=\"input input-bordered input-sm w-28\"></label> <button type=\"submit\" class=\"btn btn-ghost btn-sm\">Send test</button> <span id=\"campfire-test-result\" class=\"self-center\"></span></form></div></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\"> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Test room id</span> <input type=\"number\" name=\"room_id\" class=\"input input-bordered input-sm w-28\"></label> <button type=\"submit\" class=\"btn btn-ghost btn-sm\">Send test</button> <span id=\"campfire-test-result\" class=\"self-center\"></span></form></div></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -375,7 +375,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 			templ_7745c5c3_Var15 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<section id=\"api-keys\" class=\"card bg-base-100 shadow\"><div class=\"card-body\"><h2 class=\"card-title\">API keys</h2><p class=\"text-sm opacity-60\">One key per sender (a FluentBit instance, an app pushing logs or OTLP metrics). Any key works for every <code class=\"font-mono\">/api/v1/*</code> endpoint, sent as the <code class=\"font-mono\">X-API-Key</code> header - separate keys are for tidy revocation, not scoping.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<section id=\"api-keys\" class=\"card bg-base-100\"><div class=\"card-body\"><h2 class=\"card-title\">API keys</h2><p class=\"text-sm opacity-60\">One key per sender (a FluentBit instance, an app pushing logs or OTLP metrics). Any key works for every <code class=\"font-mono\">/api/v1/*</code> endpoint, sent as the <code class=\"font-mono\">X-API-Key</code> header - separate keys are for tidy revocation, not scoping.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -455,7 +455,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</td><td class=\"text-right\"><button class=\"btn btn-ghost btn-xs text-error\" hx-delete=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</td><td class=\"text-right\"><button class=\"btn btn-ghost btn-sm text-error\" hx-delete=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -504,7 +504,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\"> <label class=\"flex flex-col gap-1 flex-1\"><span class=\"text-xs opacity-80\">Label</span> <input type=\"text\" name=\"label\" placeholder=\"fluentbit-prod\" class=\"input input-bordered input-sm w-full\" maxlength=\"100\" required></label> <button type=\"submit\" class=\"btn btn-primary btn-sm\">Mint key</button></form></div></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\"> <label class=\"flex flex-col gap-1 flex-1\"><span class=\"text-sm opacity-80\">Label</span> <input type=\"text\" name=\"label\" placeholder=\"fluentbit-prod\" class=\"input input-bordered input-sm w-full\" maxlength=\"100\" required></label> <button type=\"submit\" class=\"btn btn-primary btn-sm\">Mint key</button></form></div></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -534,7 +534,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 			templ_7745c5c3_Var23 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<section id=\"scrape-targets\" class=\"card bg-base-100 shadow\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title text-base\">Scrape targets</h2><p class=\"text-xs opacity-60 -mt-2\">Prometheus-format <code class=\"font-mono\">/metrics</code> endpoints pooml pulls on a schedule. Every scraped value is stamped with the service and host you set here. Prefer push? Point an OTLP/HTTP exporter at <code class=\"font-mono\">/api/v1/otlp/v1/metrics</code> instead.</p>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "<section id=\"scrape-targets\" class=\"card bg-base-100\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title\">Scrape targets</h2><p class=\"text-sm opacity-60 -mt-2\">Prometheus-format <code class=\"font-mono\">/metrics</code> endpoints pooml pulls on a schedule. Every scraped value is stamped with the service and host you set here. Prefer push? Point an OTLP/HTTP exporter at <code class=\"font-mono\">/api/v1/otlp/v1/metrics</code> instead.</p>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -599,7 +599,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</td><td class=\"font-mono text-xs max-w-60 truncate\" title=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "</td><td class=\"font-mono text-sm max-w-60 truncate\" title=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -646,7 +646,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</td><td class=\"text-right whitespace-nowrap\"><button class=\"btn btn-ghost btn-xs\" hx-post=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</td><td class=\"text-right whitespace-nowrap\"><button class=\"btn btn-ghost btn-sm\" hx-post=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -674,7 +674,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</button> <button class=\"btn btn-ghost btn-xs text-error\" hx-delete=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "</button> <button class=\"btn btn-ghost btn-sm text-error\" hx-delete=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -723,7 +723,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "\"> <label class=\"flex flex-col gap-1 flex-1 min-w-56\"><span class=\"text-xs opacity-80\">URL</span> <input type=\"url\" name=\"url\" placeholder=\"http://localhost:9100/metrics\" class=\"input input-bordered input-sm w-full\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Service</span> <input type=\"text\" name=\"service\" placeholder=\"node-exporter\" class=\"input input-bordered input-sm w-36\" maxlength=\"200\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Host</span> <input type=\"text\" name=\"host\" placeholder=\"auto from URL\" class=\"input input-bordered input-sm w-32\" maxlength=\"200\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Auth header (optional)</span> <input type=\"password\" name=\"auth_header\" placeholder=\"X-API-Key: ...\" class=\"input input-bordered input-sm w-40\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Every (seconds)</span> <input type=\"number\" name=\"interval_s\" value=\"30\" min=\"30\" max=\"3600\" class=\"input input-bordered input-sm w-24\" required></label> <button type=\"submit\" class=\"btn btn-primary btn-sm\">Add target</button></form></div></section>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "\"> <label class=\"flex flex-col gap-1 flex-1 min-w-56\"><span class=\"text-sm opacity-80\">URL</span> <input type=\"url\" name=\"url\" placeholder=\"http://localhost:9100/metrics\" class=\"input input-bordered input-sm w-full\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Service</span> <input type=\"text\" name=\"service\" placeholder=\"node-exporter\" class=\"input input-bordered input-sm w-36\" maxlength=\"200\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Host</span> <input type=\"text\" name=\"host\" placeholder=\"auto from URL\" class=\"input input-bordered input-sm w-32\" maxlength=\"200\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Auth header (optional)</span> <input type=\"password\" name=\"auth_header\" placeholder=\"X-API-Key: ...\" class=\"input input-bordered input-sm w-40\"></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Every (seconds)</span> <input type=\"number\" name=\"interval_s\" value=\"30\" min=\"30\" max=\"3600\" class=\"input input-bordered input-sm w-24\" required></label> <button type=\"submit\" class=\"btn btn-primary btn-sm\">Add target</button></form></div></section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -753,7 +753,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if !t.Enabled {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<span class=\"badge badge-sm badge-ghost\">paused</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<span class=\"badge badge-sm badge-soft\">paused</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -771,7 +771,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "\">error</span><div class=\"text-xs text-error max-w-48 truncate\" title=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "\">error</span><div class=\"text-sm text-error max-w-48 truncate\" title=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -807,13 +807,13 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<span class=\"badge badge-sm badge-ghost\">waiting</span> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "<span class=\"badge badge-sm badge-soft\">waiting</span> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
 		if t.LastScrapedAt.Valid {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<div class=\"text-xs opacity-50\" data-reltime=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<div class=\"text-sm opacity-60\" data-reltime=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -869,14 +869,14 @@ func comingLater(title string, note string) templ.Component {
 			templ_7745c5c3_Var41 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "<section class=\"card bg-base-100 shadow opacity-50\"><div class=\"card-body py-4\"><h2 class=\"card-title text-base\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, "<section class=\"card bg-base-100 opacity-50\"><div class=\"card-body py-4\"><h2 class=\"card-title\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 306, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 306, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {

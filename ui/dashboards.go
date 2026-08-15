@@ -182,9 +182,35 @@ func (ur *Router) panelFragment(w http.ResponseWriter, req *http.Request) {
 	} else if res, execErr := query.Execute(req.Context(), ur.Pools.LogsRead, v.SQL()); execErr != nil {
 		view.ShapedResult = templates.ShapedResult{Kind: "error", ErrMsg: execErr.Error()}
 	} else {
-		view.ShapedResult = shapeResult(res, p.ChartType, fmt.Sprintf("p%d", p.ID))
+		view.ShapedResult = shapeResult(res, p.ChartType, fmt.Sprintf("p%d", p.ID), nil)
 	}
 	ur.render(w, req, http.StatusOK, templates.PanelFragment(view))
+}
+
+// chartFill is the exact bucket grid a DSL query asked for, letting the
+// chart show the WHOLE requested window: zero-filled for counter verbs (no
+// rows = zero events, a fact), null gaps for gauge verbs (no samples =
+// unknown - filling 0 would fabricate a measurement). Only the DSL path can
+// provide this; inferring a grid from raw SQL results would be guessing.
+type chartFill struct {
+	BucketMs int64
+	StartMs  int64
+	EndMs    int64
+	Zero     bool
+}
+
+const maxFillBuckets = 5000
+
+func (f *chartFill) buckets() []int64 {
+	n := (f.EndMs - f.StartMs) / f.BucketMs
+	if n <= 0 || n > maxFillBuckets {
+		return nil
+	}
+	out := make([]int64, 0, n+1)
+	for b := f.StartMs; b <= f.EndMs; b += f.BucketMs {
+		out = append(out, b)
+	}
+	return out
 }
 
 // shapeResult turns a query result into a renderable shape, shared by panels
@@ -192,9 +218,29 @@ func (ur *Router) panelFragment(w http.ResponseWriter, req *http.Request) {
 // rows), otherwise the result shape decides. Columns/Rows are always filled
 // so charts can offer the raw rows alongside. See CONTEXT.md > Metrics >
 // Dashboards for the conventions.
-func shapeResult(res *query.Result, chartType, chartID string) templates.ShapedResult {
+func shapeResult(res *query.Result, chartType, chartID string, fill *chartFill) templates.ShapedResult {
 	s := templates.ShapedResult{ChartID: chartID, Columns: res.Columns, Rows: cellsOf(res)}
 	if len(res.Rows) == 0 {
+		// zero rows over a known counter grid IS data: a flat zero line
+		if fill != nil && fill.Zero && chartType != "table" && chartType != "stat" && len(res.Columns) >= 2 {
+			if buckets := fill.buckets(); buckets != nil {
+				datasets := make([]templates.ChartDataset, 0, len(res.Columns)-1)
+				for _, col := range res.Columns[1:] {
+					data := make([]*float64, len(buckets))
+					for i := range data {
+						z := 0.0
+						data[i] = &z
+					}
+					datasets = append(datasets, templates.ChartDataset{Label: col, Data: data})
+				}
+				if chartType == "" {
+					chartType = "line"
+				}
+				s.Kind = "chart"
+				s.Chart = &templates.ChartPayload{Type: chartType, LabelsMs: buckets, Datasets: datasets}
+				return s
+			}
+		}
 		s.Kind = "empty"
 		return s
 	}
@@ -224,9 +270,12 @@ func shapeResult(res *query.Result, chartType, chartID string) templates.ShapedR
 		if !numericCols[j] || colLooksLikeEpochMs(res, j) {
 			continue
 		}
-		data := make([]float64, len(res.Rows))
+		data := make([]*float64, len(res.Rows))
 		for i, row := range res.Rows {
-			data[i], _ = asFloat(row[j])
+			if f, ok := asFloat(row[j]); ok {
+				v := f
+				data[i] = &v
+			}
 		}
 		datasets = append(datasets, templates.ChartDataset{Label: res.Columns[j], Data: data})
 	}
@@ -249,6 +298,28 @@ func shapeResult(res *query.Result, chartType, chartID string) templates.ShapedR
 		payload.LabelsMs = make([]int64, len(res.Rows))
 		for i, row := range res.Rows {
 			payload.LabelsMs[i] = asInt64(row[0])
+		}
+		// re-index sparse results onto the full requested grid
+		if fill != nil {
+			if buckets := fill.buckets(); buckets != nil {
+				idx := make(map[int64]int, len(res.Rows))
+				for i, row := range res.Rows {
+					idx[asInt64(row[0])] = i
+				}
+				for di := range datasets {
+					filled := make([]*float64, len(buckets))
+					for bi, b := range buckets {
+						if ri, ok := idx[b]; ok {
+							filled[bi] = datasets[di].Data[ri]
+						} else if fill.Zero {
+							z := 0.0
+							filled[bi] = &z
+						}
+					}
+					datasets[di].Data = filled
+				}
+				payload.LabelsMs = buckets
+			}
 		}
 	} else {
 		payload.Labels = make([]string, len(res.Rows))

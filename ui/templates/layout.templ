@@ -72,7 +72,8 @@ templ importMap() {
 			"@lezer/lr": "https://esm.sh/*@lezer/lr@1.4.10",
 			"crelt": "https://esm.sh/crelt@1.0.7",
 			"style-mod": "https://esm.sh/style-mod@4.1.3",
-			"w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8"
+			"w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8",
+			"sql-formatter": "https://esm.sh/sql-formatter@15.8.2"
 		}
 	}
 	</script>
@@ -140,6 +141,38 @@ func csrfHxHeaders(token string) string {
 // muting maximum - see the design rule in CONTEXT.md > UI Design Direction.
 templ contrastFixes() {
 	<style>
+		body { -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }
+		/* sub-16px inputs make iOS Safari zoom on focus; touch devices get 16px */
+		@media (hover: none) {
+			.input, .select, .textarea { font-size: 16px; }
+		}
+		/* one card treatment everywhere. Light: layered translucent shadows
+		   read as physically raised. Dark: shadows are invisible, so the
+		   stack collapses to a single quiet ring - alpha-white borders at
+		   15% were the old "FOSS glow". */
+		:root {
+			--elevation-raised:
+				0 0 0 1px rgb(0 0 0 / 0.05),
+				0 1px 3px rgb(0 0 0 / 0.05),
+				0 4px 10px -4px rgb(0 0 0 / 0.05);
+		}
+		[data-theme="dark"] {
+			--elevation-raised: 0 0 0 1px rgb(255 255 255 / 0.09);
+		}
+		.card { box-shadow: var(--elevation-raised); }
+		/* hover must move AWAY from the surface: base-content alpha lightens
+		   on dark and darkens on light; DaisyUI's ghost hover goes the wrong
+		   way (toward black) on dark themes */
+		.btn-ghost:not(:active):hover {
+			background-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);
+		}
+		/* same wrong direction for neutral default buttons: DaisyUI mixes the
+		   hover background toward black regardless of theme. Dark theme
+		   lightens instead; colored buttons keep their own hover. */
+		[data-theme="dark"] .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(:active):hover {
+			background-color: color-mix(in oklab, var(--color-base-content) 12%, var(--color-base-100));
+			border-color: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-100));
+		}
 		.table thead th {
 			color: color-mix(in oklab, var(--color-base-content) 90%, transparent);
 		}
@@ -149,6 +182,16 @@ templ contrastFixes() {
 		input::placeholder,
 		textarea::placeholder {
 			color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+		}
+		/* CodeMirror placeholders must read as hints, not typed content: the
+		   cursor parks ON them at position 0, so styling is the only signal -
+		   and once focused, the hint yields to the cursor entirely */
+		.cm-editor .cm-placeholder {
+			color: color-mix(in oklab, var(--color-base-content) 45%, transparent) !important;
+			font-style: italic;
+		}
+		.cm-editor.cm-focused .cm-placeholder {
+			visibility: hidden;
 		}
 	</style>
 }
@@ -168,8 +211,14 @@ templ themeScript() {
 			document.addEventListener("change", (e) => {
 				if (e.target && e.target.id === "theme-toggle") {
 					const theme = e.target.checked ? "light" : "dark";
+					// freeze transitions for the swap: otherwise every component
+					// animates the theme change on its own clock - a ragged cascade
+					const freeze = document.createElement("style");
+					freeze.textContent = "* { transition: none !important; }";
+					document.head.appendChild(freeze);
 					document.documentElement.setAttribute("data-theme", theme);
 					localStorage.setItem("pooml-theme", theme);
+					requestAnimationFrame(() => requestAnimationFrame(() => freeze.remove()));
 				}
 			});
 			document.addEventListener("DOMContentLoaded", () => {

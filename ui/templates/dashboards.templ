@@ -34,16 +34,18 @@ type ChartPayload struct {
 }
 
 type ChartDataset struct {
-	Label string    `json:"label"`
-	Data  []float64 `json:"data"`
+	Label string `json:"label"`
+	// nullable: a null point renders as a gap in the line (Chart.js default
+	// spanGaps=false) - "no sample" for gauges is unknown, never zero
+	Data []*float64 `json:"data"`
 }
 
 templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToken string) {
 	@Shell("dashboards · pooml", "dashboards", csrfToken) {
 		<div class="max-w-3xl mx-auto flex flex-col gap-6">
-			<div class="card bg-base-100 border border-base-content/15">
+			<div class="card bg-base-100">
 				<div class="card-body py-4 gap-3">
-					<h2 class="card-title text-base">Dashboards</h2>
+					<h2 class="card-title">Dashboards</h2>
 					if errMsg != "" {
 						<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
 					}
@@ -56,7 +58,7 @@ templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfTok
 						<ul class="flex flex-col gap-1">
 							for _, d := range dashboards {
 								<li>
-									<a href={ templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)) } class="flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-2">
+									<a href={ templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)) } class="flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-2">
 										<span class="font-semibold">{ d.Name }</span>
 										if d.Description != "" {
 											<span class="text-sm opacity-60 truncate min-w-0">{ d.Description }</span>
@@ -69,11 +71,11 @@ templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfTok
 					<form method="post" action="/dashboards" class="flex gap-2 items-end border-t border-base-content/10 pt-3">
 						<input type="hidden" name="csrf_token" value={ csrfToken }/>
 						<label class="flex flex-col gap-1">
-							<span class="text-xs opacity-80">Name</span>
+							<span class="text-sm opacity-80">Name</span>
 							<input type="text" name="name" placeholder="shop overview" class="input input-bordered input-sm" maxlength="100" required/>
 						</label>
 						<label class="flex flex-col gap-1 flex-1">
-							<span class="text-xs opacity-80">Description (optional)</span>
+							<span class="text-sm opacity-80">Description (optional)</span>
 							<input type="text" name="description" class="input input-bordered input-sm w-full"/>
 						</label>
 						<button type="submit" class="btn btn-primary btn-sm">Create</button>
@@ -107,7 +109,7 @@ templ DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string
 				<div role="alert" class="alert alert-error text-sm">{ errMsg }</div>
 			}
 			@PanelsRegion(d.ID, panels, csrfToken)
-			<details class="card bg-base-100 border border-base-content/15">
+			<details class="card bg-base-100">
 				<summary class="card-body py-3 cursor-pointer text-sm font-semibold">+ Add panel</summary>
 				<div class="card-body pt-0 py-4">
 					<form method="post" action={ templ.SafeURL(fmt.Sprintf("/dashboards/%d/panels", d.ID)) } class="flex flex-col gap-3">
@@ -137,19 +139,19 @@ templ PanelsRegion(dashboardID int64, panels []services.Panel, csrfToken string)
 }
 
 templ PanelCard(p services.Panel, csrfToken string) {
-	<div id={ fmt.Sprintf("panel-card-%d", p.ID) } class={ "panel-card card bg-base-100 border border-base-content/15 min-w-0", panelWidthClass(p.Width) }>
+	<div id={ fmt.Sprintf("panel-card-%d", p.ID) } class={ "panel-card card bg-base-100 min-w-0", panelWidthClass(p.Width) }>
 		<div class="card-body py-3 gap-2">
 			<div class="flex items-center justify-between gap-2">
 				<h3 class="card-title text-sm truncate min-w-0" title={ p.Query }>{ p.Title }</h3>
 				<span class="flex gap-1 shrink-0">
 					<button
-						class="btn btn-ghost btn-xs"
+						class="btn btn-ghost btn-sm"
 						hx-get={ fmt.Sprintf("/dashboards/%d/panels/%d?edit=1", p.DashboardID, p.ID) }
 						hx-target="closest .panel-card"
 						hx-swap="outerHTML"
 					>Edit</button>
 					<button
-						class="btn btn-ghost btn-xs text-error"
+						class="btn btn-ghost btn-sm text-error"
 						hx-delete={ fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID) }
 						hx-target="closest .panel-card"
 						hx-swap="outerHTML"
@@ -177,7 +179,7 @@ templ PanelFragment(v PanelView) {
 templ Shaped(s ShapedResult) {
 	switch s.Kind {
 		case "error":
-			<p class="text-error text-xs break-words py-2">{ s.ErrMsg }</p>
+			<p class="text-error text-sm break-words py-2">{ s.ErrMsg }</p>
 		case "empty":
 			<p class="text-sm opacity-60 italic py-2">No rows right now.</p>
 		case "stat":
@@ -196,7 +198,7 @@ templ Shaped(s ShapedResult) {
 
 templ shapedTable(s ShapedResult, heightClass string) {
 	<div class={ "overflow-x-auto", heightClass }>
-		<table class="table table-xs font-mono">
+		<table class="table table-sm font-mono">
 			<thead>
 				<tr>
 					for _, c := range s.Columns {
@@ -250,11 +252,11 @@ templ panelFormFields(p services.Panel, csrfToken string) {
 	<input type="hidden" name="csrf_token" value={ csrfToken }/>
 	<div class="grid gap-3 md:grid-cols-3">
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Title</span>
+			<span class="text-sm opacity-80">Title</span>
 			<input type="text" name="title" value={ p.Title } class="input input-bordered input-sm" maxlength="100" required/>
 		</label>
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Chart</span>
+			<span class="text-sm opacity-80">Chart</span>
 			<select name="chart_type" class="select select-bordered select-sm">
 				<option value="" selected?={ p.ChartType == "" }>auto-detect</option>
 				<option value="line" selected?={ p.ChartType == "line" }>line</option>
@@ -263,7 +265,7 @@ templ panelFormFields(p services.Panel, csrfToken string) {
 			</select>
 		</label>
 		<label class="flex flex-col gap-1">
-			<span class="text-xs opacity-80">Width (of 3 columns)</span>
+			<span class="text-sm opacity-80">Width (of 3 columns)</span>
 			<select name="width" class="select select-bordered select-sm">
 				<option value="1" selected?={ p.Width == 1 }>1</option>
 				<option value="2" selected?={ p.Width == 2 }>2</option>
@@ -273,8 +275,8 @@ templ panelFormFields(p services.Panel, csrfToken string) {
 	</div>
 	<div class="flex flex-col gap-1">
 		<span class="flex items-center justify-between">
-			<span class="text-xs opacity-80">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span>
-			<button type="button" class="open-in-logs link link-primary text-xs" title="Run this query on the logs page (new tab)">open in logs ↗</button>
+			<span class="text-sm opacity-80">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span>
+			<button type="button" class="open-in-logs link link-primary text-sm" title="Run this query on the logs page (new tab)">open in logs ↗</button>
 		</span>
 		<textarea name="query" class="hidden">{ p.Query }</textarea>
 		<div

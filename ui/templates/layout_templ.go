@@ -107,7 +107,7 @@ func importMap() templ.Component {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<script type=\"importmap\">\n\t{\n\t\t\"imports\": {\n\t\t\t\"codemirror\": \"https://esm.sh/*codemirror@6.0.2\",\n\t\t\t\"@codemirror/lang-sql\": \"https://esm.sh/*@codemirror/lang-sql@6.10.0\",\n\t\t\t\"@codemirror/theme-one-dark\": \"https://esm.sh/*@codemirror/theme-one-dark@6.1.3\",\n\t\t\t\"@codemirror/state\": \"https://esm.sh/@codemirror/state@6.7.1\",\n\t\t\t\"@codemirror/view\": \"https://esm.sh/*@codemirror/view@6.43.8\",\n\t\t\t\"@codemirror/language\": \"https://esm.sh/*@codemirror/language@6.12.4\",\n\t\t\t\"@codemirror/autocomplete\": \"https://esm.sh/*@codemirror/autocomplete@6.20.3\",\n\t\t\t\"@codemirror/commands\": \"https://esm.sh/*@codemirror/commands@6.10.4\",\n\t\t\t\"@codemirror/search\": \"https://esm.sh/*@codemirror/search@6.7.1\",\n\t\t\t\"@codemirror/lint\": \"https://esm.sh/*@codemirror/lint@6.9.7\",\n\t\t\t\"@lezer/common\": \"https://esm.sh/@lezer/common@1.5.2\",\n\t\t\t\"@lezer/highlight\": \"https://esm.sh/*@lezer/highlight@1.2.3\",\n\t\t\t\"@lezer/lr\": \"https://esm.sh/*@lezer/lr@1.4.10\",\n\t\t\t\"crelt\": \"https://esm.sh/crelt@1.0.7\",\n\t\t\t\"style-mod\": \"https://esm.sh/style-mod@4.1.3\",\n\t\t\t\"w3c-keyname\": \"https://esm.sh/w3c-keyname@2.2.8\"\n\t\t}\n\t}\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<script type=\"importmap\">\n\t{\n\t\t\"imports\": {\n\t\t\t\"codemirror\": \"https://esm.sh/*codemirror@6.0.2\",\n\t\t\t\"@codemirror/lang-sql\": \"https://esm.sh/*@codemirror/lang-sql@6.10.0\",\n\t\t\t\"@codemirror/theme-one-dark\": \"https://esm.sh/*@codemirror/theme-one-dark@6.1.3\",\n\t\t\t\"@codemirror/state\": \"https://esm.sh/@codemirror/state@6.7.1\",\n\t\t\t\"@codemirror/view\": \"https://esm.sh/*@codemirror/view@6.43.8\",\n\t\t\t\"@codemirror/language\": \"https://esm.sh/*@codemirror/language@6.12.4\",\n\t\t\t\"@codemirror/autocomplete\": \"https://esm.sh/*@codemirror/autocomplete@6.20.3\",\n\t\t\t\"@codemirror/commands\": \"https://esm.sh/*@codemirror/commands@6.10.4\",\n\t\t\t\"@codemirror/search\": \"https://esm.sh/*@codemirror/search@6.7.1\",\n\t\t\t\"@codemirror/lint\": \"https://esm.sh/*@codemirror/lint@6.9.7\",\n\t\t\t\"@lezer/common\": \"https://esm.sh/@lezer/common@1.5.2\",\n\t\t\t\"@lezer/highlight\": \"https://esm.sh/*@lezer/highlight@1.2.3\",\n\t\t\t\"@lezer/lr\": \"https://esm.sh/*@lezer/lr@1.4.10\",\n\t\t\t\"crelt\": \"https://esm.sh/crelt@1.0.7\",\n\t\t\t\"style-mod\": \"https://esm.sh/style-mod@4.1.3\",\n\t\t\t\"w3c-keyname\": \"https://esm.sh/w3c-keyname@2.2.8\",\n\t\t\t\"sql-formatter\": \"https://esm.sh/sql-formatter@15.8.2\"\n\t\t}\n\t}\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -214,7 +214,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 120, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 121, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -227,7 +227,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfHxHeaders(csrfToken))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 126, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 127, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -284,7 +284,7 @@ func contrastFixes() templ.Component {
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<style>\n\t\t.table thead th {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 90%, transparent);\n\t\t}\n\t\t.tabs .tab:not(.tab-active) {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 80%, transparent);\n\t\t}\n\t\tinput::placeholder,\n\t\ttextarea::placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 55%, transparent);\n\t\t}\n\t</style>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<style>\n\t\tbody { -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }\n\t\t/* sub-16px inputs make iOS Safari zoom on focus; touch devices get 16px */\n\t\t@media (hover: none) {\n\t\t\t.input, .select, .textarea { font-size: 16px; }\n\t\t}\n\t\t/* one card treatment everywhere. Light: layered translucent shadows\n\t\t   read as physically raised. Dark: shadows are invisible, so the\n\t\t   stack collapses to a single quiet ring - alpha-white borders at\n\t\t   15% were the old \"FOSS glow\". */\n\t\t:root {\n\t\t\t--elevation-raised:\n\t\t\t\t0 0 0 1px rgb(0 0 0 / 0.05),\n\t\t\t\t0 1px 3px rgb(0 0 0 / 0.05),\n\t\t\t\t0 4px 10px -4px rgb(0 0 0 / 0.05);\n\t\t}\n\t\t[data-theme=\"dark\"] {\n\t\t\t--elevation-raised: 0 0 0 1px rgb(255 255 255 / 0.09);\n\t\t}\n\t\t.card { box-shadow: var(--elevation-raised); }\n\t\t/* hover must move AWAY from the surface: base-content alpha lightens\n\t\t   on dark and darkens on light; DaisyUI's ghost hover goes the wrong\n\t\t   way (toward black) on dark themes */\n\t\t.btn-ghost:not(:active):hover {\n\t\t\tbackground-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);\n\t\t}\n\t\t/* same wrong direction for neutral default buttons: DaisyUI mixes the\n\t\t   hover background toward black regardless of theme. Dark theme\n\t\t   lightens instead; colored buttons keep their own hover. */\n\t\t[data-theme=\"dark\"] .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(:active):hover {\n\t\t\tbackground-color: color-mix(in oklab, var(--color-base-content) 12%, var(--color-base-100));\n\t\t\tborder-color: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-100));\n\t\t}\n\t\t.table thead th {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 90%, transparent);\n\t\t}\n\t\t.tabs .tab:not(.tab-active) {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 80%, transparent);\n\t\t}\n\t\tinput::placeholder,\n\t\ttextarea::placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 55%, transparent);\n\t\t}\n\t\t/* CodeMirror placeholders must read as hints, not typed content: the\n\t\t   cursor parks ON them at position 0, so styling is the only signal -\n\t\t   and once focused, the hint yields to the cursor entirely */\n\t\t.cm-editor .cm-placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 45%, transparent) !important;\n\t\t\tfont-style: italic;\n\t\t}\n\t\t.cm-editor.cm-focused .cm-placeholder {\n\t\t\tvisibility: hidden;\n\t\t}\n\t</style>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -316,7 +316,7 @@ func themeScript() templ.Component {
 			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<script>\n\t\t(() => {\n\t\t\t// no DOM-snapshot history: pages with live JS state (CodeMirror)\n\t\t\t// restore wrong; Back re-fetches the full page instead\n\t\t\thtmx.config.historyCacheSize = 0;\n\t\t\tif (localStorage.getItem(\"pooml-theme\") === \"light\") {\n\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"light\");\n\t\t\t}\n\t\t\tdocument.addEventListener(\"change\", (e) => {\n\t\t\t\tif (e.target && e.target.id === \"theme-toggle\") {\n\t\t\t\t\tconst theme = e.target.checked ? \"light\" : \"dark\";\n\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", theme);\n\t\t\t\t\tlocalStorage.setItem(\"pooml-theme\", theme);\n\t\t\t\t}\n\t\t\t});\n\t\t\tdocument.addEventListener(\"DOMContentLoaded\", () => {\n\t\t\t\tconst t = document.getElementById(\"theme-toggle\");\n\t\t\t\tif (t && localStorage.getItem(\"pooml-theme\") === \"light\") t.checked = true;\n\t\t\t});\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<script>\n\t\t(() => {\n\t\t\t// no DOM-snapshot history: pages with live JS state (CodeMirror)\n\t\t\t// restore wrong; Back re-fetches the full page instead\n\t\t\thtmx.config.historyCacheSize = 0;\n\t\t\tif (localStorage.getItem(\"pooml-theme\") === \"light\") {\n\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"light\");\n\t\t\t}\n\t\t\tdocument.addEventListener(\"change\", (e) => {\n\t\t\t\tif (e.target && e.target.id === \"theme-toggle\") {\n\t\t\t\t\tconst theme = e.target.checked ? \"light\" : \"dark\";\n\t\t\t\t\t// freeze transitions for the swap: otherwise every component\n\t\t\t\t\t// animates the theme change on its own clock - a ragged cascade\n\t\t\t\t\tconst freeze = document.createElement(\"style\");\n\t\t\t\t\tfreeze.textContent = \"* { transition: none !important; }\";\n\t\t\t\t\tdocument.head.appendChild(freeze);\n\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", theme);\n\t\t\t\t\tlocalStorage.setItem(\"pooml-theme\", theme);\n\t\t\t\t\trequestAnimationFrame(() => requestAnimationFrame(() => freeze.remove()));\n\t\t\t\t}\n\t\t\t});\n\t\t\tdocument.addEventListener(\"DOMContentLoaded\", () => {\n\t\t\t\tconst t = document.getElementById(\"theme-toggle\");\n\t\t\t\tif (t && localStorage.getItem(\"pooml-theme\") === \"light\") t.checked = true;\n\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -361,7 +361,7 @@ func menuLink(href string, label string, active bool) templ.Component {
 		var templ_7745c5c3_Var12 templ.SafeURL
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 184, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 233, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -387,7 +387,7 @@ func menuLink(href string, label string, active bool) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 184, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 233, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -430,7 +430,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var16 templ.SafeURL
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 189, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 238, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -443,7 +443,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 189, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 238, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -461,7 +461,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var18 templ.SafeURL
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 191, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 240, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -474,7 +474,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 191, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 240, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {

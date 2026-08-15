@@ -31,7 +31,7 @@ func logsEditorReserve(q string) templ.SafeCSS { return editorReserve(q, 64, 21,
 // back on submit, runs the form on Mod-Enter, and follows the theme toggle.
 templ sqlEditorModule() {
 	<style>
-		.sql-editor-host .cm-content { font-size: 14px; }
+		.sql-editor-host .cm-content { font-size: 15px; }
 		.sql-editor-host .cm-editor { max-height: 8rem; min-height: calc(var(--cm-reserve, 3.5rem) - 4px); }
 		.sql-editor-host:focus-within {
 			outline: 2px solid var(--color-primary);
@@ -48,6 +48,18 @@ templ sqlEditorModule() {
 		import { LanguageSupport, syntaxTree } from "@codemirror/language";
 		import { linter } from "@codemirror/lint";
 		import { oneDark } from "@codemirror/theme-one-dark";
+		import { format } from "sql-formatter";
+
+		// cosmetic, not semantic: formatting must not detach a DSL mirror
+		function fmtDoc(view) {
+			try {
+				const pretty = format(view.state.doc.toString(), { language: "sqlite", keywordCase: "upper" });
+				if (pretty !== view.state.doc.toString()) {
+					view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: pretty } });
+				}
+			} catch (e) { /* unparseable mid-edit SQL: leave it alone */ }
+			return true;
+		}
 
 		const schemaSource = schemaCompletionSource({
 			dialect: SQLite,
@@ -125,7 +137,19 @@ templ sqlEditorModule() {
 						Prec.highest(keymap.of([
 							{ key: "Tab", run: acceptCompletion },
 							{ key: "Mod-Enter", run: runForm },
+							{ key: "Mod-Shift-f", run: fmtDoc },
 						])),
+						// announce REAL user edits (typing, deleting, pasting,
+						// undo) as a DOM event - programmatic dispatches carry
+						// no userEvent annotation, so mirrors that write into
+						// the editor never trigger it
+						EditorView.updateListener.of((u) => {
+							if (!u.docChanged) return;
+							const userEdit = u.transactions.some((tr) =>
+								tr.isUserEvent("input") || tr.isUserEvent("delete") ||
+								tr.isUserEvent("move") || tr.isUserEvent("undo") || tr.isUserEvent("redo"));
+							if (userEdit) host.dispatchEvent(new CustomEvent("pooml:user-edit", { bubbles: true }));
+						}),
 						basicSetup,
 						themeComp.of(isLight() ? [] : oneDark),
 						placeholder(host.dataset.placeholder || DEFAULT_PLACEHOLDER),
@@ -159,6 +183,14 @@ templ sqlEditorModule() {
 			if (q) window.open("/logs?q=" + encodeURIComponent(q), "_blank");
 		});
 
+		document.addEventListener("click", (e) => {
+			const btn = e.target.closest(".fmt-sql");
+			if (!btn) return;
+			const host = btn.closest("form").querySelector(".sql-editor-host");
+			const view = host && editors.get(host);
+			if (view) fmtDoc(view);
+		});
+
 		// snippet chips load their SQL into the form's editor - never run it;
 		// inspecting-then-running is the point of an example
 		document.addEventListener("click", (e) => {
@@ -182,5 +214,8 @@ templ sqlEditorModule() {
 
 		mountAll();
 		document.body.addEventListener("htmx:afterSettle", mountAll);
+
+		// page scripts (e.g. the explorer's DSL mirror) reach editors here
+		window.poomlSQL = { editors };
 	</script>
 }

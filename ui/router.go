@@ -121,6 +121,8 @@ func (ur *Router) NewRouter() *chi.Mux {
 
 		r.Get("/", ur.metricsExplorerPage)
 		r.Get("/export", ur.exportMetrics)
+		r.Get("/compile", ur.compileDSL)
+		r.Get("/filter-options", ur.filterOptions)
 		r.Post("/save-panel", ur.saveExplorerPanel)
 	})
 

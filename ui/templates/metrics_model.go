@@ -7,8 +7,11 @@ func metricsExportURL(q, format string) string {
 	return "/metrics-explorer/export?" + vals.Encode()
 }
 
-func metricsViewURL(q, view string) string {
+func metricsViewURL(q, dsl, view string) string {
 	vals := url.Values{"q": {q}, "view": {view}}
+	if dsl != "" {
+		vals.Set("dsl", dsl)
+	}
 	return "/metrics-explorer?" + vals.Encode()
 }
 

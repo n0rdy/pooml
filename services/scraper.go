@@ -169,12 +169,12 @@ func (s *Scraper) familiesToRows(families map[string]*dto.MetricFamily, t Scrape
 				appendRow(m, name, metrics.TypeGauge, m.GetUntyped().GetValue())
 			case dto.MetricType_HISTOGRAM:
 				s.warnDowncast(name, "histogram")
-				appendRow(m, name+"_sum", metrics.TypeGauge, m.GetHistogram().GetSampleSum())
-				appendRow(m, name+"_count", metrics.TypeGauge, float64(m.GetHistogram().GetSampleCount()))
+				appendRow(m, name+"_sum", metrics.TypeCounter, m.GetHistogram().GetSampleSum())
+				appendRow(m, name+"_count", metrics.TypeCounter, float64(m.GetHistogram().GetSampleCount()))
 			case dto.MetricType_SUMMARY:
 				s.warnDowncast(name, "summary")
-				appendRow(m, name+"_sum", metrics.TypeGauge, m.GetSummary().GetSampleSum())
-				appendRow(m, name+"_count", metrics.TypeGauge, float64(m.GetSummary().GetSampleCount()))
+				appendRow(m, name+"_sum", metrics.TypeCounter, m.GetSummary().GetSampleSum())
+				appendRow(m, name+"_count", metrics.TypeCounter, float64(m.GetSummary().GetSampleCount()))
 			}
 		}
 	}
@@ -184,7 +184,7 @@ func (s *Scraper) familiesToRows(families map[string]*dto.MetricFamily, t Scrape
 func (s *Scraper) warnDowncast(name, kind string) {
 	if _, seen := s.downcastWarned.LoadOrStore(name, struct{}{}); !seen {
 		log.Warn().Str("metric", name).Str("kind", kind).
-			Msg("downcasting to _sum/_count gauges; buckets/quantiles are dropped")
+			Msg("downcasting to _sum/_count counters; buckets/quantiles are dropped")
 	}
 }
 

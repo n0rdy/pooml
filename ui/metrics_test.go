@@ -1,6 +1,7 @@
 package ui_test
 
 import (
+	"encoding/json"
 	"html"
 	"io"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 func (cl *client) htmx(method, path, token string) (int, string) {
@@ -348,6 +350,276 @@ func TestExplorerSnippets(t *testing.T) {
 	})
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("placeholder panel save = %d, want 400", resp.StatusCode)
+	}
+}
+
+// Logs snippets: same contract as the explorer ones - placeholders get the
+// guided inline error, substituted versions validate and run.
+func TestLogsSnippets(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedLogs(cl, 4) // logs_test helper: services payment-svc/auth-svc on host-1
+
+	_, body := cl.get("/logs")
+	matches := snippetRe.FindAllStringSubmatch(body, -1)
+	if len(matches) != 4 {
+		t.Fatalf("expected 4 logs snippets, got %d", len(matches))
+	}
+
+	substitutions := strings.NewReplacer(
+		"REPLACE_WITH_FIELD_NAME", "status",
+		"REPLACE_WITH_HOST_NAME", "host-1",
+		"REPLACE_WITH_SERVICE_NAME", "auth-svc",
+	)
+	for i, m := range matches {
+		raw := html.UnescapeString(m[1])
+
+		if strings.Contains(raw, "REPLACE_WITH_") {
+			// unedited: inline guided error, no silent empty view
+			_, page := cl.get("/logs?q=" + url.QueryEscape(raw))
+			if !strings.Contains(page, "Replace REPLACE_WITH_") {
+				t.Errorf("logs snippet %d unedited: guided error missing", i)
+			}
+			// export path blocks it outright
+			if status, _ := cl.get("/logs/export?q=" + url.QueryEscape(raw)); status != http.StatusBadRequest {
+				t.Errorf("logs snippet %d unedited export = %d, want 400", i, status)
+			}
+		}
+
+		q := substitutions.Replace(raw)
+		status, page := cl.get("/logs?q=" + url.QueryEscape(q))
+		if status != http.StatusOK || strings.Contains(page, "Replace REPLACE_WITH_") {
+			t.Errorf("logs snippet %d failed after substitution: %d\n%s", i, status, q)
+		}
+	}
+
+	// the host+service snippet substituted actually filters to the seeded rows
+	q := "SELECT * FROM logs WHERE host = 'host-1' AND service = 'auth-svc' ORDER BY timestamp DESC LIMIT 100"
+	_, page := cl.get("/logs?q=" + url.QueryEscape(q))
+	if !strings.Contains(page, "message 1") || strings.Contains(page, "message 0") {
+		t.Error("host+service query did not filter to the seeded auth-svc rows")
+	}
+}
+
+// The DSL compile endpoint: DSL in, runnable SQL out; errors ride the 200 as
+// hints. Pivots get real service names from the catalog.
+func TestDSLCompileEndpoint(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedMetrics(cl)
+
+	compile := func(dsl string) (int, string) {
+		return cl.get("/metrics-explorer/compile?dsl=" + url.QueryEscape(dsl))
+	}
+
+	status, body := compile("avg(queue_depth) per 10m last 6h")
+	if status != http.StatusOK || !strings.Contains(body, `"sql"`) || !strings.Contains(body, "AVG(value)") {
+		t.Fatalf("compile: %d %s", status, body)
+	}
+	// the parsed structure feeds the query builder (its only grammar source)
+	for _, want := range []string{`"verb":"avg"`, `"metric":"queue_depth"`, `"perMs":600000`, `"lastMs":21600000`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("parsed structure missing %s: %s", want, body)
+		}
+	}
+
+	// the compiled SQL must run through the explorer end to end
+	var res struct {
+		SQL string `json:"sql"`
+	}
+	if err := json.Unmarshal([]byte(body), &res); err != nil {
+		t.Fatal(err)
+	}
+	status, page := cl.get("/metrics-explorer?q=" + url.QueryEscape(res.SQL))
+	if status != http.StatusOK || strings.Contains(page, "alert-error") {
+		t.Fatalf("compiled SQL failed in the explorer: %d", status)
+	}
+
+	// pivot pulls real service names from the catalog
+	_, body = compile("avg(queue_depth) per 10m by service")
+	if !strings.Contains(body, `service = 'shop'`) {
+		t.Fatalf("pivot missing catalog service: %s", body)
+	}
+
+	// filters resolve: column vs labels
+	_, body = compile("count(orders_total) service=shop status=ok per 1h")
+	if !strings.Contains(body, "json_extract(labels, '$.status')") || !strings.Contains(body, `service = 'shop'`) {
+		t.Fatalf("filter resolution wrong: %s", body)
+	}
+
+	// parse errors are hints, not failures
+	status, body = compile("averg(queue_depth)")
+	if status != http.StatusOK || !strings.Contains(body, "unknown verb") {
+		t.Fatalf("parse error handling: %d %s", status, body)
+	}
+
+	// the page carries the DSL input, the builder, the names, and preserves
+	// dsl in view links
+	_, page = cl.get("/metrics-explorer?dsl=" + url.QueryEscape("avg(queue_depth)") + "&q=" + url.QueryEscape("SELECT AVG(value) AS avg_value FROM metrics WHERE name = 'queue_depth'"))
+	for _, want := range []string{
+		`id="dsl-input"`, `id="metric-names"`, "queue_depth", "dsl=avg%28queue_depth%29",
+		`id="dsl-builder"`, `id="dsl-mode-builder"`, `id="dsl-mode-text"`, `id="metric-names-dl"`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("explorer page missing %q", want)
+		}
+	}
+
+	// dsl is authoritative: a stale submitted q loses to the recompiled dsl,
+	// closing the client debounce race
+	_, page = cl.get("/metrics-explorer?dsl=" + url.QueryEscape("avg(queue_depth) last 1h") +
+		"&q=" + url.QueryEscape("SELECT value FROM metrics WHERE name = 'queue_depth' LIMIT 3"))
+	if !strings.Contains(page, "AVG(value)") || strings.Contains(page, "LIMIT 3") {
+		t.Error("dsl did not outrank the stale q")
+	}
+}
+
+// The filter-options endpoint offers what exists: keys for a metric
+// (service/host + its label keys), then values for a chosen key.
+func TestFilterOptions(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	seedMetrics(cl)
+
+	status, body := cl.get("/metrics-explorer/filter-options?metric=orders_total")
+	if status != http.StatusOK {
+		t.Fatalf("keys: %d", status)
+	}
+	for _, want := range []string{`"service"`, `"host"`, `"status"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("keys missing %s: %s", want, body)
+		}
+	}
+
+	_, body = cl.get("/metrics-explorer/filter-options?metric=orders_total&key=status")
+	if !strings.Contains(body, `"ok"`) {
+		t.Errorf("label values missing: %s", body)
+	}
+	_, body = cl.get("/metrics-explorer/filter-options?metric=orders_total&key=service")
+	if !strings.Contains(body, `"shop"`) {
+		t.Errorf("service values missing: %s", body)
+	}
+	// hostile key shapes return empty options, never an error
+	status, body = cl.get("/metrics-explorer/filter-options?metric=orders_total&key=" + url.QueryEscape(`x"];drop`))
+	if status != http.StatusOK || strings.Contains(body, "drop") {
+		t.Errorf("bad key handling: %d %s", status, body)
+	}
+}
+
+// Three snippets carry authored DSL equivalents (never decompiled); chips
+// teach the DSL by filling both layers.
+func TestSnippetDSLEquivalents(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+
+	_, body := cl.get("/metrics-explorer")
+	withDSL := regexp.MustCompile(`data-dsl-snippet="[^"]+"`).FindAllString(body, -1)
+	if len(withDSL) != 3 {
+		t.Fatalf("expected 3 snippets with DSL equivalents, got %d", len(withDSL))
+	}
+	// and the formatter is pinned in the import map
+	if !strings.Contains(body, "sql-formatter@15.8.2") {
+		t.Error("sql-formatter missing from the import map")
+	}
+}
+
+var explorerChartRe = regexp.MustCompile(`(?s)<script[^>]*id="chart-data-explorer"[^>]*>(.*?)</script>`)
+
+// Counter semantics end to end: raw-value verbs on a counter get an advisory
+// hint, and DSL charts cover the whole requested window - zeros for counter
+// verbs (no rows = zero events), null gaps for gauge verbs (no samples =
+// unknown).
+func TestCounterHintAndGapFill(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+
+	now := time.Now().UnixMilli()
+	bucket := now / 600000 * 600000
+	_, err := cl.pools.Metrics.Exec(`INSERT INTO metrics(timestamp, name, type, value, service, host) VALUES
+		(?, 'queue_depth', 1, 7, 'shop', 'h1'),
+		(?, 'queue_depth', 1, 9, 'shop', 'h1'),
+		(?, 'orders_total', 0, 100, 'shop', 'h1'),
+		(?, 'orders_total', 0, 140, 'shop', 'h1')`,
+		bucket-1200000, bucket, bucket+1000, bucket+2000)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// advisory hint: avg() pointed at a counter
+	_, body := cl.get("/metrics-explorer/compile?dsl=" + url.QueryEscape("avg(orders_total) per 10m"))
+	if !strings.Contains(body, "is a counter") {
+		t.Errorf("counter hint missing: %s", body)
+	}
+	// no hint for a gauge, none for increase on the counter
+	_, body = cl.get("/metrics-explorer/compile?dsl=" + url.QueryEscape("avg(queue_depth) per 10m"))
+	if strings.Contains(body, "is a counter") {
+		t.Error("gauge got a counter hint")
+	}
+	_, body = cl.get("/metrics-explorer/compile?dsl=" + url.QueryEscape("increase(orders_total) per 10m"))
+	if strings.Contains(body, "is a counter") {
+		t.Error("increase() got a counter hint")
+	}
+
+	chartOf := func(page string) (labels []int64, data []*float64) {
+		t.Helper()
+		m := explorerChartRe.FindStringSubmatch(page)
+		if m == nil {
+			if i := strings.Index(page, "chart-data-explorer"); i >= 0 {
+				t.Fatalf("script tag shape unexpected: %q", page[max(0, i-120):min(len(page), i+200)])
+			}
+			t.Fatalf("no chart payload in page")
+		}
+		var payload struct {
+			LabelsMs []int64 `json:"labelsMs"`
+			Datasets []struct {
+				Data []*float64 `json:"data"`
+			} `json:"datasets"`
+		}
+		if err := json.Unmarshal([]byte(m[1]), &payload); err != nil {
+			t.Fatal(err)
+		}
+		if len(payload.Datasets) == 0 {
+			t.Fatal("no datasets")
+		}
+		return payload.LabelsMs, payload.Datasets[0].Data
+	}
+
+	// gauge: full 1h grid (7 buckets of 10m), missing buckets are nulls
+	_, page := cl.get("/metrics-explorer?dsl=" + url.QueryEscape("avg(queue_depth) per 10m last 1h"))
+	labels, data := chartOf(page)
+	if len(labels) != 7 || len(data) != 7 {
+		t.Fatalf("gauge grid = %d buckets, want 7", len(labels))
+	}
+	nulls, values := 0, 0
+	for _, d := range data {
+		if d == nil {
+			nulls++
+		} else {
+			values++
+		}
+	}
+	if values != 2 || nulls != 5 {
+		t.Fatalf("gauge fill: %d values, %d nulls (want 2 and 5)", values, nulls)
+	}
+
+	// counter: same grid, missing buckets are ZEROS and the data bucket is 40
+	_, page = cl.get("/metrics-explorer?dsl=" + url.QueryEscape("increase(orders_total) per 10m last 1h"))
+	labels, data = chartOf(page)
+	if len(labels) != 7 {
+		t.Fatalf("counter grid = %d buckets, want 7", len(labels))
+	}
+	zeros, sum := 0, 0.0
+	for _, d := range data {
+		if d == nil {
+			t.Fatal("counter fill must never be null")
+		}
+		if *d == 0 {
+			zeros++
+		}
+		sum += *d
+	}
+	if zeros != 6 || sum != 40 {
+		t.Fatalf("counter fill: %d zeros, sum %v (want 6 and 40)", zeros, sum)
 	}
 }
 

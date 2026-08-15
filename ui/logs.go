@@ -56,7 +56,13 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 	lr := parseLogsRequest(req)
 	qp := req.URL.Query()
 
-	view := templates.LogsView{Q: lr.Q, FTS: lr.FTS, Op: lr.Op}
+	view := templates.LogsView{Q: lr.Q, FTS: lr.FTS, Op: lr.Op, Snippets: logsSnippets}
+
+	if strings.Contains(lr.Q, snippetPlaceholderMarker) {
+		view.Error = placeholderErr(lr.Q)
+		ur.renderLogs(w, req, view, false)
+		return
+	}
 
 	v, err := query.ValidateIn(lr.Q, query.ScopeLogs)
 	if err != nil {
@@ -264,6 +270,11 @@ func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) {
 // GET /logs/export?format=csv|json - current results as a download.
 func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 	lr := parseLogsRequest(req)
+
+	if strings.Contains(lr.Q, snippetPlaceholderMarker) {
+		http.Error(w, placeholderErr(lr.Q), http.StatusBadRequest)
+		return
+	}
 
 	v, err := query.ValidateIn(lr.Q, query.ScopeLogs)
 	if err != nil {

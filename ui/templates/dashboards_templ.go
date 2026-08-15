@@ -42,8 +42,10 @@ type ChartPayload struct {
 }
 
 type ChartDataset struct {
-	Label string    `json:"label"`
-	Data  []float64 `json:"data"`
+	Label string `json:"label"`
+	// nullable: a null point renders as a gap in the line (Chart.js default
+	// spanGaps=false) - "no sample" for gauges is unknown, never zero
+	Data []*float64 `json:"data"`
 }
 
 func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToken string) templ.Component {
@@ -79,7 +81,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-3xl mx-auto flex flex-col gap-6\"><div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title text-base\">Dashboards</h2>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-3xl mx-auto flex flex-col gap-6\"><div class=\"card bg-base-100\"><div class=\"card-body py-4 gap-3\"><h2 class=\"card-title\">Dashboards</h2>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -91,7 +93,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 48, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 50, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -120,20 +122,20 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 					var templ_7745c5c3_Var4 templ.SafeURL
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 59, Col: 69}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 61, Col: 69}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-200 rounded-field px-2 py-2\"><span class=\"font-semibold\">")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" class=\"flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-2\"><span class=\"font-semibold\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var5 string
 					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 60, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 62, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
@@ -151,7 +153,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 						var templ_7745c5c3_Var6 string
 						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(d.Description)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 62, Col: 76}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 64, Col: 76}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 						if templ_7745c5c3_Err != nil {
@@ -179,13 +181,13 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 70, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 72, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Name</span> <input type=\"text\" name=\"name\" placeholder=\"shop overview\" class=\"input input-bordered input-sm\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1 flex-1\"><span class=\"text-xs opacity-80\">Description (optional)</span> <input type=\"text\" name=\"description\" class=\"input input-bordered input-sm w-full\"></label> <button type=\"submit\" class=\"btn btn-primary btn-sm\">Create</button></form></div></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "\"> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Name</span> <input type=\"text\" name=\"name\" placeholder=\"shop overview\" class=\"input input-bordered input-sm\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1 flex-1\"><span class=\"text-sm opacity-80\">Description (optional)</span> <input type=\"text\" name=\"description\" class=\"input input-bordered input-sm w-full\"></label> <button type=\"submit\" class=\"btn btn-primary btn-sm\">Create</button></form></div></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -239,7 +241,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 92, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 94, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -257,7 +259,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(d.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 94, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 96, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -275,7 +277,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d", d.ID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 101, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 103, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 			if templ_7745c5c3_Err != nil {
@@ -288,7 +290,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete dashboard %q and all its panels?", d.Name))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 102, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 104, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
@@ -306,7 +308,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 107, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 109, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -321,14 +323,14 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, errMsg string,
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<details class=\"card bg-base-100 border border-base-content/15\"><summary class=\"card-body py-3 cursor-pointer text-sm font-semibold\">+ Add panel</summary><div class=\"card-body pt-0 py-4\"><form method=\"post\" action=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<details class=\"card bg-base-100\"><summary class=\"card-body py-3 cursor-pointer text-sm font-semibold\">+ Add panel</summary><div class=\"card-body pt-0 py-4\"><form method=\"post\" action=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var15 templ.SafeURL
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/dashboards/%d/panels", d.ID)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 113, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 115, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -426,7 +428,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 			templ_7745c5c3_Var17 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var18 = []any{"panel-card card bg-base-100 border border-base-content/15 min-w-0", panelWidthClass(p.Width)}
+		var templ_7745c5c3_Var18 = []any{"panel-card card bg-base-100 min-w-0", panelWidthClass(p.Width)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var18...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -438,7 +440,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("panel-card-%d", p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 140, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 142, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -464,7 +466,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 143, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 145, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 		if templ_7745c5c3_Err != nil {
@@ -477,33 +479,33 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(p.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 143, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 145, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</h3><span class=\"flex gap-1 shrink-0\"><button class=\"btn btn-ghost btn-xs\" hx-get=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</h3><span class=\"flex gap-1 shrink-0\"><button class=\"btn btn-ghost btn-sm\" hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?edit=1", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 147, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 149, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" hx-target=\"closest .panel-card\" hx-swap=\"outerHTML\">Edit</button> <button class=\"btn btn-ghost btn-xs text-error\" hx-delete=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "\" hx-target=\"closest .panel-card\" hx-swap=\"outerHTML\">Edit</button> <button class=\"btn btn-ghost btn-sm text-error\" hx-delete=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 153, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 155, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
 		if templ_7745c5c3_Err != nil {
@@ -516,7 +518,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete panel %q?", p.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 156, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 158, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -529,7 +531,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 161, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 163, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
 		if templ_7745c5c3_Err != nil {
@@ -596,14 +598,14 @@ func Shaped(s ShapedResult) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		switch s.Kind {
 		case "error":
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<p class=\"text-error text-xs break-words py-2\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<p class=\"text-error text-sm break-words py-2\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(s.ErrMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 180, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 182, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 			if templ_7745c5c3_Err != nil {
@@ -626,7 +628,7 @@ func Shaped(s ShapedResult) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(s.Stat)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 185, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 187, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -649,7 +651,7 @@ func Shaped(s ShapedResult) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.ChartID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 191, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 193, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 			if templ_7745c5c3_Err != nil {
@@ -707,7 +709,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\"><table class=\"table table-xs font-mono\"><thead><tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\"><table class=\"table table-sm font-mono\"><thead><tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -719,7 +721,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 			var templ_7745c5c3_Var35 string
 			templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(c)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 203, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 205, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 			if templ_7745c5c3_Err != nil {
@@ -747,7 +749,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 				var templ_7745c5c3_Var36 string
 				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 213, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
 				if templ_7745c5c3_Err != nil {
@@ -760,7 +762,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 				var templ_7745c5c3_Var37 string
 				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 213, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 				if templ_7745c5c3_Err != nil {
@@ -836,7 +838,7 @@ func PanelEditCard(p services.Panel, errMsg string, csrfToken string) templ.Comp
 			var templ_7745c5c3_Var41 string
 			templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 225, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 227, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 			if templ_7745c5c3_Err != nil {
@@ -854,7 +856,7 @@ func PanelEditCard(p services.Panel, errMsg string, csrfToken string) templ.Comp
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 228, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 230, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 		if templ_7745c5c3_Err != nil {
@@ -875,7 +877,7 @@ func PanelEditCard(p services.Panel, errMsg string, csrfToken string) templ.Comp
 		var templ_7745c5c3_Var43 string
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?card=1", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 239, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 241, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
 		if templ_7745c5c3_Err != nil {
@@ -917,26 +919,26 @@ func panelFormFields(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 250, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 252, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "\"><div class=\"grid gap-3 md:grid-cols-3\"><label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Title</span> <input type=\"text\" name=\"title\" value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, "\"><div class=\"grid gap-3 md:grid-cols-3\"><label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Title</span> <input type=\"text\" name=\"title\" value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 254, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 256, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var46)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "\" class=\"input input-bordered input-sm\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Chart</span> <select name=\"chart_type\" class=\"select select-bordered select-sm\"><option value=\"\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, "\" class=\"input input-bordered input-sm\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Chart</span> <select name=\"chart_type\" class=\"select select-bordered select-sm\"><option value=\"\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -976,7 +978,7 @@ func panelFormFields(p services.Panel, csrfToken string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, ">stat</option></select></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Width (of 3 columns)</span> <select name=\"width\" class=\"select select-bordered select-sm\"><option value=\"1\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, ">stat</option></select></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Width (of 3 columns)</span> <select name=\"width\" class=\"select select-bordered select-sm\"><option value=\"1\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1006,14 +1008,14 @@ func panelFormFields(p services.Panel, csrfToken string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, ">3</option></select></label></div><div class=\"flex flex-col gap-1\"><span class=\"flex items-center justify-between\"><span class=\"text-xs opacity-80\">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span> <button type=\"button\" class=\"open-in-logs link link-primary text-xs\" title=\"Run this query on the logs page (new tab)\">open in logs ↗</button></span> <textarea name=\"query\" class=\"hidden\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, ">3</option></select></label></div><div class=\"flex flex-col gap-1\"><span class=\"flex items-center justify-between\"><span class=\"text-sm opacity-80\">Query - one signal per panel, logs or metrics (first column = x axis, numeric columns = series)</span> <button type=\"button\" class=\"open-in-logs link link-primary text-sm\" title=\"Run this query on the logs page (new tab)\">open in logs ↗</button></span> <textarea name=\"query\" class=\"hidden\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(p.Query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 279, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 281, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -1026,7 +1028,7 @@ func panelFormFields(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(sqlEditorReserve(p.Query))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 282, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 284, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 		if templ_7745c5c3_Err != nil {

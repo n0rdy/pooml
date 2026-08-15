@@ -152,12 +152,12 @@ func TestOTLPPushJSON(t *testing.T) {
 	var n int
 	if err := pools.Metrics.QueryRow(
 		"SELECT COUNT(*) FROM metrics WHERE name IN ('req_latency_sum', 'req_latency_count') AND type = ?",
-		metrics.TypeGauge,
+		metrics.TypeCounter, // downcast rows are cumulative, typed as counters
 	).Scan(&n); err != nil {
 		t.Fatal(err)
 	}
 	if n != 2 {
-		t.Fatalf("expected histogram downcast to 2 gauge rows, got %d", n)
+		t.Fatalf("expected histogram downcast to 2 counter rows, got %d", n)
 	}
 }
 

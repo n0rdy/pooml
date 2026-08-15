@@ -12,7 +12,8 @@ type LogsView struct {
 	FTS string
 	Op  string
 
-	Error string
+	Error    string
+	Snippets []QuerySnippet
 
 	// log-viewer shape
 	IsViewer     bool

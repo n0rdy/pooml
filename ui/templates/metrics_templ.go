@@ -17,8 +17,12 @@ import (
 type MetricsExplorerView struct {
 	Query   string
 	View    string // auto | line | bar | stat | table
+	DSL     string // last DSL input; SQL stays canonical
 	Shaped  ShapedResult
 	SaveErr string
+
+	// catalog names feeding the DSL autocomplete
+	MetricNames []string
 
 	// empty-result disambiguation: nothing ingested vs nothing matched
 	HasAnyMetrics bool
@@ -31,6 +35,9 @@ type MetricsExplorerView struct {
 type QuerySnippet struct {
 	Label string
 	SQL   string
+	// authored DSL equivalent where one exists (never decompiled from SQL);
+	// chips carrying one teach the DSL by filling both layers
+	DSL string
 }
 
 func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Component {
@@ -66,168 +73,230 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-6xl mx-auto flex flex-col gap-4\"><div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-4 gap-2\"><form method=\"get\" action=\"/metrics-explorer\" class=\"flex flex-col gap-2\"><span class=\"flex items-center justify-between\"><span class=\"text-xs opacity-80\">SQL over <code class=\"font-mono\">metrics</code></span> <span class=\"text-xs opacity-50\">Cmd/Ctrl+Enter runs</span></span> <textarea name=\"q\" class=\"hidden\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"max-w-6xl mx-auto flex flex-col gap-4\"><div class=\"card bg-base-100\"><div class=\"card-body py-4 gap-2\"><form method=\"get\" action=\"/metrics-explorer\" class=\"flex flex-col gap-2\"><div class=\"flex flex-col gap-1\"><span class=\"flex items-center gap-2\"><span class=\"text-sm opacity-80\">Quick query</span> <span class=\"join\"><button type=\"button\" id=\"dsl-mode-builder\" class=\"join-item btn btn-sm\">builder</button> <button type=\"button\" id=\"dsl-mode-text\" class=\"join-item btn btn-sm\">text</button></span></span><div id=\"dsl-builder\" class=\"hidden flex-col gap-2 border-2 border-base-content/20 rounded-field bg-base-100 p-2\"><div class=\"flex items-end gap-2 flex-wrap\"><label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-60\">verb</span> <select id=\"b-verb\" class=\"select select-bordered select-sm\"><option>avg</option> <option>increase</option> <option>rate</option> <option>min</option> <option>max</option> <option>sum</option> <option>count</option> <option>latest</option></select></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-60\">metric</span> <input id=\"b-metric\" list=\"metric-names-dl\" class=\"input input-bordered input-sm w-64\" placeholder=\"pick or type\"></label></div><div class=\"flex items-end gap-2 flex-wrap\"><div id=\"b-filters\" class=\"contents\"></div><button type=\"button\" id=\"b-add-filter\" class=\"btn btn-ghost btn-sm mb-1\" title=\"Add a key=value filter (service and host are columns; anything else matches labels)\">+ filter</button></div><div class=\"flex items-end gap-2 flex-wrap\"><label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-60\">per</span> <select id=\"b-per\" class=\"select select-bordered select-sm w-20\"><option value=\"\">off</option> <option>1m</option> <option>5m</option> <option>10m</option> <option>30m</option> <option>1h</option> <option>1d</option></select></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-60\">last</span> <select id=\"b-last\" class=\"select select-bordered select-sm w-22\"><option>15m</option> <option>1h</option> <option>6h</option> <option selected>24h</option> <option>7d</option> <option>30d</option></select></label> <label class=\"flex items-center gap-2 text-sm mb-1 cursor-pointer\"><input type=\"checkbox\" id=\"b-by-service\" class=\"checkbox checkbox-sm\"> by service</label></div><div id=\"b-dsl-preview\" class=\"text-sm font-mono opacity-60\"></div></div><div id=\"dsl-input\" data-dsl=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(v.Query)
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.DSL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 38, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 106, Col: 24}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</textarea><div class=\"sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors\" style=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(sqlEditorReserve(v.Query))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 41, Col: 40}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" class=\"border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors\" style=\"min-height: 45px\"></div><div id=\"dsl-hint\" class=\"text-sm text-error hidden\"></div><div id=\"dsl-counter-hint\" class=\"text-sm text-warning hidden\"></div></div><datalist id=\"metric-names-dl\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" data-placeholder=\"SELECT name, service, value, timestamp FROM metrics ORDER BY timestamp DESC LIMIT 100\"></div><input type=\"hidden\" name=\"view\" value=\"")
+			for _, n := range v.MetricNames {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<option value=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var4 string
+				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(n)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 115, Col: 25}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"></option>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</datalist> <datalist id=\"b-fkeys-dl\"></datalist> <datalist id=\"b-fvals-dl\"></datalist> <input type=\"hidden\" name=\"dsl\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.View)
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.DSL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 44, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 120, Col: 51}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"> ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"> <span class=\"flex items-center justify-between\"><span class=\"text-sm opacity-80\">SQL over <code class=\"font-mono\">metrics</code> <span class=\"opacity-60\">- the quick query compiles here; edit it and it's yours</span></span> <span class=\"text-sm opacity-60 flex items-center gap-3\"><button type=\"button\" class=\"fmt-sql link link-primary\" title=\"Format the SQL (Cmd/Ctrl+Shift+F)\">format</button> Cmd/Ctrl+Enter runs</span></span> <textarea name=\"q\" class=\"hidden\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var6 string
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(v.Query)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 128, Col: 49}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</textarea><div class=\"sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors\" style=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var7 string
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(sqlEditorReserve(v.Query))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 131, Col: 40}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" data-placeholder=\"SELECT name, service, value, timestamp FROM metrics ORDER BY timestamp DESC LIMIT 100\"></div><input type=\"hidden\" name=\"view\" value=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var8 string
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.View)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 134, Col: 53}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"> ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if len(v.Snippets) > 0 {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"flex items-center gap-1.5 flex-wrap\"><span class=\"text-xs opacity-50\">examples:</span> ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex items-center gap-1.5 flex-wrap\"><span class=\"text-sm opacity-60\">examples:</span> ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				for _, s := range v.Snippets {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<button type=\"button\" class=\"btn btn-xs btn-ghost border border-base-content/15 font-normal\" data-snippet=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<button type=\"button\" class=\"btn btn-sm btn-ghost border border-base-content/15 font-normal\" data-snippet=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var6 string
-					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.SQL)
+					var templ_7745c5c3_Var9 string
+					templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.SQL)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 52, Col: 30}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 142, Col: 30}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
-					if templ_7745c5c3_Err != nil {
-						return templ_7745c5c3_Err
-					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" title=\"Load into the editor (nothing runs until you hit Run)\">")
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var7 string
-					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
-					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 54, Col: 19}
-					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" data-dsl-snippet=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</button>")
+					var templ_7745c5c3_Var10 string
+					templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.DSL)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 143, Col: 34}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" title=\"Load into the editor (nothing runs until you hit Run)\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var11 string
+					templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 145, Col: 19}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</button>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"flex items-center gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Run</button> <a href=\"/metrics-explorer\" class=\"btn btn-ghost btn-sm\">Reset</a></div></form></div></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<div class=\"flex items-center gap-2\"><button type=\"submit\" class=\"btn btn-primary btn-sm\">Run</button> <a href=\"/metrics-explorer\" class=\"btn btn-ghost btn-sm\">Reset</a></div></form></div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			if v.SaveErr != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<div role=\"alert\" class=\"alert alert-error text-sm\">Saving the panel failed: ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<div role=\"alert\" class=\"alert alert-error text-sm\">Saving the panel failed: ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var8 string
-				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(v.SaveErr)
+				var templ_7745c5c3_Var12 string
+				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(v.SaveErr)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 66, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 157, Col: 92}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
 			switch v.Shaped.Kind {
 			case "error":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<div role=\"alert\" class=\"alert alert-error text-sm\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div role=\"alert\" class=\"alert alert-error text-sm\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var9 string
-				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(v.Shaped.ErrMsg)
+				var templ_7745c5c3_Var13 string
+				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(v.Shaped.ErrMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 70, Col: 74}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 161, Col: 74}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			case "empty":
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-4\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"card bg-base-100\"><div class=\"card-body py-4\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if v.HasAnyMetrics {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<p class=\"text-sm opacity-60 italic\">No rows matched this query. Loosen the WHERE, widen the time range.</p>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<p class=\"text-sm opacity-60 italic\">No rows matched this query. Loosen the WHERE, widen the time range.</p>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				} else {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<p class=\"text-sm opacity-70\">Nothing in <code class=\"font-mono\">metrics</code> yet. Two ways in, equally good:</p><ul class=\"text-sm opacity-70 list-disc ml-5 flex flex-col gap-1 mt-1\"><li><b>Pull</b>: add a Prometheus scrape target in <a href=\"/settings\" class=\"link link-primary\">Settings</a>.</li><li><b>Push</b>: send OTLP/HTTP to <code class=\"font-mono\">POST /api/v1/otlp/v1/metrics</code> with an <code class=\"font-mono\">X-API-Key</code> header.</li></ul>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<p class=\"text-sm opacity-70\">Nothing in <code class=\"font-mono\">metrics</code> yet. Two ways in, equally good:</p><ul class=\"text-sm opacity-70 list-disc ml-5 flex flex-col gap-1 mt-1\"><li><b>Pull</b>: add a Prometheus scrape target in <a href=\"/settings\" class=\"link link-primary\">Settings</a>.</li><li><b>Push</b>: send OTLP/HTTP to <code class=\"font-mono\">POST /api/v1/otlp/v1/metrics</code> with an <code class=\"font-mono\">X-API-Key</code> header.</li></ul>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			default:
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-3 gap-2\"><div class=\"flex items-center gap-3 flex-wrap\"><span class=\"text-xs opacity-60 whitespace-nowrap\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "<div class=\"card bg-base-100\"><div class=\"card-body py-3 gap-2\"><div class=\"flex items-center gap-3 flex-wrap\"><span class=\"text-sm opacity-60 whitespace-nowrap\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var10 string
-				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Shaped.Rows)))
+				var templ_7745c5c3_Var14 string
+				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Shaped.Rows)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 91, Col: 93}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 182, Col: 93}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, " rows</span><div class=\"join\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, " rows</span><div class=\"join\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -251,51 +320,51 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</div><span class=\"ml-auto flex gap-3 text-xs opacity-60\"><a href=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div><span class=\"ml-auto flex gap-3 text-sm opacity-60\"><a href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var11 templ.SafeURL
-				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsExportURL(v.Query, "csv")))
+				var templ_7745c5c3_Var15 templ.SafeURL
+				templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsExportURL(v.Query, "csv")))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 100, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 191, Col: 66}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" class=\"link link-hover\">CSV</a> <a href=\"")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var12 templ.SafeURL
-				templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsExportURL(v.Query, "json")))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 101, Col: 67}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "\" class=\"link link-hover\">CSV</a> <a href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"link link-hover\">JSON</a></span></div>")
+				var templ_7745c5c3_Var16 templ.SafeURL
+				templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsExportURL(v.Query, "json")))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 192, Col: 67}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "\" class=\"link link-hover\">JSON</a></span></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				if v.Shaped.Kind == "chart" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<div class=\"h-72 relative\"><canvas data-chart=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<div class=\"h-72 relative\"><canvas data-chart=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var13 string
-					templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Shaped.ChartID)
+					var templ_7745c5c3_Var17 string
+					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Shaped.ChartID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 106, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 197, Col: 46}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\"></canvas></div>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "\"></canvas></div>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -303,20 +372,20 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, " <details class=\"mt-1\"><summary class=\"cursor-pointer text-xs opacity-60\">rows (")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, " <details class=\"mt-1\"><summary class=\"cursor-pointer text-sm opacity-60\">rows (")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					var templ_7745c5c3_Var14 string
-					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Shaped.Rows)))
+					var templ_7745c5c3_Var18 string
+					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Shaped.Rows)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 110, Col: 100}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 201, Col: 100}
 					}
-					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, ")</summary>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, ")</summary>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -324,7 +393,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "</details>")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</details>")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
@@ -334,7 +403,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 						return templ_7745c5c3_Err
 					}
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, "</div></div>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -343,7 +412,15 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.JSONScript("metric-names", v.MetricNames).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, " ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -351,7 +428,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, " ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, " ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -359,9 +436,51 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = dslScript().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 			return nil
 		})
 		templ_7745c5c3_Err = Shell("metrics · pooml", "metrics", csrfToken).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+// dslScript mounts the one-line DSL editor: autocomplete (verbs by position,
+// catalog metric names inside the parens, durations after per/last), a
+// debounced compile fetch mirroring into the SQL editor, and
+// detach-by-clearing when the SQL is hand-edited (the placeholder swap is
+// the explanation). Enter runs; the hidden dsl input keeps the URL honest.
+func dslScript() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var19 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var19 == nil {
+			templ_7745c5c3_Var19 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<style>\n\t\t/* symmetric padding centers the single line; a forced min-height\n\t\t   left the slack below the text and the cursor riding high */\n\t\t#dsl-input .cm-content { font-size: 15px; padding: 10px 0; }\n\t\t#dsl-input:focus-within {\n\t\t\toutline: 2px solid var(--color-primary);\n\t\t\toutline-offset: 2px;\n\t\t\tborder-color: var(--color-primary);\n\t\t}\n\t</style><script type=\"module\">\n\t\timport { EditorView, keymap, placeholder } from \"@codemirror/view\";\n\t\timport { EditorState, Compartment, Prec } from \"@codemirror/state\";\n\t\timport { autocompletion, acceptCompletion } from \"@codemirror/autocomplete\";\n\t\timport { oneDark } from \"@codemirror/theme-one-dark\";\n\n\t\tconst host = document.getElementById(\"dsl-input\");\n\t\tif (host) {\n\t\t\tconst form = host.closest(\"form\");\n\t\t\tconst hidden = form.querySelector('input[name=\"dsl\"]');\n\t\t\tconst hint = document.getElementById(\"dsl-hint\");\n\t\t\tconst counterHint = document.getElementById(\"dsl-counter-hint\");\n\t\t\tconst names = JSON.parse(document.getElementById(\"metric-names\")?.textContent || \"[]\") || [];\n\t\t\tconst VERBS = [\"increase\", \"rate\", \"avg\", \"min\", \"max\", \"sum\", \"count\", \"latest\"];\n\t\t\tconst DURS = [\"1m\", \"5m\", \"10m\", \"30m\", \"1h\", \"6h\", \"24h\", \"7d\"];\n\n\t\t\tfunction dslCompletion(ctx) {\n\t\t\t\tconst before = ctx.state.sliceDoc(0, ctx.pos);\n\t\t\t\tconst open = before.lastIndexOf(\"(\");\n\t\t\t\tconst close = before.lastIndexOf(\")\");\n\t\t\t\tif (open > close) {\n\t\t\t\t\tconst w = ctx.matchBefore(/[^()\\s]*/);\n\t\t\t\t\tif (!names.length) return null;\n\t\t\t\t\treturn { from: w ? w.from : ctx.pos, options: names.map((n) => ({ label: n, type: \"constant\" })), validFor: /^[^()\\s]*$/ };\n\t\t\t\t}\n\t\t\t\tif (open === -1) {\n\t\t\t\t\tconst w = ctx.matchBefore(/\\w*/);\n\t\t\t\t\tif (!w && !ctx.explicit) return null;\n\t\t\t\t\treturn { from: w ? w.from : ctx.pos, options: VERBS.map((v) => ({ label: v, apply: v + \"(\", type: \"function\" })), validFor: /^\\w*$/ };\n\t\t\t\t}\n\t\t\t\tconst w = ctx.matchBefore(/[\\w]*/);\n\t\t\t\tif (/(per|last)\\s+\\w*$/i.test(before)) {\n\t\t\t\t\treturn { from: w ? w.from : ctx.pos, options: DURS.map((d) => ({ label: d, type: \"constant\" })), validFor: /^\\w*$/ };\n\t\t\t\t}\n\t\t\t\treturn {\n\t\t\t\t\tfrom: w ? w.from : ctx.pos,\n\t\t\t\t\toptions: [\n\t\t\t\t\t\t{ label: \"per\", apply: \"per \", type: \"keyword\" },\n\t\t\t\t\t\t{ label: \"last\", apply: \"last \", type: \"keyword\" },\n\t\t\t\t\t\t{ label: \"by service\", type: \"keyword\" },\n\t\t\t\t\t\t{ label: \"service=\", type: \"keyword\" },\n\t\t\t\t\t\t{ label: \"host=\", type: \"keyword\" },\n\t\t\t\t\t],\n\t\t\t\t\tvalidFor: /^\\w*$/,\n\t\t\t\t};\n\t\t\t}\n\n\t\t\tconst isLight = () => document.documentElement.getAttribute(\"data-theme\") === \"light\";\n\t\t\tconst themeComp = new Compartment();\n\t\t\tconst placeholderComp = new Compartment();\n\t\t\tconst NORMAL_PH = \"avg(queue_depth) per 10m last 6h by service\";\n\t\t\tconst DETACHED_PH = \"custom SQL below - type here to start over\";\n\n\t\t\tlet compileTimer = null;\n\t\t\tlet populateBuilderNext = false;\n\n\t\t\tconst sqlView = () => {\n\t\t\t\tconst h = form.querySelector(\".sql-editor-host\");\n\t\t\t\treturn h && window.poomlSQL ? window.poomlSQL.editors.get(h) : null;\n\t\t\t};\n\n\t\t\tfunction compile() {\n\t\t\t\tconst text = view.state.doc.toString().trim();\n\t\t\t\thidden.value = text;\n\t\t\t\tif (!text) {\n\t\t\t\t\thint.classList.add(\"hidden\");\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tfetch(\"/metrics-explorer/compile?dsl=\" + encodeURIComponent(text))\n\t\t\t\t\t.then((r) => r.json())\n\t\t\t\t\t.then((res) => {\n\t\t\t\t\t\tif (res.error) {\n\t\t\t\t\t\t\thint.textContent = res.error;\n\t\t\t\t\t\t\thint.classList.remove(\"hidden\");\n\t\t\t\t\t\t\tcounterHint.classList.add(\"hidden\");\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\thint.classList.add(\"hidden\");\n\t\t\t\t\t\t// advisory, not an error: e.g. avg() pointed at a counter\n\t\t\t\t\t\tcounterHint.textContent = res.hint || \"\";\n\t\t\t\t\t\tcounterHint.classList.toggle(\"hidden\", !res.hint);\n\t\t\t\t\t\tconst sv = sqlView();\n\t\t\t\t\t\tif (sv && res.sql !== sv.state.doc.toString()) {\n\t\t\t\t\t\t\tsv.dispatch({ changes: { from: 0, to: sv.state.doc.length, insert: res.sql } });\n\t\t\t\t\t\t}\n\t\t\t\t\t\t// one-shot: builder catches up after a chip click, but\n\t\t\t\t\t\t// never mid-typing (it would fight the cursor)\n\t\t\t\t\t\tif (populateBuilderNext && res.parsed) {\n\t\t\t\t\t\t\tpopulateBuilder(res.parsed);\n\t\t\t\t\t\t\tpopulateBuilderNext = false;\n\t\t\t\t\t\t}\n\t\t\t\t\t})\n\t\t\t\t\t.catch(() => {});\n\t\t\t}\n\n\t\t\tconst view = new EditorView({\n\t\t\t\tdoc: host.dataset.dsl || \"\",\n\t\t\t\textensions: [\n\t\t\t\t\tPrec.highest(keymap.of([\n\t\t\t\t\t\t{ key: \"Tab\", run: acceptCompletion },\n\t\t\t\t\t\t{ key: \"Enter\", run: (v) => acceptCompletion(v) || (form.requestSubmit(), true) },\n\t\t\t\t\t])),\n\t\t\t\t\tautocompletion({ override: [dslCompletion] }),\n\t\t\t\t\tplaceholderComp.of(placeholder(NORMAL_PH)),\n\t\t\t\t\tthemeComp.of(isLight() ? [] : oneDark),\n\t\t\t\t\t// one line, always: pasted newlines have nowhere to live here\n\t\t\t\t\tEditorState.transactionFilter.of((tr) => (tr.newDoc.lines > 1 ? [] : tr)),\n\t\t\t\t\tEditorView.updateListener.of((u) => {\n\t\t\t\t\t\tif (!u.docChanged) return;\n\t\t\t\t\t\tclearTimeout(compileTimer);\n\t\t\t\t\t\tcompileTimer = setTimeout(compile, 250);\n\t\t\t\t\t}),\n\t\t\t\t],\n\t\t\t\tparent: host,\n\t\t\t});\n\n\t\t\t// --- query builder: a visual editor for the DSL string. Controls\n\t\t\t// generate the text, the text feeds the same compile pipeline; the\n\t\t\t// parsed structure comes back from the server (no grammar in JS).\n\t\t\tconst builder = document.getElementById(\"dsl-builder\");\n\t\t\tconst bVerb = document.getElementById(\"b-verb\");\n\t\t\tconst bMetric = document.getElementById(\"b-metric\");\n\t\t\tconst bFilters = document.getElementById(\"b-filters\");\n\t\t\tconst bPer = document.getElementById(\"b-per\");\n\t\t\tconst bLast = document.getElementById(\"b-last\");\n\t\t\tconst bByService = document.getElementById(\"b-by-service\");\n\t\t\tconst bPreview = document.getElementById(\"b-dsl-preview\");\n\t\t\tconst modeBuilder = document.getElementById(\"dsl-mode-builder\");\n\t\t\tconst modeText = document.getElementById(\"dsl-mode-text\");\n\t\t\tconst MODE_KEY = \"pooml-dsl-mode\";\n\n\t\t\tfunction fmtDur(ms) {\n\t\t\t\tif (ms % 86400000 === 0) return (ms / 86400000) + \"d\";\n\t\t\t\tif (ms % 3600000 === 0) return (ms / 3600000) + \"h\";\n\t\t\t\treturn (ms / 60000) + \"m\";\n\t\t\t}\n\t\t\tfunction ensureOption(sel, val) {\n\t\t\t\tif (!val) return;\n\t\t\t\tif (![...sel.options].some((o) => o.value === val || o.text === val)) {\n\t\t\t\t\tconst o = document.createElement(\"option\");\n\t\t\t\t\to.text = val;\n\t\t\t\t\tsel.add(o);\n\t\t\t\t}\n\t\t\t\tsel.value = val;\n\t\t\t}\n\t\t\tfunction addFilterRow(key, val) {\n\t\t\t\tconst row = document.createElement(\"label\");\n\t\t\t\trow.className = \"flex flex-col gap-1 b-filter\";\n\t\t\t\trow.innerHTML = '<span class=\"text-sm opacity-60\">filter</span>' +\n\t\t\t\t\t'<span class=\"join\">' +\n\t\t\t\t\t'<input class=\"b-fkey join-item input input-bordered input-sm w-24\" placeholder=\"key\" list=\"b-fkeys-dl\"/>' +\n\t\t\t\t\t'<input class=\"b-fval join-item input input-bordered input-sm w-24\" placeholder=\"value\" list=\"b-fvals-dl\"/>' +\n\t\t\t\t\t'<button type=\"button\" class=\"b-fremove join-item btn btn-sm btn-ghost\" title=\"remove\">✕</button>' +\n\t\t\t\t\t'</span>';\n\t\t\t\trow.querySelector(\".b-fkey\").value = key || \"\";\n\t\t\t\trow.querySelector(\".b-fval\").value = val || \"\";\n\t\t\t\tbFilters.appendChild(row);\n\t\t\t}\n\n\t\t\t// filter datalists offer what actually exists for the chosen\n\t\t\t// metric: keys on key-focus, values (for that row's key) on\n\t\t\t// value-focus. Cached per metric; a menu, not a guess.\n\t\t\tconst fkeysDl = document.getElementById(\"b-fkeys-dl\");\n\t\t\tconst fvalsDl = document.getElementById(\"b-fvals-dl\");\n\t\t\tconst optionsCache = new Map();\n\t\t\tfunction fillDatalist(dl, options) {\n\t\t\t\tdl.innerHTML = \"\";\n\t\t\t\t(options || []).forEach((o) => {\n\t\t\t\t\tconst opt = document.createElement(\"option\");\n\t\t\t\t\topt.value = o;\n\t\t\t\t\tdl.appendChild(opt);\n\t\t\t\t});\n\t\t\t}\n\t\t\tfunction fetchOptions(metric, key) {\n\t\t\t\tconst cacheKey = metric + \" \" + (key || \"\");\n\t\t\t\tif (optionsCache.has(cacheKey)) return Promise.resolve(optionsCache.get(cacheKey));\n\t\t\t\tlet u = \"/metrics-explorer/filter-options?metric=\" + encodeURIComponent(metric);\n\t\t\t\tif (key) u += \"&key=\" + encodeURIComponent(key);\n\t\t\t\treturn fetch(u)\n\t\t\t\t\t.then((r) => r.json())\n\t\t\t\t\t.then((res) => {\n\t\t\t\t\t\toptionsCache.set(cacheKey, res.options || []);\n\t\t\t\t\t\treturn res.options || [];\n\t\t\t\t\t})\n\t\t\t\t\t.catch(() => []);\n\t\t\t}\n\t\t\tbFilters.addEventListener(\"focusin\", (e) => {\n\t\t\t\tconst metric = bMetric.value.trim();\n\t\t\t\tif (!metric) return;\n\t\t\t\tif (e.target.classList.contains(\"b-fkey\")) {\n\t\t\t\t\tfetchOptions(metric, \"\").then((o) => fillDatalist(fkeysDl, o));\n\t\t\t\t} else if (e.target.classList.contains(\"b-fval\")) {\n\t\t\t\t\tconst key = e.target.closest(\".b-filter\").querySelector(\".b-fkey\").value.trim();\n\t\t\t\t\tif (key) fetchOptions(metric, key).then((o) => fillDatalist(fvalsDl, o));\n\t\t\t\t}\n\t\t\t});\n\t\t\tfunction buildDSLText() {\n\t\t\t\tconst metric = bMetric.value.trim();\n\t\t\t\tif (!metric) return \"\";\n\t\t\t\tlet t = bVerb.value + \"(\" + metric + \")\";\n\t\t\t\tbFilters.querySelectorAll(\".b-filter\").forEach((row) => {\n\t\t\t\t\tconst k = row.querySelector(\".b-fkey\").value.trim();\n\t\t\t\t\tconst val = row.querySelector(\".b-fval\").value.trim();\n\t\t\t\t\tif (k && val) t += \" \" + k + \"=\" + val;\n\t\t\t\t});\n\t\t\t\tif (bPer.value && bVerb.value !== \"latest\") t += \" per \" + bPer.value;\n\t\t\t\tt += \" last \" + bLast.value;\n\t\t\t\tif (bByService.checked) t += \" by service\";\n\t\t\t\treturn t;\n\t\t\t}\n\t\t\tfunction syncFromBuilder() {\n\t\t\t\tconst t = buildDSLText();\n\t\t\t\tbPreview.textContent = t;\n\t\t\t\tif (t === view.state.doc.toString()) return;\n\t\t\t\tview.dispatch({\n\t\t\t\t\tchanges: { from: 0, to: view.state.doc.length, insert: t },\n\t\t\t\t\teffects: placeholderComp.reconfigure(placeholder(NORMAL_PH)),\n\t\t\t\t});\n\t\t\t}\n\t\t\tfunction populateBuilder(p) {\n\t\t\t\tbVerb.value = p.verb;\n\t\t\t\tbMetric.value = p.metric;\n\t\t\t\tbFilters.innerHTML = \"\";\n\t\t\t\t(p.filters || []).forEach((f) => addFilterRow(f.key, f.value));\n\t\t\t\tif (p.perMs) { ensureOption(bPer, fmtDur(p.perMs)); } else { bPer.value = \"\"; }\n\t\t\t\t// canonicalize one day to the idiomatic \"24h\" so the round trip\n\t\t\t\t// doesn't grow a duplicate \"1d\" option next to it\n\t\t\t\tensureOption(bLast, p.lastMs === 86400000 ? \"24h\" : fmtDur(p.lastMs));\n\t\t\t\tbByService.checked = !!p.byService;\n\t\t\t\tbPreview.textContent = view.state.doc.toString();\n\t\t\t}\n\t\t\tfunction resetBuilder() {\n\t\t\t\tbVerb.value = \"avg\";\n\t\t\t\tbMetric.value = \"\";\n\t\t\t\tbFilters.innerHTML = \"\";\n\t\t\t\tbPer.value = \"\";\n\t\t\t\tbLast.value = \"24h\";\n\t\t\t\tbByService.checked = false;\n\t\t\t\tbPreview.textContent = \"\";\n\t\t\t}\n\t\t\tfunction applyMode(mode) {\n\t\t\t\tlocalStorage.setItem(MODE_KEY, mode);\n\t\t\t\tconst isBuilder = mode === \"builder\";\n\t\t\t\tbuilder.classList.toggle(\"hidden\", !isBuilder);\n\t\t\t\tbuilder.classList.toggle(\"flex\", isBuilder);\n\t\t\t\thost.classList.toggle(\"hidden\", isBuilder);\n\t\t\t\t// btn-primary, not btn-active: the active segment must be\n\t\t\t\t// unmistakable (the one-notch contrast rule)\n\t\t\t\tmodeBuilder.classList.toggle(\"btn-primary\", isBuilder);\n\t\t\t\tmodeText.classList.toggle(\"btn-primary\", !isBuilder);\n\t\t\t}\n\t\t\tmodeText.addEventListener(\"click\", () => applyMode(\"text\"));\n\t\t\tmodeBuilder.addEventListener(\"click\", () => {\n\t\t\t\tconst t = view.state.doc.toString().trim();\n\t\t\t\tif (!t) {\n\t\t\t\t\tapplyMode(\"builder\");\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\t// populate from the server's parse; unparseable stays in text\n\t\t\t\tfetch(\"/metrics-explorer/compile?dsl=\" + encodeURIComponent(t))\n\t\t\t\t\t.then((r) => r.json())\n\t\t\t\t\t.then((res) => {\n\t\t\t\t\t\tif (!res.parsed) {\n\t\t\t\t\t\t\thint.textContent = (res.error || \"can't read this expression\") + \" - fix it (or clear it) to switch to the builder\";\n\t\t\t\t\t\t\thint.classList.remove(\"hidden\");\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\tpopulateBuilder(res.parsed);\n\t\t\t\t\t\tapplyMode(\"builder\");\n\t\t\t\t\t})\n\t\t\t\t\t.catch(() => {});\n\t\t\t});\n\t\t\tbFilters.addEventListener(\"click\", (e) => {\n\t\t\t\tif (e.target.closest(\".b-fremove\")) {\n\t\t\t\t\te.target.closest(\".b-filter\").remove();\n\t\t\t\t\tsyncFromBuilder();\n\t\t\t\t}\n\t\t\t});\n\t\t\tdocument.getElementById(\"b-add-filter\").addEventListener(\"click\", () => addFilterRow(\"\", \"\"));\n\t\t\tbuilder.addEventListener(\"input\", syncFromBuilder);\n\t\t\tbuilder.addEventListener(\"change\", syncFromBuilder);\n\n\t\t\t// hand-editing the SQL (or loading a snippet) detaches the whole\n\t\t\t// quick-query pipeline: DSL text cleared, builder reset, the\n\t\t\t// placeholder explains\n\t\t\tfunction detach() {\n\t\t\t\tclearTimeout(compileTimer);\n\t\t\t\thidden.value = \"\";\n\t\t\t\thint.classList.add(\"hidden\");\n\t\t\t\tcounterHint.classList.add(\"hidden\");\n\t\t\t\tresetBuilder();\n\t\t\t\tif (view.state.doc.length) {\n\t\t\t\t\tview.dispatch({\n\t\t\t\t\t\tchanges: { from: 0, to: view.state.doc.length, insert: \"\" },\n\t\t\t\t\t\teffects: placeholderComp.reconfigure(placeholder(DETACHED_PH)),\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t}\n\t\t\t// detach only on REAL edits to the SQL (the shared module raises\n\t\t\t// pooml:user-edit for user-origin doc changes; clicks, selection,\n\t\t\t// and our own compile dispatches don't count)\n\t\t\tconst sqlHost = form.querySelector(\".sql-editor-host\");\n\t\t\tif (sqlHost) {\n\t\t\t\tsqlHost.addEventListener(\"pooml:user-edit\", detach);\n\t\t\t}\n\t\t\t// snippet chips with an authored DSL equivalent fill the DSL too -\n\t\t\t// the compile pipeline then normalizes the SQL, and the whole\n\t\t\t// ladder (builder, DSL, SQL) stays in agreement. Chips without one\n\t\t\t// detach the quick query as any hand-edit would.\n\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\tconst chip = e.target.closest(\"[data-snippet]\");\n\t\t\t\tif (!chip) return;\n\t\t\t\tif (chip.dataset.dslSnippet) {\n\t\t\t\t\tpopulateBuilderNext = true;\n\t\t\t\t\tview.dispatch({\n\t\t\t\t\t\tchanges: { from: 0, to: view.state.doc.length, insert: chip.dataset.dslSnippet },\n\t\t\t\t\t\teffects: placeholderComp.reconfigure(placeholder(NORMAL_PH)),\n\t\t\t\t\t});\n\t\t\t\t} else {\n\t\t\t\t\tdetach();\n\t\t\t\t}\n\t\t\t});\n\n\t\t\tnew MutationObserver(() => {\n\t\t\t\tview.dispatch({ effects: themeComp.reconfigure(isLight() ? [] : oneDark) });\n\t\t\t}).observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\n\t\t\t// initial mode: remembered choice, builder for first contact; an\n\t\t\t// incoming dsl URL param populates the builder via one parse\n\t\t\tconst initialMode = localStorage.getItem(MODE_KEY) || \"builder\";\n\t\t\tapplyMode(initialMode);\n\t\t\tconst initial = view.state.doc.toString().trim();\n\t\t\tif (initial && initialMode === \"builder\") {\n\t\t\t\tfetch(\"/metrics-explorer/compile?dsl=\" + encodeURIComponent(initial))\n\t\t\t\t\t.then((r) => r.json())\n\t\t\t\t\t.then((res) => { if (res.parsed) populateBuilder(res.parsed); })\n\t\t\t\t\t.catch(() => {});\n\t\t\t}\n\t\t}\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -387,56 +506,56 @@ func viewSegment(v MetricsExplorerView, view string, label string) templ.Compone
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var15 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var15 == nil {
-			templ_7745c5c3_Var15 = templ.NopComponent
+		templ_7745c5c3_Var20 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var20 == nil {
+			templ_7745c5c3_Var20 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var16 = []any{"join-item btn btn-xs", templ.KV("btn-active", v.View == view)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var16...)
+		var templ_7745c5c3_Var21 = []any{"join-item btn btn-sm", templ.KV("btn-primary", v.View == view)}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var21...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "<a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var17 templ.SafeURL
-		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsViewURL(v.Query, view)))
+		var templ_7745c5c3_Var22 templ.SafeURL
+		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsViewURL(v.Query, v.DSL, view)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 130, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 581, Col: 60}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "\" class=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var18 string
-		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var16).String())
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var23 string
+		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var21).String())
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 1, Col: 0}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var18)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var19 string
-		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(label)
+		var templ_7745c5c3_Var24 string
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 132, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 583, Col: 9}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</a>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -462,102 +581,102 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var20 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var20 == nil {
-			templ_7745c5c3_Var20 = templ.NopComponent
+		templ_7745c5c3_Var25 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var25 == nil {
+			templ_7745c5c3_Var25 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<div class=\"card bg-base-100 border border-base-content/15\"><div class=\"card-body py-3\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<div class=\"card bg-base-100\"><div class=\"card-body py-3\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if len(v.Dashboards) == 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "<p class=\"text-xs opacity-60\">Like this view? <a href=\"/dashboards\" class=\"link link-primary\">Create a dashboard</a> and you can save queries as panels.</p>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<p class=\"text-sm opacity-60\">Like this view? <a href=\"/dashboards\" class=\"link link-primary\">Create a dashboard</a> and you can save queries as panels.</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<form method=\"post\" action=\"/metrics-explorer/save-panel\" class=\"flex gap-2 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "<form method=\"post\" action=\"/metrics-explorer/save-panel\" class=\"flex gap-2 items-end flex-wrap\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var21 string
-			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
+			var templ_7745c5c3_Var26 string
+			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 146, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 597, Col: 61}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "\"> <input type=\"hidden\" name=\"query\" value=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var22 string
-			templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Query)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 147, Col: 54}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "\"> <input type=\"hidden\" name=\"query\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\"> <input type=\"hidden\" name=\"chart_type\" value=\"")
+			var templ_7745c5c3_Var27 string
+			templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Query)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 598, Col: 54}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var27)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var23 string
-			templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.View)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 148, Col: 58}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "\"> <input type=\"hidden\" name=\"chart_type\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "\"> <span class=\"text-xs opacity-60 self-center mr-1\">Keep this view:</span> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Panel title</span> <input type=\"text\" name=\"title\" class=\"input input-bordered input-sm w-48\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-xs opacity-80\">Dashboard</span> <select name=\"dashboard_id\" class=\"select select-bordered select-sm\">")
+			var templ_7745c5c3_Var28 string
+			templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.View)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 599, Col: 58}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "\"> <span class=\"text-sm opacity-60 self-center mr-1\">Keep this view:</span> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Panel title</span> <input type=\"text\" name=\"title\" class=\"input input-bordered input-sm w-48\" maxlength=\"100\" required></label> <label class=\"flex flex-col gap-1\"><span class=\"text-sm opacity-80\">Dashboard</span> <select name=\"dashboard_id\" class=\"select select-bordered select-sm\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			for _, d := range v.Dashboards {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "<option value=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<option value=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var24 string
-				templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatInt(d.ID, 10))
+				var templ_7745c5c3_Var29 string
+				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatInt(d.ID, 10))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 158, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 609, Col: 51}
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "\">")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				var templ_7745c5c3_Var25 string
-				templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 158, Col: 62}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</option>")
+				var templ_7745c5c3_Var30 string
+				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 609, Col: 62}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "</option>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "</select></label> <button type=\"submit\" class=\"btn btn-ghost btn-sm\">Save as panel</button></form>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "</select></label> <button type=\"submit\" class=\"btn btn-ghost btn-sm\">Save as panel</button></form>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "</div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

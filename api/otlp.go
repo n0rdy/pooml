@@ -159,7 +159,9 @@ func appendNumberPoint(rows []metrics.Row, base metrics.Row, name string, typ in
 }
 
 // appendSumCount is the lossy histogram/summary downcast: {name}_sum and
-// {name}_count as gauges, buckets/quantiles dropped.
+// {name}_count, buckets/quantiles dropped. Both are CUMULATIVE (Prometheus
+// treats them as counters), so they get the counter type - raw-value charts
+// of them draw a straight climb, and the type is what lets the UI say so.
 func appendSumCount(rows []metrics.Row, base metrics.Row, name string, sum float64, hasSum bool, count uint64,
 	attrs []*commonpb.KeyValue, timeNano uint64, flags uint32, receivedAt int64) []metrics.Row {
 	if flags&noRecordedValueMask != 0 {
@@ -169,18 +171,18 @@ func appendSumCount(rows []metrics.Row, base metrics.Row, name string, sum float
 	labels := labelsJSON(attrs)
 	if hasSum {
 		r := base
-		r.Name, r.Type, r.Value, r.Timestamp, r.Labels = name+"_sum", metrics.TypeGauge, sum, ts, labels
+		r.Name, r.Type, r.Value, r.Timestamp, r.Labels = name+"_sum", metrics.TypeCounter, sum, ts, labels
 		rows = append(rows, r)
 	}
 	r := base
-	r.Name, r.Type, r.Value, r.Timestamp, r.Labels = name+"_count", metrics.TypeGauge, float64(count), ts, labels
+	r.Name, r.Type, r.Value, r.Timestamp, r.Labels = name+"_count", metrics.TypeCounter, float64(count), ts, labels
 	return append(rows, r)
 }
 
 func (ar *Router) warnDowncast(name, kind string) {
 	if _, seen := ar.downcastWarned.LoadOrStore(name, struct{}{}); !seen {
 		log.Warn().Str("metric", name).Str("kind", kind).
-			Msg("downcasting to _sum/_count gauges; export pre-computed quantile gauges if you need percentiles")
+			Msg("downcasting to _sum/_count counters; export pre-computed quantile gauges if you need percentiles")
 	}
 }
 
