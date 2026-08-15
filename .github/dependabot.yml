@@ -1,0 +1,77 @@
+version: 2
+updates:
+  # Daily security updates
+  - package-ecosystem: "gomod"
+    target-branch: "main"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    # Enables security updates only
+    open-pull-requests-limit: 0
+  - package-ecosystem: "github-actions"
+    target-branch: "main"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    # Enables security updates only
+    open-pull-requests-limit: 0
+  - package-ecosystem: "docker"
+    target-branch: "main"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    # Enables security updates only
+    open-pull-requests-limit: 0
+
+  # Weekly updates for all packages
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    groups:
+      gomod:
+        patterns:
+          - "**"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    groups:
+      github-actions:
+        patterns:
+          - "**"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    groups:
+      docker:
+        patterns:
+          - "**"
