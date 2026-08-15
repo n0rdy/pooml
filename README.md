@@ -1,6 +1,6 @@
 # pooml - Logs + Metrics in One Binary
 
-Pooml is a self-hosted, single-binary log and metrics server on top of SQLite, built for solo developers and small teams who want observability for their side projects and VPS deployments without running an ELK stack, a Prometheus + Grafana pair, or paying per-GB SaaS prices.
+Pooml (stands for "Poor Man's Logger") is a self-hosted, single-binary log and metrics server on top of SQLite, built for solo developers and small teams who want observability for their side projects and VPS deployments without running an ELK stack, a Prometheus + Grafana pair, or paying per-GB SaaS prices.
 
 One binary, two SQLite files, a web UI. Ship logs from FluentBit or plain HTTP, push metrics via OTLP or let pooml scrape Prometheus endpoints, query everything with real SQL, draw charts, build dashboards, and get alerts on your phone.
 
