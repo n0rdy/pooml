@@ -8,7 +8,8 @@ templ LoginPage(kind string, message string, csrfToken string) {
 		<main class="min-h-screen flex items-center justify-center p-4">
 			<div class="card bg-base-100 w-full max-w-sm">
 				<div class="card-body">
-					<h1 class="text-4xl font-bold tracking-tight">pooml</h1>
+					<img src="/logo.png" alt="" class="h-16 w-auto self-start"/>
+				<h1 class="text-4xl font-bold tracking-tight">pooml</h1>
 					switch kind {
 						case "error":
 							<div role="alert" class="alert alert-error mt-3 text-sm">{ message }</div>

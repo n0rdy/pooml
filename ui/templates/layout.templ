@@ -13,6 +13,7 @@ templ Base(title string) {
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title }</title>
+			<link rel="icon" type="image/png" href="/logo.png"/>
 			<link
 				href="https://cdn.jsdelivr.net/npm/daisyui@5.7.16/daisyui.css"
 				rel="stylesheet"
@@ -102,7 +103,10 @@ templ Shell(title string, active string, csrfToken string) {
 							@menuLink("/settings", "Settings", active == "settings")
 						</ul>
 					</div>
-					<a href="/" class="text-lg sm:text-xl font-bold tracking-tight">pooml</a>
+					<a href="/" class="flex items-center gap-2 text-lg sm:text-xl font-bold tracking-tight">
+					<img src="/logo.png" alt="" class="h-6 w-auto"/>
+					pooml
+				</a>
 					<nav class="tabs tabs-border hidden sm:flex">
 						@navLink("/", "Home", active == "home")
 						@navLink("/logs", "Logs", active == "logs")

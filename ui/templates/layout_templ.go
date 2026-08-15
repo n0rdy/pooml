@@ -48,7 +48,7 @@ func Base(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.7.16/daisyui.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha256-GQTycwr2OIyUj+ok6c+6ligubbvkG7Vcl/zwXCLEO4g=\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.7.16/themes.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha256-6/wrf5HWy8I5zK33PAdr/ET603UswVEZLPqnOE/+nL8=\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js\" integrity=\"sha256-pgx4VjCgYZaAjL555ve9tKvMj0QhpHtW8pM4/ISAXjs=\" crossorigin=\"anonymous\"></script><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js\" integrity=\"sha256-cepnGFv6jJjDnTFxfG/OXYUjcPzf0SnbRUN3TTFFwN4=\" crossorigin=\"anonymous\"></script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"icon\" type=\"image/png\" href=\"/logo.png\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.7.16/daisyui.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha256-GQTycwr2OIyUj+ok6c+6ligubbvkG7Vcl/zwXCLEO4g=\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.7.16/themes.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha256-6/wrf5HWy8I5zK33PAdr/ET603UswVEZLPqnOE/+nL8=\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js\" integrity=\"sha256-pgx4VjCgYZaAjL555ve9tKvMj0QhpHtW8pM4/ISAXjs=\" crossorigin=\"anonymous\"></script><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js\" integrity=\"sha256-cepnGFv6jJjDnTFxfG/OXYUjcPzf0SnbRUN3TTFFwN4=\" crossorigin=\"anonymous\"></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -179,7 +179,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</ul></div><a href=\"/\" class=\"text-lg sm:text-xl font-bold tracking-tight\">pooml</a><nav class=\"tabs tabs-border hidden sm:flex\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</ul></div><a href=\"/\" class=\"flex items-center gap-2 text-lg sm:text-xl font-bold tracking-tight\"><img src=\"/logo.png\" alt=\"\" class=\"h-6 w-auto\"> pooml</a><nav class=\"tabs tabs-border hidden sm:flex\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -214,7 +214,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 121, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 125, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {
@@ -227,7 +227,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfHxHeaders(csrfToken))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 127, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 131, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -361,7 +361,7 @@ func menuLink(href string, label string, active bool) templ.Component {
 		var templ_7745c5c3_Var12 templ.SafeURL
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 247, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -387,7 +387,7 @@ func menuLink(href string, label string, active bool) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 247, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -430,7 +430,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var16 templ.SafeURL
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 252, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -443,7 +443,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 252, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -461,7 +461,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var18 templ.SafeURL
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 254, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -474,7 +474,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 254, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {

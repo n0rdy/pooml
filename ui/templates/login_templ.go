@@ -44,7 +44,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"min-h-screen flex items-center justify-center p-4\"><div class=\"card bg-base-100 w-full max-w-sm\"><div class=\"card-body\"><h1 class=\"text-4xl font-bold tracking-tight\">pooml</h1>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<main class=\"min-h-screen flex items-center justify-center p-4\"><div class=\"card bg-base-100 w-full max-w-sm\"><div class=\"card-body\"><img src=\"/logo.png\" alt=\"\" class=\"h-16 w-auto self-start\"><h1 class=\"text-4xl font-bold tracking-tight\">pooml</h1>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -57,7 +57,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 14, Col: 73}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 15, Col: 73}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -75,7 +75,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 16, Col: 75}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 17, Col: 75}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -93,7 +93,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 18, Col: 72}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 19, Col: 72}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -111,7 +111,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 21, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/login.templ`, Line: 22, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 			if templ_7745c5c3_Err != nil {

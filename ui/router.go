@@ -60,8 +60,9 @@ func (ur *Router) NewRouter() *chi.Mux {
 	router.Use(securityHeaders(ur.Env))
 	router.Use(csrfPrevention(ur.csrfErrorHandler, ur.Env))
 
-	// unprotected login routes:
+	// unprotected: login + the logo (login page and favicon need it pre-auth)
 	router.Get("/login", ur.loginPage)
+	router.Get("/logo.png", ur.logo)
 	router.With(loginThrottle(ur.Throttling, ur.TrustProxyHeaders)).Post("/login", ur.processLogin)
 
 	// protected routes:
