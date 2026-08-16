@@ -9,7 +9,7 @@ The assumption is that you will self-host pooml on a VPS or a small cloud instan
 ## What it does
 
 - **Logs**: FluentBit-compatible HTTP ingestion with automatic format detection per line (JSON, Common Log Format, plain text), full-text search (SQLite FTS5), live tail, infinite scroll, SQL querying
-- **Metrics**: OTLP/HTTP push and Prometheus scrape targets, a quick-query builder that compiles to SQL (`increase(http_requests_total) per 1h last 24h by service`), charts
+- **Metrics**: OTLP/HTTP push and Prometheus scrape targets, a quick-query builder that compiles to SQL (`increase(http_requests_total) per 1h last 24h by service`), charts. Two metric types on purpose: counters and gauges - histograms and summaries are downcast to their `_sum`/`_count` counter series
 - **Dashboards**: typed logs/metrics dashboards with stream, chart, and number panels
 - **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire
 - **Ops**: hourly retention cleanup, scheduled S3 backups, Prometheus `/metrics` self-observability - pooml can monitor itself
@@ -136,7 +136,9 @@ curl -X POST "http://your-pooml-host:8080/api/v1/ingest/my-service/my-host" \
 
 ## Shipping metrics
 
-**Push (OTLP/HTTP)**: point your OpenTelemetry SDK or collector at `http://your-pooml-host:8080/api/v1/otlp/v1/metrics` with the `X-API-Key` header. Both protobuf and JSON encodings are accepted. Gauges and monotonic sums are stored directly; histograms are downcast to their `_sum`/`_count` series.
+Pooml stores exactly two metric types: **counters** and **gauges**. Everything richer is normalized down to them - histograms and summaries become `<name>_sum` / `<name>_count` counter pairs (enough for rates, totals, and averages via SQL), and untyped Prometheus samples are treated as gauges. If you need native histogram buckets and quantiles, that's Prometheus territory.
+
+**Push (OTLP/HTTP)**: point your OpenTelemetry SDK or collector at `http://your-pooml-host:8080/api/v1/otlp/v1/metrics` with the `X-API-Key` header. Both protobuf and JSON encodings are accepted.
 
 **Pull (Prometheus scrape)**: add scrape targets in Settings - URL, interval, optional auth header. Pooml scrapes them and normalizes the samples into `metrics.db`.
 

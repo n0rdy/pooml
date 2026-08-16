@@ -124,7 +124,7 @@ const envVars = [
           </div>
           <div class="feat">
             <h3>Metrics</h3>
-            <p>OTLP/HTTP push and Prometheus scraping, a quick-query builder that compiles to SQL, charts with gap-aware series.</p>
+            <p>OTLP/HTTP push and Prometheus scraping. Counters and gauges only, on purpose - histograms are downcast to their <code>_sum</code>/<code>_count</code> series. Query builder, charts with gap-aware series.</p>
           </div>
           <div class="feat">
             <h3>Dashboards</h3>
