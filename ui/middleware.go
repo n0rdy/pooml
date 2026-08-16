@@ -35,10 +35,12 @@ func newNonce() string {
 func securityHeaders(env string) func(http.Handler) http.Handler {
 	cspTemplate := strings.Join([]string{
 		"default-src 'self'",
-		"script-src 'self' 'nonce-%s' https://cdn.jsdelivr.net https://esm.sh",
-		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+		// no CDN hosts anywhere: every asset is vendored + embedded, so a
+		// page that tries to reach one is a bug (or an injection)
+		"script-src 'self' 'nonce-%s'",
+		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data:",
-		"font-src 'self' https://cdn.jsdelivr.net data:",
+		"font-src 'self' data:",
 		"connect-src 'self'",
 		"object-src 'none'",
 		"frame-src 'none'",

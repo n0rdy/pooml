@@ -51,6 +51,24 @@ jobs:
             exit 1
           fi
 
+      - name: Setup Node (asset toolchain)
+        uses: actions/setup-node@v6
+        with:
+          node-version: "lts/*"
+          cache: npm
+          cache-dependency-path: ui/assets/package-lock.json
+
+      - name: Check compiled CSS is fresh
+        working-directory: ui/assets
+        run: |
+          npm ci
+          npx tailwindcss -i input.css -o ../static/styles.css --minify
+          if [ -n "$(git status --porcelain ../static/styles.css)" ]; then
+            echo "ui/static/styles.css is stale - run 'npm run css' in ui/assets and commit"
+            git diff --stat ../static/styles.css
+            exit 1
+          fi
+
       # the sqlite_fts5 tag is mandatory: without it the binary builds fine
       # but fails at startup (no such module: fts5), so an untagged build
       # proves nothing

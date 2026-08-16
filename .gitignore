@@ -31,3 +31,5 @@ yarn-error.log*
 dist/
 
 CLAUDE.md
+# frontend asset toolchain (outputs in ui/static are committed)
+ui/assets/node_modules/

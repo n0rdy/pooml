@@ -1,0 +1,14 @@
+/* source(none): Tailwind would otherwise scan the working directory,
+   including ui/static/ - the OUTPUT of this build - picking up class-like
+   tokens from minified vendor JS and the previous styles.css, making the
+   build non-deterministic. Only the explicit @source globs are scanned.
+   (Rule learned in forq; see its input.css.) */
+@import "tailwindcss" source(none);
+@plugin "daisyui" {
+  themes: dark --default, light;
+}
+
+/* class names live in the templ templates (and their generated *_templ.go)
+   plus a few handler-level Go files that build class strings */
+@source "../templates";
+@source "../*.go";

@@ -10,8 +10,8 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "fmt"
 
-// Base is the HTML skeleton every page renders into. CDN dependencies are
-// version-pinned; see CONTEXT.md > Static Assets. The theme is stock DaisyUI
+// Base is the HTML skeleton every page renders into. All assets are
+// vendored + embedded (no CDN); see CONTEXT.md > Static Assets. The theme is stock DaisyUI
 // dark (custom theme deferred; see UI Design Direction) - the data-theme
 // attribute swaps to others: dim, night, business, dracula, sunset, nord.
 func Base(title string) templ.Component {
@@ -48,7 +48,7 @@ func Base(title string) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"icon\" type=\"image/png\" href=\"/logo.png\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.7.16/daisyui.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha256-GQTycwr2OIyUj+ok6c+6ligubbvkG7Vcl/zwXCLEO4g=\" crossorigin=\"anonymous\"><link href=\"https://cdn.jsdelivr.net/npm/daisyui@5.7.16/themes.css\" rel=\"stylesheet\" type=\"text/css\" integrity=\"sha256-6/wrf5HWy8I5zK33PAdr/ET603UswVEZLPqnOE/+nL8=\" crossorigin=\"anonymous\"><script src=\"https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js\" integrity=\"sha256-pgx4VjCgYZaAjL555ve9tKvMj0QhpHtW8pM4/ISAXjs=\" crossorigin=\"anonymous\"></script><script src=\"https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js\" integrity=\"sha256-cepnGFv6jJjDnTFxfG/OXYUjcPzf0SnbRUN3TTFFwN4=\" crossorigin=\"anonymous\"></script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</title><link rel=\"icon\" type=\"image/png\" href=\"/logo.png\"><link href=\"/static/styles.css\" rel=\"stylesheet\" type=\"text/css\"><script src=\"/static/vendor/htmx.min.js\"></script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -80,12 +80,11 @@ func Base(title string) templ.Component {
 	})
 }
 
-// importMap pins the whole CodeMirror dependency closure to single URLs.
-// esm.sh's `*pkg` form externalizes a package's imports so every shared dep
-// resolves through this map to exactly one module instance. jsdelivr's /+esm
-// cannot do this: each bundle resolves shared deps independently, and two
-// instances of @codemirror/state make EditorView construction throw.
-// See CONTEXT.md > Static Assets.
+// importMap resolves the CodeMirror dependency closure to the vendored,
+// embedded copies (tools/vendor-assets.sh keeps files and this map in
+// sync). Every bare specifier maps to exactly one file, so shared deps
+// like @codemirror/state stay a single module instance - two instances
+// make EditorView construction throw. See CONTEXT.md > Static Assets.
 func importMap() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -114,13 +113,13 @@ func importMap() templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 58, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 38, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">\n\t{\n\t\t\"imports\": {\n\t\t\t\"codemirror\": \"https://esm.sh/*codemirror@6.0.2\",\n\t\t\t\"@codemirror/lang-sql\": \"https://esm.sh/*@codemirror/lang-sql@6.10.0\",\n\t\t\t\"@codemirror/theme-one-dark\": \"https://esm.sh/*@codemirror/theme-one-dark@6.1.3\",\n\t\t\t\"@codemirror/state\": \"https://esm.sh/@codemirror/state@6.7.1\",\n\t\t\t\"@codemirror/view\": \"https://esm.sh/*@codemirror/view@6.43.8\",\n\t\t\t\"@codemirror/language\": \"https://esm.sh/*@codemirror/language@6.12.4\",\n\t\t\t\"@codemirror/autocomplete\": \"https://esm.sh/*@codemirror/autocomplete@6.20.3\",\n\t\t\t\"@codemirror/commands\": \"https://esm.sh/*@codemirror/commands@6.10.4\",\n\t\t\t\"@codemirror/search\": \"https://esm.sh/*@codemirror/search@6.7.1\",\n\t\t\t\"@codemirror/lint\": \"https://esm.sh/*@codemirror/lint@6.9.7\",\n\t\t\t\"@lezer/common\": \"https://esm.sh/@lezer/common@1.5.2\",\n\t\t\t\"@lezer/highlight\": \"https://esm.sh/*@lezer/highlight@1.2.3\",\n\t\t\t\"@lezer/lr\": \"https://esm.sh/*@lezer/lr@1.4.10\",\n\t\t\t\"crelt\": \"https://esm.sh/crelt@1.0.7\",\n\t\t\t\"style-mod\": \"https://esm.sh/style-mod@4.1.3\",\n\t\t\t\"w3c-keyname\": \"https://esm.sh/w3c-keyname@2.2.8\",\n\t\t\t\"sql-formatter\": \"https://esm.sh/sql-formatter@15.8.2\"\n\t\t}\n\t}\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">\n\t{\n\t\t\"imports\": {\n\t\t\t\"codemirror\": \"/static/vendor/codemirror.js\",\n\t\t\t\"@codemirror/lang-sql\": \"/static/vendor/codemirror-lang-sql.js\",\n\t\t\t\"@codemirror/theme-one-dark\": \"/static/vendor/codemirror-theme-one-dark.js\",\n\t\t\t\"@codemirror/state\": \"/static/vendor/codemirror-state.js\",\n\t\t\t\"@codemirror/view\": \"/static/vendor/codemirror-view.js\",\n\t\t\t\"@codemirror/language\": \"/static/vendor/codemirror-language.js\",\n\t\t\t\"@codemirror/autocomplete\": \"/static/vendor/codemirror-autocomplete.js\",\n\t\t\t\"@codemirror/commands\": \"/static/vendor/codemirror-commands.js\",\n\t\t\t\"@codemirror/search\": \"/static/vendor/codemirror-search.js\",\n\t\t\t\"@codemirror/lint\": \"/static/vendor/codemirror-lint.js\",\n\t\t\t\"@lezer/common\": \"/static/vendor/lezer-common.js\",\n\t\t\t\"@lezer/highlight\": \"/static/vendor/lezer-highlight.js\",\n\t\t\t\"@lezer/lr\": \"/static/vendor/lezer-lr.js\",\n\t\t\t\"@marijn/find-cluster-break\": \"/static/vendor/find-cluster-break.js\",\n\t\t\t\"crelt\": \"/static/vendor/crelt.js\",\n\t\t\t\"style-mod\": \"/static/vendor/style-mod.js\",\n\t\t\t\"w3c-keyname\": \"/static/vendor/w3c-keyname.js\",\n\t\t\t\"sql-formatter\": \"/static/vendor/sql-formatter.js\"\n\t\t}\n\t}\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -227,7 +226,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 125, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 106, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -240,7 +239,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfHxHeaders(csrfToken))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 131, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 112, Col: 96}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 			if templ_7745c5c3_Err != nil {
@@ -336,7 +335,7 @@ func themeScript() templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 221, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 202, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -387,7 +386,7 @@ func menuLink(href string, label string, active bool) templ.Component {
 		var templ_7745c5c3_Var14 templ.SafeURL
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 232, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -413,7 +412,7 @@ func menuLink(href string, label string, active bool) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 232, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -456,7 +455,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var18 templ.SafeURL
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 237, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -469,7 +468,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 237, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -487,7 +486,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var20 templ.SafeURL
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 239, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -500,7 +499,7 @@ func navLink(href string, label string, active bool) templ.Component {
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 239, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {

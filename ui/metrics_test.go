@@ -541,8 +541,8 @@ func TestSnippetDSLEquivalents(t *testing.T) {
 	if len(withDSL) != 3 {
 		t.Fatalf("expected 3 snippets with DSL equivalents, got %d", len(withDSL))
 	}
-	// and the formatter is pinned in the import map
-	if !strings.Contains(body, "sql-formatter@15.8.2") {
+	// and the formatter resolves to the vendored copy
+	if !strings.Contains(body, "/static/vendor/sql-formatter.js") {
 		t.Error("sql-formatter missing from the import map")
 	}
 }

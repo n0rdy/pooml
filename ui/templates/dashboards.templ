@@ -365,11 +365,7 @@ templ dashboardScripts() {
 // re-render on fragment swaps and theme flips; swapped-out canvases are
 // destroyed to keep Chart.js's registry from leaking on the 30s refresh cycle.
 templ chartScripts() {
-	<script
-		src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.js"
-		integrity="sha256-7MPNHuuMNNIXjj9Z/WPsWj2ENYwRcwrwuZWNyIbXZSo="
-		crossorigin="anonymous"
-	></script>
+	<script src="/static/vendor/chart.umd.js"></script>
 	<script nonce={ templ.GetNonce(ctx) }>
 		(() => {
 			const PALETTE = ["#3b82f6", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6", "#14b8a6"];

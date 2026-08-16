@@ -1,0 +1,12 @@
+{
+  "name": "pooml-assets",
+  "private": true,
+  "scripts": {
+    "css": "tailwindcss -i input.css -o ../static/styles.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "daisyui": "^5.7.16",
+    "tailwindcss": "^4.1.0"
+  }
+}

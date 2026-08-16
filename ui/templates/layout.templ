@@ -2,8 +2,8 @@ package templates
 
 import "fmt"
 
-// Base is the HTML skeleton every page renders into. CDN dependencies are
-// version-pinned; see CONTEXT.md > Static Assets. The theme is stock DaisyUI
+// Base is the HTML skeleton every page renders into. All assets are
+// vendored + embedded (no CDN); see CONTEXT.md > Static Assets. The theme is stock DaisyUI
 // dark (custom theme deferred; see UI Design Direction) - the data-theme
 // attribute swaps to others: dim, night, business, dracula, sunset, nord.
 templ Base(title string) {
@@ -14,30 +14,11 @@ templ Base(title string) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>{ title }</title>
 			<link rel="icon" type="image/png" href="/logo.png"/>
-			<link
-				href="https://cdn.jsdelivr.net/npm/daisyui@5.7.16/daisyui.css"
-				rel="stylesheet"
-				type="text/css"
-				integrity="sha256-GQTycwr2OIyUj+ok6c+6ligubbvkG7Vcl/zwXCLEO4g="
-				crossorigin="anonymous"
-			/>
-			<link
-				href="https://cdn.jsdelivr.net/npm/daisyui@5.7.16/themes.css"
-				rel="stylesheet"
-				type="text/css"
-				integrity="sha256-6/wrf5HWy8I5zK33PAdr/ET603UswVEZLPqnOE/+nL8="
-				crossorigin="anonymous"
-			/>
-			<script
-				src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.3/dist/index.global.js"
-				integrity="sha256-pgx4VjCgYZaAjL555ve9tKvMj0QhpHtW8pM4/ISAXjs="
-				crossorigin="anonymous"
-			></script>
-			<script
-				src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.10/dist/htmx.min.js"
-				integrity="sha256-cepnGFv6jJjDnTFxfG/OXYUjcPzf0SnbRUN3TTFFwN4="
-				crossorigin="anonymous"
-			></script>
+			// all frontend assets are vendored + embedded (tools/vendor-assets.sh,
+			// ui/assets for the CSS build): pooml works fully offline and no
+			// page load ever talks to a CDN. See CONTEXT.md > Static Assets.
+			<link href="/static/styles.css" rel="stylesheet" type="text/css"/>
+			<script src="/static/vendor/htmx.min.js"></script>
 			@importMap()
 			@contrastFixes()
 			@themeScript()
@@ -48,33 +29,33 @@ templ Base(title string) {
 	</html>
 }
 
-// importMap pins the whole CodeMirror dependency closure to single URLs.
-// esm.sh's `*pkg` form externalizes a package's imports so every shared dep
-// resolves through this map to exactly one module instance. jsdelivr's /+esm
-// cannot do this: each bundle resolves shared deps independently, and two
-// instances of @codemirror/state make EditorView construction throw.
-// See CONTEXT.md > Static Assets.
+// importMap resolves the CodeMirror dependency closure to the vendored,
+// embedded copies (tools/vendor-assets.sh keeps files and this map in
+// sync). Every bare specifier maps to exactly one file, so shared deps
+// like @codemirror/state stay a single module instance - two instances
+// make EditorView construction throw. See CONTEXT.md > Static Assets.
 templ importMap() {
 	<script type="importmap" nonce={ templ.GetNonce(ctx) }>
 	{
 		"imports": {
-			"codemirror": "https://esm.sh/*codemirror@6.0.2",
-			"@codemirror/lang-sql": "https://esm.sh/*@codemirror/lang-sql@6.10.0",
-			"@codemirror/theme-one-dark": "https://esm.sh/*@codemirror/theme-one-dark@6.1.3",
-			"@codemirror/state": "https://esm.sh/@codemirror/state@6.7.1",
-			"@codemirror/view": "https://esm.sh/*@codemirror/view@6.43.8",
-			"@codemirror/language": "https://esm.sh/*@codemirror/language@6.12.4",
-			"@codemirror/autocomplete": "https://esm.sh/*@codemirror/autocomplete@6.20.3",
-			"@codemirror/commands": "https://esm.sh/*@codemirror/commands@6.10.4",
-			"@codemirror/search": "https://esm.sh/*@codemirror/search@6.7.1",
-			"@codemirror/lint": "https://esm.sh/*@codemirror/lint@6.9.7",
-			"@lezer/common": "https://esm.sh/@lezer/common@1.5.2",
-			"@lezer/highlight": "https://esm.sh/*@lezer/highlight@1.2.3",
-			"@lezer/lr": "https://esm.sh/*@lezer/lr@1.4.10",
-			"crelt": "https://esm.sh/crelt@1.0.7",
-			"style-mod": "https://esm.sh/style-mod@4.1.3",
-			"w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8",
-			"sql-formatter": "https://esm.sh/sql-formatter@15.8.2"
+			"codemirror": "/static/vendor/codemirror.js",
+			"@codemirror/lang-sql": "/static/vendor/codemirror-lang-sql.js",
+			"@codemirror/theme-one-dark": "/static/vendor/codemirror-theme-one-dark.js",
+			"@codemirror/state": "/static/vendor/codemirror-state.js",
+			"@codemirror/view": "/static/vendor/codemirror-view.js",
+			"@codemirror/language": "/static/vendor/codemirror-language.js",
+			"@codemirror/autocomplete": "/static/vendor/codemirror-autocomplete.js",
+			"@codemirror/commands": "/static/vendor/codemirror-commands.js",
+			"@codemirror/search": "/static/vendor/codemirror-search.js",
+			"@codemirror/lint": "/static/vendor/codemirror-lint.js",
+			"@lezer/common": "/static/vendor/lezer-common.js",
+			"@lezer/highlight": "/static/vendor/lezer-highlight.js",
+			"@lezer/lr": "/static/vendor/lezer-lr.js",
+			"@marijn/find-cluster-break": "/static/vendor/find-cluster-break.js",
+			"crelt": "/static/vendor/crelt.js",
+			"style-mod": "/static/vendor/style-mod.js",
+			"w3c-keyname": "/static/vendor/w3c-keyname.js",
+			"sql-formatter": "/static/vendor/sql-formatter.js"
 		}
 	}
 	</script>

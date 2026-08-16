@@ -287,9 +287,15 @@ func TestSecurityHeaders(t *testing.T) {
 	defer resp.Body.Close()
 
 	csp := resp.Header.Get("Content-Security-Policy")
-	for _, directive := range []string{"default-src 'self'", "cdn.jsdelivr.net", "frame-ancestors 'none'"} {
+	for _, directive := range []string{"default-src 'self'", "'nonce-", "frame-ancestors 'none'"} {
 		if !strings.Contains(csp, directive) {
 			t.Errorf("CSP missing %q: %s", directive, csp)
+		}
+	}
+	// assets are vendored: a CDN host in the CSP means a regression
+	for _, host := range []string{"jsdelivr", "esm.sh"} {
+		if strings.Contains(csp, host) {
+			t.Errorf("CSP allows CDN host %q: %s", host, csp)
 		}
 	}
 	if resp.Header.Get("X-Content-Type-Options") != "nosniff" {

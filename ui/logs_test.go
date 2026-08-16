@@ -61,7 +61,7 @@ func TestLogsPageFull(t *testing.T) {
 	for _, want := range []string{
 		`data-q="SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100"`,
 		"importmap",
-		"esm.sh/*codemirror@6.0.2",
+		"/static/vendor/codemirror.js", // editors load from the embedded vendor dir, never a CDN
 		`import { EditorView, basicSetup } from "codemirror"`,
 		"message 3",             // seeded rows rendered
 		"payment-svc",           // badge
