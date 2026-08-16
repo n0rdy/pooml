@@ -86,13 +86,26 @@ func (rs *RetentionService) Sweep(ctx context.Context) {
 		}
 	}
 
-	// reclaim freed pages; meta.db churn is tiny and skips the vacuum
+	// reclaim freed pages in bounded chunks: a bare incremental_vacuum moves
+	// the ENTIRE freelist in one transaction - after a big sweep that is a
+	// multi-second write-lock hold, undoing the chunked deletes above.
+	// meta.db churn is tiny and skips the vacuum.
 	for _, d := range []struct {
 		name string
 		db   *sql.DB
 	}{{"logs", rs.logsWrite}, {"metrics", rs.metricsDB}} {
-		if _, err := d.db.ExecContext(ctx, "PRAGMA incremental_vacuum"); err != nil {
-			log.Error().Err(err).Str("db", d.name).Msg("incremental_vacuum failed")
+		for ctx.Err() == nil {
+			var before, after int
+			if err := d.db.QueryRowContext(ctx, "PRAGMA freelist_count").Scan(&before); err != nil || before == 0 {
+				break
+			}
+			if _, err := d.db.ExecContext(ctx, "PRAGMA incremental_vacuum(1000)"); err != nil {
+				log.Error().Err(err).Str("db", d.name).Msg("incremental_vacuum failed")
+				break
+			}
+			if err := d.db.QueryRowContext(ctx, "PRAGMA freelist_count").Scan(&after); err != nil || after >= before {
+				break // no progress; don't spin
+			}
 		}
 	}
 }

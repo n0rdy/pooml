@@ -20,7 +20,7 @@ func setupRetention(t *testing.T) (*services.RetentionService, *db.Pools, *servi
 		t.Fatal(err)
 	}
 	t.Cleanup(pools.Close)
-	enc, err := services.NewEncryptionService("0123456789abcdef0123456789abcdef")
+	enc, err := services.NewEncryptionService("0123456789abcdef0123456789abcdef", pools.Meta)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -48,7 +48,13 @@ func NewScraper(store *ScrapeTargetsService, pipeline MetricsPusher) *Scraper {
 	return &Scraper{
 		store:    store,
 		pipeline: pipeline,
-		client:   &http.Client{Timeout: scrapeTimeout},
+		// no redirect following: Go forwards custom headers (X-API-Key etc.)
+		// to whatever host a redirect points at - only Authorization/Cookie
+		// get stripped cross-host
+		client: &http.Client{
+			Timeout:       scrapeTimeout,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
+		},
 	}
 }
 

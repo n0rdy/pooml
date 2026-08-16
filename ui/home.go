@@ -93,8 +93,12 @@ func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Reque
 	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
 	defer cancel()
 
+	// bounded to 7 days: an unbounded GROUP BY walks the whole service index
+	// on every 30s refresh, which hurts at multi-million-row scale. A service
+	// silent for a week has no place on a "current state" home card anyway.
 	rows, err := ur.Pools.LogsRead.QueryContext(ctx,
-		"SELECT service, MAX(timestamp), COUNT(*) FROM logs GROUP BY service ORDER BY 2 DESC LIMIT 25")
+		"SELECT service, MAX(timestamp), COUNT(*) FROM logs WHERE timestamp > ? GROUP BY service ORDER BY 2 DESC LIMIT 25",
+		time.Now().UnixMilli()-7*24*60*60*1000)
 	if err != nil {
 		ur.homeFragmentError(w, req, err)
 		return

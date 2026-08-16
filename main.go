@@ -69,7 +69,7 @@ func main() {
 	sessionsService := services.NewSessionsService()
 	throttlingService := services.NewThrottlingService()
 	apiKeysService := services.NewApiKeysService(pools.Meta)
-	encryptionService, err := services.NewEncryptionService(encryptionKey)
+	encryptionService, err := services.NewEncryptionService(encryptionKey, pools.Meta)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to init encryption")
 	}
@@ -95,7 +95,7 @@ func main() {
 	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
 	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
 	startJob(appCtx, &jobsWG, "retention-sweeper", retentionService.Run)
-	backupService := services.NewBackupService(settingsService, pools.LogsWrite, pools.Metrics, pools.Meta)
+	backupService := services.NewBackupService(settingsService, pools.LogsRead, pools.Metrics, pools.Meta)
 	startJob(appCtx, &jobsWG, "backup", backupService.Run)
 	startJob(appCtx, &jobsWG, "db-optimizer", func(ctx context.Context) {
 		services.RunOptimizer(ctx, map[string]*sql.DB{
@@ -145,6 +145,17 @@ func main() {
 		Env:               env,
 		TrustProxyHeaders: trustProxyHeaders,
 	})
+
+	// internet-facing heuristic (CONTEXT.md > Network Security defense 2):
+	// pro env + non-localhost bind + no trusted proxy smells like a bare
+	// public deployment, where spoofable IPs defang the auth throttling
+	if env == common.ProEnv && !trustProxyHeaders &&
+		(!strings.HasPrefix(apiAddr, "localhost") && !strings.HasPrefix(apiAddr, "127.") ||
+			!strings.HasPrefix(uiAddr, "localhost") && !strings.HasPrefix(uiAddr, "127.")) {
+		log.Warn().Msg("binding beyond localhost without POOML_TRUST_PROXY_HEADERS: " +
+			"if pooml is directly internet-facing, put it behind a reverse proxy with TLS; " +
+			"if it already is, set POOML_TRUST_PROXY_HEADERS=true so throttling sees real client IPs")
+	}
 
 	apiServer := newAPIServer(apiAddr, apiRouter.NewRouter())
 	uiServer := newUIServer(uiAddr, uiRouter.NewRouter())

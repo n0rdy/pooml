@@ -44,7 +44,7 @@ func newClient(t *testing.T) *client {
 	pipeline.Start()
 	t.Cleanup(pipeline.Shutdown)
 
-	enc, err := services.NewEncryptionService("ui-test-encryption-key-0123456789012")
+	enc, err := services.NewEncryptionService("ui-test-encryption-key-0123456789012", pools.Meta)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +58,7 @@ func newClient(t *testing.T) *client {
 		Notifier:          services.NewNotificationService(settings),
 		ScrapeTargets:     services.NewScrapeTargetsService(pools.Meta, enc),
 		Dashboards:        services.NewDashboardsService(pools.Meta),
-		Backup:            services.NewBackupService(settings, pools.LogsWrite, pools.Metrics, pools.Meta),
+		Backup:            services.NewBackupService(settings, pools.LogsRead, pools.Metrics, pools.Meta),
 		Pools:             pools,
 		Broadcaster:       broadcaster,
 		StreamCtx:         context.Background(),

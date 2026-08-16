@@ -54,8 +54,14 @@ type NotificationService struct {
 
 func NewNotificationService(settings *SettingsService) *NotificationService {
 	return &NotificationService{
-		settings:        settings,
-		httpClient:      &http.Client{Timeout: 10 * time.Second},
+		settings: settings,
+		// no redirect following: a 301 would silently convert the POST to a
+		// bodyless GET whose 200 counts as "delivered" - the worst alerting
+		// failure mode. A 3xx must surface as a delivery error instead.
+		httpClient: &http.Client{
+			Timeout:       10 * time.Second,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse },
+		},
 		PushoverBaseURL: "https://api.pushover.net",
 	}
 }

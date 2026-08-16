@@ -68,6 +68,12 @@ func (ar *Router) otlpMetrics(w http.ResponseWriter, req *http.Request) {
 	}
 
 	rows := ar.otlpToRows(&exportReq, time.Now().UnixMilli())
+	// a 2 MiB payload of minimal datapoints can explode into hundreds of
+	// thousands of rows, and the batch channel holds up to 100 such slices
+	if len(rows) > maxOTLPRowsPerRequest {
+		ar.sendErrorResponse(w, http.StatusRequestEntityTooLarge, common.ErrCodePayloadTooLarge)
+		return
+	}
 	if !ar.metricsPipeline.TryPush(rows) {
 		// pipeline saturated: the OTel exporter retries with backoff
 		ar.sendErrorResponse(w, http.StatusTooManyRequests, common.ErrCodeTooManyRequests)
@@ -241,5 +247,5 @@ func otlpTimestampMs(nano uint64, receivedAt int64) int64 {
 	if nano == 0 {
 		return receivedAt
 	}
-	return int64(nano / 1e6)
+	return common.ClampTimestamp(int64(nano/1e6), receivedAt)
 }

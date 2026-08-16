@@ -25,6 +25,8 @@ const (
 
 	// matches FluentBit's default chunk size; see CONTEXT.md > Ingestion
 	maxIngestPayloadBytes = 2 << 20
+
+	maxOTLPRowsPerRequest = 50000
 )
 
 type Router struct {

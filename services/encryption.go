@@ -4,22 +4,31 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
+	"database/sql"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"time"
+
+	"golang.org/x/crypto/argon2"
 )
 
-// EncryptionService is AES-256-GCM keyed from POOML_ENCRYPTION_KEY (sha256 of
-// the configured secret; the env var is already length-enforced at startup).
+// EncryptionService is AES-256-GCM keyed from POOML_ENCRYPTION_KEY via
+// argon2id with a per-install salt (stored plaintext in meta.db, so it
+// travels with backups). A bare hash would let anyone holding a meta.db
+// backup run an offline dictionary attack on a passphrase-style key.
 // Used for secrets stored in meta.db - see CONTEXT.md > Secret Storage.
 type EncryptionService struct {
 	aead cipher.AEAD
 }
 
-func NewEncryptionService(secret string) (*EncryptionService, error) {
-	key := sha256.Sum256([]byte(secret))
-	block, err := aes.NewCipher(key[:])
+func NewEncryptionService(secret string, metaDB *sql.DB) (*EncryptionService, error) {
+	salt, err := ensureEncryptionSalt(metaDB)
+	if err != nil {
+		return nil, fmt.Errorf("encryption salt: %w", err)
+	}
+	key := argon2.IDKey([]byte(secret), salt, argonTime, argonMemoryKiB, argonThreads, 32)
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, fmt.Errorf("cipher init: %w", err)
 	}
@@ -28,6 +37,26 @@ func NewEncryptionService(secret string) (*EncryptionService, error) {
 		return nil, fmt.Errorf("gcm init: %w", err)
 	}
 	return &EncryptionService{aead: aead}, nil
+}
+
+func ensureEncryptionSalt(metaDB *sql.DB) ([]byte, error) {
+	fresh := make([]byte, 16)
+	if _, err := rand.Read(fresh); err != nil {
+		return nil, err
+	}
+	// insert-if-absent then read back: first boot wins, every later boot
+	// (and any concurrent starter) reads the same stored salt
+	if _, err := metaDB.Exec(
+		`INSERT INTO settings (key, value, is_encrypted, updated_at) VALUES ('encryption.salt', ?, 0, ?)
+		 ON CONFLICT(key) DO NOTHING`,
+		base64.StdEncoding.EncodeToString(fresh), time.Now().UnixMilli()); err != nil {
+		return nil, err
+	}
+	var stored string
+	if err := metaDB.QueryRow("SELECT value FROM settings WHERE key = 'encryption.salt'").Scan(&stored); err != nil {
+		return nil, err
+	}
+	return base64.StdEncoding.DecodeString(stored)
 }
 
 // Encrypt returns base64(nonce || ciphertext).

@@ -5,6 +5,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/n0rdy/pooml/common"
@@ -20,6 +21,11 @@ const (
 	batchInputChanSize = 1000
 	batchSize          = 1000
 	batchTimeout       = 100 * time.Millisecond
+
+	// entry-count bounds alone allow 1000 x 2 MiB = 2 GiB of buffered
+	// payloads - an OOM on the small boxes pooml targets. Bytes are capped
+	// too; crossing the budget 429s exactly like a full channel.
+	maxBufferedBytes = 256 << 20
 )
 
 const insertPrefix = "INSERT INTO logs(timestamp,ingested_at,level,service,host,message,parsed,raw) VALUES "
@@ -45,6 +51,8 @@ type Pipeline struct {
 	parserWG sync.WaitGroup
 	fanoutWG sync.WaitGroup
 	writerWG sync.WaitGroup
+
+	bufferedBytes atomic.Int64 // payload bytes admitted but not yet parsed
 }
 
 func NewPipeline(logsWrite *sql.DB, broadcaster *Broadcaster) *Pipeline {
@@ -73,10 +81,16 @@ func (p *Pipeline) Start() {
 // means the pipeline is saturated: the caller returns 429 and the client
 // (FluentBit) retries with backoff.
 func (p *Pipeline) TryIngest(service, host string, payload []byte, receivedAt int64) bool {
+	n := int64(len(payload))
+	if p.bufferedBytes.Add(n) > maxBufferedBytes {
+		p.bufferedBytes.Add(-n)
+		return false
+	}
 	select {
 	case p.ingestChan <- ingestEvent{service: service, host: host, payload: payload, receivedAt: receivedAt}:
 		return true
 	default:
+		p.bufferedBytes.Add(-n)
 		return false
 	}
 }
@@ -98,10 +112,12 @@ func (p *Pipeline) parserWorker() {
 	defer p.parserWG.Done()
 	for ev := range p.ingestChan {
 		for _, l := range parsePayload(ev.service, ev.host, ev.payload, ev.receivedAt) {
+			l.Timestamp = common.ClampTimestamp(l.Timestamp, ev.receivedAt)
 			// blocking send on purpose: full parsedChan cascades backpressure
 			// to ingestChan and ultimately to 429s
 			p.parsedChan <- l
 		}
+		p.bufferedBytes.Add(-int64(len(ev.payload)))
 	}
 }
 

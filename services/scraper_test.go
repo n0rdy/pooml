@@ -46,7 +46,7 @@ func scrapeSetup(t *testing.T) (*services.ScrapeTargetsService, *rowRecorder, *s
 	}
 	t.Cleanup(pools.Close)
 
-	enc, err := services.NewEncryptionService(strings.Repeat("k", 32))
+	enc, err := services.NewEncryptionService(strings.Repeat("k", 32), pools.Meta)
 	if err != nil {
 		t.Fatal(err)
 	}

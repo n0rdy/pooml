@@ -189,6 +189,10 @@ func (c *checkVisitor) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
 		if allowedTables[name] && !c.cteNames[name] {
 			c.referenced[name] = true
 		}
+	case *sqlp.QualifiedTableFunctionName:
+		// table-valued functions (pragma_table_info, json_each, ...) would
+		// bypass the FROM allow-list and the scope check entirely
+		return nil, nil, fmt.Errorf("table-valued function %q is not allowed", t.Name.Name)
 	case *sqlp.Call:
 		if bannedFunctions[strings.ToLower(t.Name.Name)] {
 			return nil, nil, fmt.Errorf("function %q is not allowed", t.Name.Name)

@@ -34,7 +34,7 @@ templ HomePage(csrfToken string) {
 				</div>
 				<div class="card bg-base-100 min-w-0">
 					<div class="card-body py-4">
-						<h3 class="card-title">Services sending logs</h3>
+						<h3 class="card-title">Services sending logs <span class="text-sm font-normal opacity-60">(last 7 days)</span></h3>
 						<div hx-get="/home/services" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>

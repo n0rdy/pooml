@@ -151,8 +151,16 @@ func (s *ApiKeysService) Verify(ctx context.Context, key string) bool {
 	}
 
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	// re-check under the lock: a Revoke during the argon2 run above purges
+	// the cache BEFORE this insert, and the revoked key would then stay
+	// valid via the cache fast path until restart
+	var one int
+	if err := s.metaDB.QueryRowContext(ctx,
+		"SELECT 1 FROM api_keys WHERE id = ?", id).Scan(&one); err != nil {
+		return false
+	}
 	s.verified[digest] = id
-	s.mu.Unlock()
 	return true
 }
 

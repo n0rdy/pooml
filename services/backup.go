@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -48,12 +49,16 @@ func ValidateCron(expr string) error {
 type BackupService struct {
 	settings *SettingsService
 	dbs      map[string]*sql.DB // filename (logs.db etc.) -> open handle
+	runMu    sync.Mutex         // one backup at a time (cron + "run now" can overlap)
 }
 
-func NewBackupService(settings *SettingsService, logsWrite, metricsDB, metaDB *sql.DB) *BackupService {
+// NewBackupService sources logs.db from the READ pool: the Backup API only
+// reads pages, and the write pool has a single connection - holding it for a
+// multi-minute copy would stall all ingestion.
+func NewBackupService(settings *SettingsService, logsRead, metricsDB, metaDB *sql.DB) *BackupService {
 	return &BackupService{
 		settings: settings,
-		dbs:      map[string]*sql.DB{"logs.db": logsWrite, "metrics.db": metricsDB, "meta.db": metaDB},
+		dbs:      map[string]*sql.DB{"logs.db": logsRead, "metrics.db": metricsDB, "meta.db": metaDB},
 	}
 }
 
@@ -103,6 +108,10 @@ func (bs *BackupService) enabled(ctx context.Context) bool {
 // upload all three under one timestamped prefix. Records the outcome for the
 // Settings UI either way.
 func (bs *BackupService) RunNow(ctx context.Context) error {
+	if !bs.runMu.TryLock() {
+		return errors.New("a backup is already running")
+	}
+	defer bs.runMu.Unlock()
 	err := bs.runBackup(ctx)
 	result := "ok"
 	if err != nil {
@@ -145,6 +154,9 @@ func (bs *BackupService) runBackup(ctx context.Context) error {
 	client := s3.NewFromConfig(aws.Config{
 		Region:      cfg.region,
 		Credentials: credentials.NewStaticCredentialsProvider(cfg.accessKey, cfg.secretKey, ""),
+		// default CRC32 checksums break Cloudflare R2 uploads
+		RequestChecksumCalculation: aws.RequestChecksumCalculationWhenRequired,
+		ResponseChecksumValidation: aws.ResponseChecksumValidationWhenRequired,
 	}, func(o *s3.Options) {
 		if cfg.endpoint != "" {
 			o.BaseEndpoint = aws.String(cfg.endpoint)

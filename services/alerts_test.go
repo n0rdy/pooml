@@ -26,7 +26,8 @@ func newTestPools(t *testing.T) *db.Pools {
 }
 
 func TestEncryptionRoundTrip(t *testing.T) {
-	enc, err := NewEncryptionService("test-encryption-key-0123456789012345")
+	pools := newTestPools(t)
+	enc, err := NewEncryptionService("test-encryption-key-0123456789012345", pools.Meta)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +44,7 @@ func TestEncryptionRoundTrip(t *testing.T) {
 	}
 
 	// wrong key must fail, not return garbage
-	enc2, _ := NewEncryptionService("another-key-entirely-9876543210987654")
+	enc2, _ := NewEncryptionService("another-key-entirely-9876543210987654", pools.Meta)
 	if _, err := enc2.Decrypt(ct); err == nil {
 		t.Error("decrypt with wrong key succeeded")
 	}
@@ -56,7 +57,7 @@ func TestEncryptionRoundTrip(t *testing.T) {
 
 func TestSettingsEncryptedStorage(t *testing.T) {
 	pools := newTestPools(t)
-	enc, _ := NewEncryptionService("test-encryption-key-0123456789012345")
+	enc, _ := NewEncryptionService("test-encryption-key-0123456789012345", pools.Meta)
 	s := NewSettingsService(pools.Meta, enc)
 	ctx := context.Background()
 
@@ -99,7 +100,7 @@ func TestSettingsEncryptedStorage(t *testing.T) {
 
 func newNotifyFixture(t *testing.T) (*NotificationService, *SettingsService) {
 	pools := newTestPools(t)
-	enc, _ := NewEncryptionService("test-encryption-key-0123456789012345")
+	enc, _ := NewEncryptionService("test-encryption-key-0123456789012345", pools.Meta)
 	settings := NewSettingsService(pools.Meta, enc)
 	return NewNotificationService(settings), settings
 }
@@ -188,8 +189,9 @@ func TestCampfireSend(t *testing.T) {
 		w.WriteHeader(http.StatusFound)
 	}))
 	defer srv3.Close()
+	// no CheckRedirect override here: the PRODUCTION client must refuse to
+	// follow the redirect, or this test masks a silently-lost notification
 	_ = settings.Set(ctx, SettingCampfireBaseURL, srv3.URL, false)
-	n.httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }
 	err := n.TestCampfire(ctx, 42)
 	if err == nil {
 		t.Fatal("3xx treated as success - lost notification counted as delivered")
