@@ -132,6 +132,7 @@ templ QuickQueryModule() {
 	</style>
 	<script type="module" nonce={ templ.GetNonce(ctx) }>
 		import { EditorView, keymap } from "@codemirror/view";
+		import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
 		import { EditorState, Compartment, Prec } from "@codemirror/state";
 		import { autocompletion, acceptCompletion } from "@codemirror/autocomplete";
 		import { oneDark } from "@codemirror/theme-one-dark";
@@ -342,7 +343,15 @@ templ QuickQueryModule() {
 					])),
 					autocompletion({ override: [dslCompletion] }),
 					themeComp.of(isLight() ? [] : oneDark),
+					// pasted text usually carries newlines (trailing from a terminal
+					// copy, or wrapped from docs): collapse them BEFORE the edit is
+					// built - the bare lines>1 reject made Cmd+V look broken
+					EditorView.clipboardInputFilter.of((text) => text.replace(/\s*\n+\s*/g, " ").trim()),
 					EditorState.transactionFilter.of((tr) => (tr.newDoc.lines > 1 ? [] : tr)),
+					// standard editing keys (select-all, undo, arrows-with-selection):
+					// without these the input silently ignores Cmd+A / Cmd+Z
+					history(),
+					keymap.of([...defaultKeymap, ...historyKeymap]),
 					EditorView.updateListener.of((u) => {
 						if (!u.docChanged) return;
 						host.classList.toggle("qq-has-doc", u.state.doc.length > 0);
