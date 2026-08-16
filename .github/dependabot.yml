@@ -34,6 +34,19 @@ updates:
       - "n0rdy"
     # Enables security updates only
     open-pull-requests-limit: 0
+  - package-ecosystem: "npm"
+    target-branch: "main"
+    directories:
+      - "/site"
+      - "/ui/assets"
+    schedule:
+      interval: "daily"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    # Enables security updates only
+    open-pull-requests-limit: 0
 
   # Weekly updates for all packages
   - package-ecosystem: "gomod"
@@ -73,5 +86,20 @@ updates:
       - "n0rdy"
     groups:
       docker:
+        patterns:
+          - "**"
+  - package-ecosystem: "npm"
+    directories:
+      - "/site"
+      - "/ui/assets"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "12:00"
+      timezone: "Europe/Oslo"
+    assignees:
+      - "n0rdy"
+    groups:
+      npm:
         patterns:
           - "**"
