@@ -95,7 +95,7 @@ func main() {
 	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
 	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
 	startJob(appCtx, &jobsWG, "retention-sweeper", retentionService.Run)
-	backupService := services.NewBackupService(settingsService, pools.LogsRead, pools.Metrics, pools.Meta)
+	backupService := services.NewBackupService(settingsService, dbDir, pools.LogsRead, pools.Metrics, pools.Meta)
 	startJob(appCtx, &jobsWG, "backup", backupService.Run)
 	startJob(appCtx, &jobsWG, "db-optimizer", func(ctx context.Context) {
 		services.RunOptimizer(ctx, map[string]*sql.DB{

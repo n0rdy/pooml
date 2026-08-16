@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 
@@ -67,7 +66,7 @@ func metricsSecretAuth(secret string, throttlingService *services.ThrottlingServ
 				return
 			}
 			key := req.Header.Get("X-API-Key")
-			if subtle.ConstantTimeCompare([]byte(key), []byte(secret)) != 1 {
+			if !utils.SecureCompare(key, secret) {
 				throttlingService.RecordFailure(ip)
 				log.Warn().Str("ip", ip).Msg("invalid metrics secret")
 				sendUnauthorizedErrorResponse(w)

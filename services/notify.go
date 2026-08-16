@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/n0rdy/pooml/query"
 )
@@ -232,7 +233,17 @@ func compactRow(cols []string, row []any, maxLen int) string {
 	}
 	s := strings.Join(parts, " ")
 	if len(s) > maxLen {
-		s = s[:maxLen] + "…"
+		s = truncateAtRune(s, maxLen) + "…"
 	}
 	return s
+}
+
+// truncateAtRune cuts at a rune boundary at or below maxLen bytes: a naive
+// byte slice can split a UTF-8 sequence and emit a replacement character.
+func truncateAtRune(s string, maxLen int) string {
+	cut := maxLen
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut]
 }

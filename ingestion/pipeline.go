@@ -53,6 +53,12 @@ type Pipeline struct {
 	writerWG sync.WaitGroup
 
 	bufferedBytes atomic.Int64 // payload bytes admitted but not yet parsed
+
+	// closed guards TryIngest against send-on-closed-channel if a shutdown
+	// deadline expires while an ingest handler is still running: RLock is
+	// held across the send, so Shutdown's Lock waits out in-flight sends.
+	closeMu sync.RWMutex
+	closed  bool
 }
 
 func NewPipeline(logsWrite *sql.DB, broadcaster *Broadcaster) *Pipeline {
@@ -81,6 +87,11 @@ func (p *Pipeline) Start() {
 // means the pipeline is saturated: the caller returns 429 and the client
 // (FluentBit) retries with backoff.
 func (p *Pipeline) TryIngest(service, host string, payload []byte, receivedAt int64) bool {
+	p.closeMu.RLock()
+	defer p.closeMu.RUnlock()
+	if p.closed {
+		return false
+	}
 	n := int64(len(payload))
 	if p.bufferedBytes.Add(n) > maxBufferedBytes {
 		p.bufferedBytes.Add(-n)
@@ -100,6 +111,9 @@ func (p *Pipeline) TryIngest(service, host string, payload []byte, receivedAt in
 // it in. Callers must guarantee no TryIngest calls after this starts (HTTP
 // servers are already down in main's shutdown sequence).
 func (p *Pipeline) Shutdown() {
+	p.closeMu.Lock()
+	p.closed = true
+	p.closeMu.Unlock()
 	close(p.ingestChan)
 	p.parserWG.Wait()
 	close(p.parsedChan)

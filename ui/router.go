@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"crypto/subtle"
 	"net/http"
 	"strconv"
 
@@ -194,7 +193,7 @@ func (ur *Router) processLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	secret := req.PostFormValue("secret")
-	if subtle.ConstantTimeCompare([]byte(secret), []byte(ur.AuthSecret)) != 1 {
+	if !utils.SecureCompare(secret, ur.AuthSecret) {
 		ur.Throttling.RecordFailure(utils.ClientIP(req, ur.TrustProxyHeaders))
 		ur.render(w, req, http.StatusUnauthorized,
 			templates.LoginPage("error", "That's not it. Deep breath, try again.", nosurf.Token(req)))

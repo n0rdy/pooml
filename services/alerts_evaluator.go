@@ -135,7 +135,10 @@ func (e *Evaluator) recordError(ctx context.Context, a Alert, msg string, now in
 	}
 }
 
-const auditMaxRows = 20
+const (
+	auditMaxRows     = 20
+	auditMaxValueLen = 200
+)
 
 func matchedRowsPayload(res *query.Result) []map[string]any {
 	n := min(len(res.Rows), auditMaxRows)
@@ -143,7 +146,14 @@ func matchedRowsPayload(res *query.Result) []map[string]any {
 	for _, row := range res.Rows[:n] {
 		m := make(map[string]any, len(res.Columns))
 		for i, c := range res.Columns {
-			if i < len(row) {
+			if i >= len(row) {
+				continue
+			}
+			// raw log lines can approach the 2 MB ingest cap; the audit
+			// trail wants the gist, not meta.db bloat
+			if s, ok := row[i].(string); ok && len(s) > auditMaxValueLen {
+				m[c] = truncateAtRune(s, auditMaxValueLen) + "…"
+			} else {
 				m[c] = row[i]
 			}
 		}

@@ -44,6 +44,11 @@ type Pipeline struct {
 	db       *sql.DB
 	batchCh  chan []Row
 	writerWG sync.WaitGroup
+
+	// guards TryPush against send-on-closed-channel when a shutdown deadline
+	// expires mid-request; RLock held across the send (see ingestion.Pipeline)
+	closeMu sync.RWMutex
+	closed  bool
 }
 
 func NewPipeline(metricsDB *sql.DB) *Pipeline {
@@ -65,6 +70,11 @@ func (p *Pipeline) TryPush(rows []Row) bool {
 	if len(rows) == 0 {
 		return true
 	}
+	p.closeMu.RLock()
+	defer p.closeMu.RUnlock()
+	if p.closed {
+		return false
+	}
 	select {
 	case p.batchCh <- rows:
 		return true
@@ -77,6 +87,9 @@ func (p *Pipeline) TryPush(rows []Row) bool {
 // guarantee no TryPush calls after this starts (HTTP servers and the scrape
 // loop are already down in main's shutdown sequence).
 func (p *Pipeline) Shutdown() {
+	p.closeMu.Lock()
+	p.closed = true
+	p.closeMu.Unlock()
 	close(p.batchCh)
 	p.writerWG.Wait()
 }

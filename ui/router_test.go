@@ -58,7 +58,7 @@ func newClient(t *testing.T) *client {
 		Notifier:          services.NewNotificationService(settings),
 		ScrapeTargets:     services.NewScrapeTargetsService(pools.Meta, enc),
 		Dashboards:        services.NewDashboardsService(pools.Meta),
-		Backup:            services.NewBackupService(settings, pools.LogsRead, pools.Metrics, pools.Meta),
+		Backup:            services.NewBackupService(settings, t.TempDir(), pools.LogsRead, pools.Metrics, pools.Meta),
 		Pools:             pools,
 		Broadcaster:       broadcaster,
 		StreamCtx:         context.Background(),

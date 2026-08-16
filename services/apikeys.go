@@ -178,7 +178,14 @@ func hashSecret(secret string) (string, error) {
 		base64.RawStdEncoding.EncodeToString(hash)), nil
 }
 
+// each argon2 run costs 19 MiB + real CPU; without a cap, N parallel
+// wrong-key requests from distinct IPs (throttling is per-IP) burn N of
+// those at once - an easy memory spike on a small box
+var argonSem = make(chan struct{}, 4)
+
 func verifySecret(secret, phc string) bool {
+	argonSem <- struct{}{}
+	defer func() { <-argonSem }()
 	parts := strings.Split(phc, "$")
 	if len(parts) != 6 || parts[1] != "argon2id" {
 		return false

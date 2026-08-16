@@ -167,6 +167,7 @@ Set `POOML_METRICS_ENABLED=true` and `POOML_METRICS_AUTH_SECRET`, and pooml expo
 - Keep the UI (port 8081) off the public internet, or at least behind a reverse proxy with TLS. The ingestion API (8080) is what your services need to reach.
 - Login and API-key failures are throttled per IP. If you run behind a reverse proxy, set `POOML_TRUST_PROXY_HEADERS=true` (and make sure the proxy overwrites `X-Forwarded-For`).
 - Secrets configured in the UI are encrypted at rest; `logs.db` and `metrics.db` content is not. Backups inherit that, so enable server-side encryption on the bucket if you need encryption at rest.
+- Scrape targets and the Campfire base URL are fetched server-side: anyone with UI admin access can point them at internal network addresses. That is consistent with pooml's single-admin model (the same admin already runs arbitrary SQL), but worth knowing if the pooml host sits inside a sensitive network.
 
 ## License
 

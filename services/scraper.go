@@ -1,6 +1,7 @@
 package services
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -141,8 +142,17 @@ func (s *Scraper) fetch(ctx context.Context, t ScrapeTarget, now int64) ([]metri
 		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 
+	// limit+1: a body truncated exactly at the cap parses cleanly at a line
+	// boundary and silently drops every metric after it - fail loudly instead
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxScrapeBodyBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(body) > maxScrapeBodyBytes {
+		return nil, fmt.Errorf("response exceeds the %d MB scrape limit", maxScrapeBodyBytes>>20)
+	}
 	parser := expfmt.NewTextParser(model.UTF8Validation)
-	families, err := parser.TextToMetricFamilies(io.LimitReader(resp.Body, maxScrapeBodyBytes))
+	families, err := parser.TextToMetricFamilies(bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}

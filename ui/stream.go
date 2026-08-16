@@ -186,9 +186,14 @@ func (ur *Router) streamPolling(req *http.Request, sw *sseWriter, lr logsRequest
 func (ur *Router) streamRefresh(req *http.Request, sw *sseWriter, lr logsRequest, v *query.Validated) {
 	var args []any
 	if lr.FTS != "" {
-		if err := v.CombineFTS(lr.Op); err == nil {
-			args = append(args, query.FTSMatch(lr.FTS))
+		if err := v.CombineFTS(lr.Op); err != nil {
+			// refreshing UNFILTERED results here would silently show the
+			// user different data than they asked for
+			sw.event("streamerror", "full-text search does not combine with this query shape")
+			sw.flush()
+			return
 		}
+		args = append(args, query.FTSMatch(lr.FTS))
 	}
 	sqlText := v.SQL()
 
@@ -234,7 +239,9 @@ type sseWriter struct {
 
 func (s *sseWriter) event(name, data string) {
 	fmt.Fprintf(s.w, "event: %s\n", name)
-	for _, line := range strings.Split(data, "\n") {
+	// SSE treats a bare \r as a line terminator too: an unstripped CR in log
+	// content would break out of the data field and spoof events
+	for _, line := range strings.Split(strings.ReplaceAll(data, "\r", ""), "\n") {
 		fmt.Fprintf(s.w, "data: %s\n", line)
 	}
 	fmt.Fprint(s.w, "\n")

@@ -44,7 +44,7 @@ func TestBackupRunNow(t *testing.T) {
 
 	mustExec(t, pools.LogsWrite, "INSERT INTO logs(timestamp, ingested_at, level, service, host, raw) VALUES (1,1,2,'svc','h','backed up line')")
 
-	bs := services.NewBackupService(settings, pools.LogsRead, pools.Metrics, pools.Meta)
+	bs := services.NewBackupService(settings, dir, pools.LogsRead, pools.Metrics, pools.Meta)
 
 	// unconfigured: fails loudly and records the failure
 	if err := bs.RunNow(ctx); err == nil {

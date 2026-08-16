@@ -48,16 +48,27 @@ func ValidateCron(expr string) error {
 
 type BackupService struct {
 	settings *SettingsService
+	dbDir    string
 	dbs      map[string]*sql.DB // filename (logs.db etc.) -> open handle
 	runMu    sync.Mutex         // one backup at a time (cron + "run now" can overlap)
 }
 
 // NewBackupService sources logs.db from the READ pool: the Backup API only
 // reads pages, and the write pool has a single connection - holding it for a
-// multi-minute copy would stall all ingestion.
-func NewBackupService(settings *SettingsService, logsRead, metricsDB, metaDB *sql.DB) *BackupService {
+// multi-minute copy would stall all ingestion. Temp copies live under dbDir,
+// not the OS temp dir (often tmpfs, and too small for a multi-GB copy);
+// leftovers from a SIGKILL are removed here on the next boot.
+func NewBackupService(settings *SettingsService, dbDir string, logsRead, metricsDB, metaDB *sql.DB) *BackupService {
+	if stale, err := filepath.Glob(filepath.Join(dbDir, ".backup-*")); err == nil {
+		for _, dir := range stale {
+			if err := os.RemoveAll(dir); err != nil {
+				log.Error().Err(err).Str("dir", dir).Msg("removing stale backup temp dir")
+			}
+		}
+	}
 	return &BackupService{
 		settings: settings,
+		dbDir:    dbDir,
 		dbs:      map[string]*sql.DB{"logs.db": logsRead, "metrics.db": metricsDB, "meta.db": metaDB},
 	}
 }
@@ -138,7 +149,7 @@ func (bs *BackupService) runBackup(ctx context.Context) error {
 		return err
 	}
 
-	tmpDir, err := os.MkdirTemp("", "pooml-backup-*")
+	tmpDir, err := os.MkdirTemp(bs.dbDir, ".backup-*")
 	if err != nil {
 		return err
 	}

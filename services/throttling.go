@@ -113,15 +113,27 @@ func (ts *ThrottlingService) RecordFailure(ip string) {
 // Used as a memory-DoS guard when the entry map hits its hard cap. Caller
 // must hold ts.mu.
 func (ts *ThrottlingService) evictOldestEntryLocked() {
-	var oldestIP string
-	var oldestMs int64
-	first := true
+	// active lockouts are the entries an attacker most wants gone: flooding
+	// the map from ~10K distinct IPs must not flush a lockout and re-arm the
+	// brute-force budget. Locked entries are only evicted if nothing else is
+	// left (then the map holds nothing but attacker-earned lockouts anyway).
+	now := time.Now().UnixMilli()
+	var oldestIP, oldestLockedIP string
+	var oldestMs, oldestLockedMs int64
 	for ip, e := range ts.entries {
-		if first || e.lastSeenMs < oldestMs {
-			oldestMs = e.lastSeenMs
-			oldestIP = ip
-			first = false
+		if now < e.lockedUntil {
+			if oldestLockedIP == "" || e.lastSeenMs < oldestLockedMs {
+				oldestLockedMs, oldestLockedIP = e.lastSeenMs, ip
+			}
+			continue
+		}
+		if oldestIP == "" || e.lastSeenMs < oldestMs {
+			oldestMs, oldestIP = e.lastSeenMs, ip
 		}
 	}
-	delete(ts.entries, oldestIP)
+	if oldestIP != "" {
+		delete(ts.entries, oldestIP)
+		return
+	}
+	delete(ts.entries, oldestLockedIP)
 }
