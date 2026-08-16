@@ -38,7 +38,7 @@ docker run -d \
   -e POOML_DB_DIR=/data \
   -p 8080:8080 \
   -p 8081:8081 \
-  -v ~/pooml-data:/data \
+  -v pooml-data:/data \
   mykonordy/pooml:latest
 ```
 
@@ -62,15 +62,18 @@ services:
       - "8080:8080"
       - "8081:8081"
     volumes:
-      - ./pooml-data:/data
+      - pooml-data:/data
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  pooml-data:
 ```
 
-`docker compose up -d`, and the same two ports apply. This is also the shape platforms like Coolify accept as a one-service compose deployment.
+`docker compose up -d`, and the same two ports apply. Both examples use a named volume on purpose: pooml runs as a non-root user (uid 1001), and a bind-mounted host directory is created root-owned on Linux, which crash-loops the container. If you prefer a bind mount, `chown -R 1001:1001` the host directory first. This is also the shape platforms like Coolify accept as a one-service compose deployment.
 
 ### Binary (Linux)
 
