@@ -1,0 +1,654 @@
+---
+const dockerCmd = `docker run -d --name pooml --restart unless-stopped \\
+  -e POOML_UI_SECRET=change-me-to-something-long-and-random \\
+  -e POOML_ENCRYPTION_KEY=change-me-too-32-chars-minimum-ok \\
+  -e POOML_DB_DIR=/data \\
+  -p 8080:8080 -p 8081:8081 \\
+  -v ~/pooml-data:/data \\
+  n0rdy/pooml:latest`;
+
+const queries = [
+  {
+    label: 'errors across every service, last hour',
+    sql: `SELECT * FROM logs
+WHERE level >= 4 AND timestamp > unixepoch('now', '-1 hour') * 1000
+ORDER BY timestamp DESC`,
+  },
+  {
+    label: 'which service is the noisiest?',
+    sql: `SELECT service, COUNT(*) AS lines
+FROM logs GROUP BY service ORDER BY lines DESC`,
+  },
+  {
+    label: 'p50-ish checkout latency, by hour',
+    sql: `SELECT timestamp / 3600000 * 3600000 AS hour, AVG(value)
+FROM metrics WHERE name = 'checkout_latency_seconds'
+GROUP BY hour ORDER BY hour`,
+  },
+];
+
+const envVars = [
+  ['POOML_DB_DIR', 'required', 'Directory for the three SQLite files. Created if missing.'],
+  ['POOML_UI_SECRET', 'required', 'UI login secret, min 32 chars.'],
+  ['POOML_ENCRYPTION_KEY', 'required', 'Encrypts secrets stored in meta.db (S3 creds, tokens), min 32 chars.'],
+  ['POOML_ENV', 'pro', 'local / pro. Cookie Secure flag, HSTS, log verbosity.'],
+  ['POOML_API_ADDR', 'localhost:8080', 'Ingestion API bind address.'],
+  ['POOML_UI_ADDR', 'localhost:8081', 'Web UI bind address.'],
+  ['POOML_LOG_LEVEL', 'info', "pooml's own log level."],
+  ['POOML_TRUST_PROXY_HEADERS', 'false', 'Read client IPs from X-Forwarded-For. Only behind a proxy that overwrites it.'],
+  ['POOML_METRICS_ENABLED', 'false', "Expose pooml's own Prometheus metrics + self-scrape."],
+  ['POOML_METRICS_AUTH_SECRET', '-', 'Required when metrics are enabled, min 32 chars.'],
+  ['POOML_SHUTDOWN_TIMEOUT_SECONDS', '30', 'Hard deadline for graceful shutdown.'],
+];
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>pooml - the Poor Man's Logger</title>
+    <meta
+      name="description"
+      content="Logs, metrics, dashboards, and alerts in one small SQLite-backed binary. Queried with plain SQL, built for self-hosters."
+    />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta property="og:title" content="pooml - the Poor Man's Logger" />
+    <meta
+      property="og:description"
+      content="Logs + metrics in one binary. SQLite inside, SQL outside. No new query language to learn."
+    />
+    <meta property="og:image" content="https://pooml.com/shots/dashboard.png" />
+    <meta property="og:url" content="https://pooml.com" />
+    <meta name="twitter:card" content="summary_large_image" />
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div class="hero-text">
+          <p class="eyebrow"><img class="logo" src="/logo.png" alt="" width="26" height="28" /> pooml <span class="dim">/&#712;pu&#720;ml/ &middot; the Poor Man's Logger</span></p>
+          <h1><code>SELECT * FROM logs;</code></h1>
+          <p class="tagline">
+            That's the query language. pooml is a logs + metrics server in one
+            small binary: SQLite inside, SQL outside, a web UI on top. Ship
+            logs from FluentBit, push metrics over OTLP or scrape Prometheus
+            endpoints, draw dashboards, get alerts on your phone.
+          </p>
+          <div class="cta-row">
+            <a class="btn primary" href="https://github.com/n0rdy/pooml">GitHub &rarr;</a>
+            <a class="btn" href="#quick-start">Quick start</a>
+            <span class="license">AGPL-3.0 &middot; no telemetry</span>
+          </div>
+        </div>
+      </header>
+
+      <figure class="shot">
+        <img
+          src="/shots/dashboard.png"
+          alt="A pooml metrics dashboard: request rates by service, a queue-depth spike during an incident, and a big stat panel"
+          width="1800"
+          height="1075"
+          loading="eager"
+        />
+        <figcaption>A real dashboard, five minutes after install. The spike is the demo incident.</figcaption>
+      </figure>
+
+      <section class="why">
+        <h2>No new query language. That's the feature.</h2>
+        <p>
+          Every observability tool ships its own query dialect: LogQL, PromQL,
+          KQL, SPL, three flavors of Lucene. Each one you learn just well
+          enough to forget by the next incident.
+        </p>
+        <p>
+          pooml's query language shipped in 1974 and you already know it. Logs
+          and metrics live in SQLite tables; you query them with <code>SELECT</code>, <code>WHERE</code>, <code>GROUP BY</code>, and friends. Full-text search rides on FTS5. A query builder exists for
+          the lazy mornings, and it compiles to SQL you can read, edit, and
+          keep.
+        </p>
+        <div class="queries">
+          {queries.map((q) => (
+            <div class="query-card">
+              <p class="query-label">-- {q.label}</p>
+              <pre><code>{q.sql}</code></pre>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="features">
+        <h2>What's in the binary</h2>
+        <div class="grid">
+          <div class="feat">
+            <h3>Logs</h3>
+            <p>FluentBit-compatible ingestion, per-line format detection (JSON, CLF, plain), full-text search, live tail, infinite scroll.</p>
+          </div>
+          <div class="feat">
+            <h3>Metrics</h3>
+            <p>OTLP/HTTP push and Prometheus scraping, a quick-query builder that compiles to SQL, charts with gap-aware series.</p>
+          </div>
+          <div class="feat">
+            <h3>Dashboards</h3>
+            <p>Typed logs/metrics dashboards: stream, chart, and number panels. Panels remember the query that built them.</p>
+          </div>
+          <div class="feat">
+            <h3>Alerts</h3>
+            <p>Alert rules are SQL queries too. Delivered via Pushover or Once Campfire, with cooldowns and an audit trail.</p>
+          </div>
+          <div class="feat">
+            <h3>Ops included</h3>
+            <p>Hourly retention cleanup, scheduled S3 backups via SQLite's online backup API, Prometheus <code>/metrics</code> - pooml can monitor itself.</p>
+          </div>
+          <div class="feat">
+            <h3>Your data, in files</h3>
+            <p>Three SQLite files you can copy, back up, or open with any SQLite tool. No telemetry, no phone-home, ever.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="peanuts">
+        <h2>Runs on peanuts</h2>
+        <p>
+          Hence the mascot. One Go binary, three SQLite files, no JVM, no
+          cluster, no sidecar agents. The whole thing idles in a few dozen
+          megabytes of RAM and is perfectly happy on the cheapest VPS your
+          cloud sells - the one that costs about as much as a bag of peanuts.
+        </p>
+        <figure class="shot small">
+          <img
+            src="/shots/logs.png"
+            alt="The pooml logs view filtered to errors: a burst of stripe API timeouts during the demo incident"
+            width="1800"
+            height="1075"
+            loading="lazy"
+          />
+          <figcaption>The logs view during the same incident: <code>WHERE level &gt;= 3</code> and there's your story.</figcaption>
+        </figure>
+      </section>
+
+      <section class="honesty">
+        <h2>pooml is not for everyone</h2>
+        <ul>
+          <li>It is <strong>not distributed</strong> and not highly available. One node, one binary, one disk.</li>
+          <li>It is <strong>single-admin</strong>: one login secret, no user management, no RBAC.</li>
+          <li>It is <strong>closed-contribution</strong>: open source, but no PRs - bugs and ideas go to GitHub Discussions.</li>
+          <li>If you have a platform team and a compliance department, you want Grafana &amp; friends. Godspeed - they're great.</li>
+        </ul>
+        <p>
+          If you have three side projects on a VPS and grep-over-ssh has
+          stopped being funny: welcome.
+        </p>
+      </section>
+
+      <section class="quick-start" id="quick-start">
+        <h2>Quick start</h2>
+        <ol>
+          <li>
+            <p>Run it:</p>
+            <div class="code-block">
+              <pre><code>{dockerCmd}</code></pre>
+              <button class="copy" data-copy={dockerCmd}>copy</button>
+            </div>
+          </li>
+          <li>
+            <p>Open <code>http://localhost:8081</code>, log in with your secret, mint an API key in Settings.</p>
+          </li>
+          <li>
+            <p>Point your log shipper at port 8080:</p>
+            <div class="code-block">
+              <pre><code>{`curl -X POST "http://localhost:8080/api/v1/ingest/my-service/my-host" \\
+  -H "X-API-Key: $API_KEY" \\
+  -d '{"level":"info","message":"hello pooml"}'`}</code></pre>
+            </div>
+          </li>
+        </ol>
+        <p class="aside">
+          Binaries for Linux amd64/arm64 are on the <a href="https://github.com/n0rdy/pooml/releases">releases page</a>;
+          building from source needs Go and the <code>sqlite_fts5</code> tag.
+          The <a href="https://github.com/n0rdy/pooml#readme">README</a> covers
+          FluentBit, OTLP, scrape targets, retention, and S3 backups.
+        </p>
+      </section>
+
+      <section class="config">
+        <h2>Configuration</h2>
+        <p class="config-intro">
+          Everything is environment variables. The required ones fail fast at
+          startup with a clear message; the rest have defaults you can ignore.
+        </p>
+        <div class="env-table-wrap">
+          <table class="env-table">
+            <thead>
+              <tr><th>Variable</th><th>Default</th><th>Purpose</th></tr>
+            </thead>
+            <tbody>
+              {envVars.map(([name, def, purpose]) => (
+                <tr>
+                  <td><code>{name}</code></td>
+                  <td class="def">{def}</td>
+                  <td>{purpose}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="used-by">
+        <h2>Trusted in production</h2>
+        <p class="used-by-intro">Real products keeping their logs in pooml.</p>
+        <div class="used-by-row">
+          <a class="used-by-card" href="https://retrek.me">
+            <img src="/retrek.png" alt="" width="44" height="44" />
+            <span class="used-by-text">
+              <strong>reTrek</strong>
+              <span>walking, made an adventure</span>
+            </span>
+          </a>
+        </div>
+      </section>
+
+      <footer>
+        <a href="https://github.com/n0rdy/pooml">GitHub</a>
+        <a href="https://github.com/n0rdy/pooml/blob/main/LICENSE">AGPL-3.0</a>
+        <span class="dim">made by <a href="https://n0rdy.foo">n0rdy</a> &middot; this page has no analytics either</span>
+      </footer>
+    </main>
+
+    <script>
+      document.querySelectorAll('.copy').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(btn.dataset.copy);
+          btn.textContent = 'copied';
+          setTimeout(() => (btn.textContent = 'copy'), 1500);
+        });
+      });
+    </script>
+
+    <style>
+      :root {
+        --bg: #16191f;
+        --surface: #1d232a;
+        --edge: rgba(255, 255, 255, 0.09);
+        --text: #e8e4dd;
+        --muted: #a49e93;
+        --peanut: #c98a4b;
+        --peanut-bright: #e4aa6d;
+        --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * {
+        margin: 0;
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      code {
+        font-family: var(--mono);
+      }
+      h2 {
+        font-size: 1.7rem;
+        letter-spacing: -0.01em;
+        margin-bottom: 0.75rem;
+        text-wrap: balance;
+      }
+      section {
+        margin: 5.5rem 0;
+      }
+
+      .hero {
+        padding: 5.5rem 0 3rem;
+      }
+      .hero-text {
+        flex: 1;
+        min-width: 0;
+      }
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        font-family: var(--mono);
+        color: var(--peanut-bright);
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+      }
+      .eyebrow .logo {
+        width: 26px;
+        height: auto;
+      }
+      .eyebrow .dim {
+        color: var(--muted);
+      }
+      h1 {
+        font-size: clamp(1.7rem, 4.6vw, 3.1rem);
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        margin-bottom: 1.2rem;
+        white-space: nowrap;
+      }
+      h1 code {
+        color: var(--text);
+      }
+      .tagline {
+        color: var(--muted);
+        margin-bottom: 1.6rem;
+      }
+      .cta-row {
+        display: flex;
+        align-items: center;
+        gap: 0.9rem;
+        flex-wrap: wrap;
+      }
+      .btn {
+        display: inline-block;
+        padding: 0.55rem 1.15rem;
+        border-radius: 8px;
+        border: 1px solid var(--edge);
+        color: var(--text);
+        text-decoration: none;
+        font-weight: 500;
+        transition: background-color 150ms ease-out, border-color 150ms ease-out;
+      }
+      .btn:hover {
+        background: rgba(255, 255, 255, 0.06);
+      }
+      .btn.primary {
+        background: var(--peanut);
+        border-color: var(--peanut);
+        color: #16130e;
+      }
+      .btn.primary:hover {
+        background: var(--peanut-bright);
+        border-color: var(--peanut-bright);
+      }
+      .license {
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .shot {
+        margin: 2rem 0;
+      }
+      .shot img {
+        width: 100%;
+        height: auto;
+        border-radius: 10px;
+        outline: 1px solid rgba(255, 255, 255, 0.1);
+        outline-offset: -1px;
+      }
+      .shot figcaption {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-top: 0.6rem;
+      }
+
+      .why p {
+        color: var(--muted);
+        margin-bottom: 0.9rem;
+      }
+      .why p code {
+        color: var(--text);
+      }
+      .queries {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+        gap: 1rem;
+        margin-top: 1.6rem;
+      }
+      .query-card {
+        background: var(--surface);
+        border-radius: 10px;
+        padding: 1rem 1.1rem;
+        outline: 1px solid var(--edge);
+        outline-offset: -1px;
+        overflow-x: auto;
+      }
+      .query-label {
+        font-family: var(--mono);
+        color: var(--peanut-bright);
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+        white-space: nowrap;
+      }
+      .query-card pre {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        color: var(--text);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1rem;
+        margin-top: 1.4rem;
+      }
+      .feat {
+        background: var(--surface);
+        border-radius: 10px;
+        padding: 1.1rem 1.2rem;
+        outline: 1px solid var(--edge);
+        outline-offset: -1px;
+      }
+      .feat h3 {
+        font-size: 1.02rem;
+        margin-bottom: 0.35rem;
+      }
+      .feat p {
+        color: var(--muted);
+        font-size: 0.93rem;
+      }
+      .feat code {
+        font-size: 0.88em;
+      }
+
+      .peanuts p {
+        color: var(--muted);
+      }
+      .shot.small {
+        margin-top: 1.8rem;
+      }
+
+      .honesty ul {
+        color: var(--muted);
+        padding-left: 1.2rem;
+        margin-bottom: 1rem;
+      }
+      .honesty li {
+        margin-bottom: 0.45rem;
+      }
+      .honesty strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .quick-start ol {
+        padding-left: 1.3rem;
+        max-width: 800px;
+      }
+      .quick-start li {
+        margin-bottom: 1.3rem;
+      }
+      .quick-start li > p {
+        margin-bottom: 0.5rem;
+      }
+      .code-block {
+        position: relative;
+        background: var(--surface);
+        border-radius: 10px;
+        outline: 1px solid var(--edge);
+        outline-offset: -1px;
+        padding: 1rem 1.1rem;
+        overflow-x: auto;
+      }
+      .code-block pre {
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        line-height: 1.55;
+      }
+      .copy {
+        position: absolute;
+        top: 0.6rem;
+        right: 0.6rem;
+        font-family: var(--mono);
+        font-size: 0.8rem;
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--text);
+        border: 1px solid var(--edge);
+        border-radius: 6px;
+        padding: 0.25rem 0.65rem;
+        cursor: pointer;
+      }
+      .copy:hover {
+        background: rgba(255, 255, 255, 0.12);
+      }
+      .aside {
+        color: var(--muted);
+        font-size: 0.92rem;
+        margin-top: 1.4rem;
+      }
+      .aside a,
+      .honesty a {
+        color: var(--peanut-bright);
+      }
+
+      .config-intro {
+        color: var(--muted);
+        margin-bottom: 1.2rem;
+      }
+      .env-table-wrap {
+        background: var(--surface);
+        border-radius: 10px;
+        outline: 1px solid var(--edge);
+        outline-offset: -1px;
+        overflow-x: auto;
+      }
+      .env-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      .env-table th,
+      .env-table td {
+        text-align: left;
+        padding: 0.55rem 1rem;
+        border-bottom: 1px solid var(--edge);
+        vertical-align: top;
+      }
+      .env-table tbody tr:last-child td {
+        border-bottom: none;
+      }
+      .env-table th {
+        color: var(--muted);
+        font-weight: 500;
+        font-size: 0.85rem;
+      }
+      .env-table code {
+        font-size: 0.85em;
+        white-space: nowrap;
+      }
+      .env-table .def {
+        font-family: var(--mono);
+        color: var(--muted);
+        white-space: nowrap;
+        font-size: 0.85em;
+      }
+      .env-table td:last-child {
+        color: var(--muted);
+      }
+
+      .used-by-intro {
+        color: var(--muted);
+        margin-bottom: 1.2rem;
+      }
+      .used-by-row {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+      .used-by-card {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+        background: var(--surface);
+        border-radius: 10px;
+        outline: 1px solid var(--edge);
+        outline-offset: -1px;
+        padding: 0.9rem 1.2rem;
+        text-decoration: none;
+        color: var(--text);
+        transition: background-color 150ms ease-out;
+      }
+      .used-by-card:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .used-by-card img {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+      }
+      .used-by-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.35;
+      }
+      .used-by-text strong {
+        font-weight: 600;
+      }
+      .used-by-text span {
+        color: var(--muted);
+        font-size: 0.88rem;
+      }
+
+      footer {
+        display: flex;
+        gap: 1.4rem;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 2.5rem 0 3rem;
+        border-top: 1px solid var(--edge);
+        margin-top: 5rem;
+        font-size: 0.92rem;
+      }
+      footer a {
+        color: var(--text);
+      }
+      footer .dim {
+        color: var(--muted);
+        margin-left: auto;
+      }
+      footer .dim a {
+        color: var(--muted);
+      }
+
+      @media (max-width: 760px) {
+        .hero {
+          padding-top: 3rem;
+        }
+        h1 {
+          white-space: normal;
+        }
+        footer .dim {
+          margin-left: 0;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
+    </style>
+  </body>
+</html>

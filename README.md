@@ -35,6 +35,7 @@ docker run -d \
   --restart unless-stopped \
   -e POOML_UI_SECRET=your-ui-login-secret-min-32-chars-long \
   -e POOML_ENCRYPTION_KEY=your-encryption-key-min-32-chars-long \
+  -e POOML_DB_DIR=/data \
   -p 8080:8080 \
   -p 8081:8081 \
   -v ~/pooml-data:/data \

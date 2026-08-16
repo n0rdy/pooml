@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"sort"
 	"strconv"
@@ -490,9 +491,24 @@ func colLooksLikeEpochMs(res *query.Result, col int) bool {
 	return seen
 }
 
+// formatStat renders big-number panels for humans: compact suffixes above
+// 10K, trimmed decimals below - a raw float64 print is a wall of digits.
 func formatStat(v any) string {
-	if f, ok := asFloat(v); ok {
-		return strconv.FormatFloat(f, 'f', -1, 64)
+	f, ok := asFloat(v)
+	if !ok {
+		return cellString(v)
 	}
-	return cellString(v)
+	abs := math.Abs(f)
+	switch {
+	case abs >= 1e9:
+		return strconv.FormatFloat(f/1e9, 'f', 2, 64) + "B"
+	case abs >= 1e6:
+		return strconv.FormatFloat(f/1e6, 'f', 2, 64) + "M"
+	case abs >= 1e4:
+		return strconv.FormatFloat(f/1e3, 'f', 1, 64) + "K"
+	case abs >= 100 || f == math.Trunc(f):
+		return strconv.FormatFloat(f, 'f', 0, 64)
+	default:
+		return strconv.FormatFloat(f, 'f', 2, 64)
+	}
 }
