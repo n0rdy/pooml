@@ -5,7 +5,7 @@ const dockerCmd = `docker run -d --name pooml --restart unless-stopped \\
   -e POOML_DB_DIR=/data \\
   -p 8080:8080 -p 8081:8081 \\
   -v ~/pooml-data:/data \\
-  n0rdy/pooml:latest`;
+  mykonordy/pooml:latest`;
 
 const queries = [
   {

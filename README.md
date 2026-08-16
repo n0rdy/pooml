@@ -39,12 +39,33 @@ docker run -d \
   -p 8080:8080 \
   -p 8081:8081 \
   -v ~/pooml-data:/data \
-  n0rdy/pooml:latest
+  mykonordy/pooml:latest
 ```
 
 Open `http://localhost:8081`, log in with your `POOML_UI_SECRET`, create an API key in Settings, and point your log shipper at port 8080.
 
 Port 8080 is the ingestion API, port 8081 is the UI. The two are separate servers on purpose: expose the API to your services, keep the UI behind your VPN or reverse proxy.
+
+### Docker Compose
+
+```yaml
+services:
+  pooml:
+    image: mykonordy/pooml:latest
+    container_name: pooml
+    restart: unless-stopped
+    environment:
+      POOML_UI_SECRET: your-ui-login-secret-min-32-chars-long
+      POOML_ENCRYPTION_KEY: your-encryption-key-min-32-chars-long
+      POOML_DB_DIR: /data
+    ports:
+      - "8080:8080"
+      - "8081:8081"
+    volumes:
+      - ./pooml-data:/data
+```
+
+`docker compose up -d`, and the same two ports apply. This is also the shape platforms like Coolify accept as a one-service compose deployment.
 
 ### Binary (Linux)
 
