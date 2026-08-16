@@ -39,7 +39,7 @@ templ sqlEditorModule() {
 			border-color: var(--color-primary);
 		}
 	</style>
-	<script type="module">
+	<script type="module" nonce={ templ.GetNonce(ctx) }>
 		import { EditorView, basicSetup } from "codemirror";
 		import { placeholder, keymap } from "@codemirror/view";
 		import { Compartment, Prec } from "@codemirror/state";

@@ -147,7 +147,7 @@ templ HomeMetrics(v HomeMetricsView) {
 // homeScript rewrites [data-reltime] to "3m ago" style, initially and after
 // every fragment refresh.
 templ homeScript() {
-	<script>
+	<script nonce={ templ.GetNonce(ctx) }>
 		(() => {
 			function rel(ms) {
 				const s = Math.max(0, Math.floor((Date.now() - ms) / 1000));

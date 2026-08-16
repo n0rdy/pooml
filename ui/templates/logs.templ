@@ -282,7 +282,7 @@ templ LogDetailPage(d LogDetail, csrfToken string) {
 				</div>
 			</div>
 		</div>
-		<script>
+		<script nonce={ templ.GetNonce(ctx) }>
 			document.querySelectorAll("[data-ts]").forEach((el) => {
 				el.textContent = new Date(Number(el.dataset.ts)).toLocaleString(undefined, { hour12: false });
 			});
@@ -358,7 +358,7 @@ templ logsScript() {
 	// during parse: time formatting, wrap mode, and bottom-anchoring must not
 	// wait for the CodeMirror module fetch below, or the table visibly
 	// reflows once the network catches up (the "jump on load", round two).
-	<script>
+	<script nonce={ templ.GetNonce(ctx) }>
 		(() => {
 			// compact local times in rows (full timestamp on hover); detail
 			// rows marked data-ts-full keep the complete local timestamp
@@ -402,7 +402,7 @@ templ logsScript() {
 			anchorBottom();
 		})();
 	</script>
-	<script type="module">
+	<script type="module" nonce={ templ.GetNonce(ctx) }>
 		import { EditorView, basicSetup } from "codemirror";
 		import { placeholder, keymap } from "@codemirror/view";
 		import { Compartment, Prec } from "@codemirror/state";

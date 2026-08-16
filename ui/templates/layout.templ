@@ -55,7 +55,7 @@ templ Base(title string) {
 // instances of @codemirror/state make EditorView construction throw.
 // See CONTEXT.md > Static Assets.
 templ importMap() {
-	<script type="importmap">
+	<script type="importmap" nonce={ templ.GetNonce(ctx) }>
 	{
 		"imports": {
 			"codemirror": "https://esm.sh/*codemirror@6.0.2",
@@ -218,7 +218,7 @@ templ contrastFixes() {
 // applies the persisted theme before first paint (no flash) and keeps the nav
 // toggle in sync. dark is the default; light is the alternative.
 templ themeScript() {
-	<script>
+	<script nonce={ templ.GetNonce(ctx) }>
 		(() => {
 			// no DOM-snapshot history: pages with live JS state (CodeMirror)
 			// restore wrong; Back re-fetches the full page instead

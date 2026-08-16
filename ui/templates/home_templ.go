@@ -534,7 +534,20 @@ func homeScript() templ.Component {
 			templ_7745c5c3_Var25 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<script>\n\t\t(() => {\n\t\t\tfunction rel(ms) {\n\t\t\t\tconst s = Math.max(0, Math.floor((Date.now() - ms) / 1000));\n\t\t\t\tif (s < 10) return \"just now\";\n\t\t\t\tif (s < 60) return s + \"s ago\";\n\t\t\t\tif (s < 3600) return Math.floor(s / 60) + \"m ago\";\n\t\t\t\tif (s < 86400) return Math.floor(s / 3600) + \"h ago\";\n\t\t\t\treturn Math.floor(s / 86400) + \"d ago\";\n\t\t\t}\n\t\t\tfunction fmt() {\n\t\t\t\tdocument.querySelectorAll(\"[data-reltime]\").forEach((el) => {\n\t\t\t\t\tel.textContent = rel(Number(el.dataset.reltime));\n\t\t\t\t\tel.title = new Date(Number(el.dataset.reltime)).toLocaleString();\n\t\t\t\t});\n\t\t\t}\n\t\t\tfmt();\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", fmt);\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "<script nonce=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var26 string
+		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.GetNonce(ctx))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/home.templ`, Line: 150, Col: 36}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "\">\n\t\t(() => {\n\t\t\tfunction rel(ms) {\n\t\t\t\tconst s = Math.max(0, Math.floor((Date.now() - ms) / 1000));\n\t\t\t\tif (s < 10) return \"just now\";\n\t\t\t\tif (s < 60) return s + \"s ago\";\n\t\t\t\tif (s < 3600) return Math.floor(s / 60) + \"m ago\";\n\t\t\t\tif (s < 86400) return Math.floor(s / 3600) + \"h ago\";\n\t\t\t\treturn Math.floor(s / 86400) + \"d ago\";\n\t\t\t}\n\t\t\tfunction fmt() {\n\t\t\t\tdocument.querySelectorAll(\"[data-reltime]\").forEach((el) => {\n\t\t\t\t\tel.textContent = rel(Number(el.dataset.reltime));\n\t\t\t\t\tel.title = new Date(Number(el.dataset.reltime)).toLocaleString();\n\t\t\t\t});\n\t\t\t}\n\t\t\tfmt();\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", fmt);\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

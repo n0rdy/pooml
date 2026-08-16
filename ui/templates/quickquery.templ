@@ -130,7 +130,7 @@ templ QuickQueryModule() {
 			border-color: var(--color-primary);
 		}
 	</style>
-	<script type="module">
+	<script type="module" nonce={ templ.GetNonce(ctx) }>
 		import { EditorView, keymap } from "@codemirror/view";
 		import { EditorState, Compartment, Prec } from "@codemirror/state";
 		import { autocompletion, acceptCompletion } from "@codemirror/autocomplete";

@@ -1,6 +1,9 @@
 package ui
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -9,17 +12,30 @@ import (
 	"github.com/n0rdy/pooml/ui/templates"
 	"github.com/n0rdy/pooml/utils"
 
+	"github.com/a-h/templ"
 	"github.com/justinas/nosurf"
 	"github.com/rs/zerolog/log"
 )
 
+func newNonce() string {
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		panic(err) // crypto/rand failure means the process is unusable anyway
+	}
+	return base64.StdEncoding.EncodeToString(b)
+}
+
 // securityHeaders middleware sets HTTP security headers on every UI response.
-// CSP allows jsdelivr.net (CDN for DaisyUI, Tailwind, HTMX) and 'unsafe-inline'
-// for inline <script>/<style> blocks and HTMX hx-on attributes.
+// script-src is nonce-based (no 'unsafe-inline'): every inline <script> in
+// the templates carries nonce={ templ.GetNonce(ctx) }, so an injected script
+// from a hypothetical escaping gap never executes. htmx needs no inline
+// allowance (we use none of its eval-dependent features). style-src keeps
+// 'unsafe-inline' for the template <style> blocks - style injection is not
+// the threat CSP is load-bearing for here.
 func securityHeaders(env string) func(http.Handler) http.Handler {
-	csp := strings.Join([]string{
+	cspTemplate := strings.Join([]string{
 		"default-src 'self'",
-		"script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://esm.sh",
+		"script-src 'self' 'nonce-%s' https://cdn.jsdelivr.net https://esm.sh",
 		"style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
 		"img-src 'self' data:",
 		"font-src 'self' https://cdn.jsdelivr.net data:",
@@ -33,8 +49,10 @@ func securityHeaders(env string) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			nonce := newNonce()
+			req = req.WithContext(templ.WithNonce(req.Context(), nonce))
 			h := w.Header()
-			h.Set("Content-Security-Policy", csp)
+			h.Set("Content-Security-Policy", fmt.Sprintf(cspTemplate, nonce))
 			h.Set("X-Frame-Options", "DENY")
 			h.Set("X-Content-Type-Options", "nosniff")
 			h.Set("Referrer-Policy", "same-origin")

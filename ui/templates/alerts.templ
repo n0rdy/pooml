@@ -216,7 +216,7 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, cs
 // submit sync, open-in-logs, theming) lives in the shared sqlEditorModule.
 templ alertsScript() {
 	@sqlEditorModule()
-	<script>
+	<script nonce={ templ.GetNonce(ctx) }>
 		document.addEventListener("change", (e) => {
 			if (!e.target || e.target.name !== "target_type") return;
 			const form = e.target.closest("form");

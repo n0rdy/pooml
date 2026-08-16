@@ -107,7 +107,20 @@ func importMap() templ.Component {
 			templ_7745c5c3_Var3 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<script type=\"importmap\">\n\t{\n\t\t\"imports\": {\n\t\t\t\"codemirror\": \"https://esm.sh/*codemirror@6.0.2\",\n\t\t\t\"@codemirror/lang-sql\": \"https://esm.sh/*@codemirror/lang-sql@6.10.0\",\n\t\t\t\"@codemirror/theme-one-dark\": \"https://esm.sh/*@codemirror/theme-one-dark@6.1.3\",\n\t\t\t\"@codemirror/state\": \"https://esm.sh/@codemirror/state@6.7.1\",\n\t\t\t\"@codemirror/view\": \"https://esm.sh/*@codemirror/view@6.43.8\",\n\t\t\t\"@codemirror/language\": \"https://esm.sh/*@codemirror/language@6.12.4\",\n\t\t\t\"@codemirror/autocomplete\": \"https://esm.sh/*@codemirror/autocomplete@6.20.3\",\n\t\t\t\"@codemirror/commands\": \"https://esm.sh/*@codemirror/commands@6.10.4\",\n\t\t\t\"@codemirror/search\": \"https://esm.sh/*@codemirror/search@6.7.1\",\n\t\t\t\"@codemirror/lint\": \"https://esm.sh/*@codemirror/lint@6.9.7\",\n\t\t\t\"@lezer/common\": \"https://esm.sh/@lezer/common@1.5.2\",\n\t\t\t\"@lezer/highlight\": \"https://esm.sh/*@lezer/highlight@1.2.3\",\n\t\t\t\"@lezer/lr\": \"https://esm.sh/*@lezer/lr@1.4.10\",\n\t\t\t\"crelt\": \"https://esm.sh/crelt@1.0.7\",\n\t\t\t\"style-mod\": \"https://esm.sh/style-mod@4.1.3\",\n\t\t\t\"w3c-keyname\": \"https://esm.sh/w3c-keyname@2.2.8\",\n\t\t\t\"sql-formatter\": \"https://esm.sh/sql-formatter@15.8.2\"\n\t\t}\n\t}\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<script type=\"importmap\" nonce=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.GetNonce(ctx))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 58, Col: 53}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">\n\t{\n\t\t\"imports\": {\n\t\t\t\"codemirror\": \"https://esm.sh/*codemirror@6.0.2\",\n\t\t\t\"@codemirror/lang-sql\": \"https://esm.sh/*@codemirror/lang-sql@6.10.0\",\n\t\t\t\"@codemirror/theme-one-dark\": \"https://esm.sh/*@codemirror/theme-one-dark@6.1.3\",\n\t\t\t\"@codemirror/state\": \"https://esm.sh/@codemirror/state@6.7.1\",\n\t\t\t\"@codemirror/view\": \"https://esm.sh/*@codemirror/view@6.43.8\",\n\t\t\t\"@codemirror/language\": \"https://esm.sh/*@codemirror/language@6.12.4\",\n\t\t\t\"@codemirror/autocomplete\": \"https://esm.sh/*@codemirror/autocomplete@6.20.3\",\n\t\t\t\"@codemirror/commands\": \"https://esm.sh/*@codemirror/commands@6.10.4\",\n\t\t\t\"@codemirror/search\": \"https://esm.sh/*@codemirror/search@6.7.1\",\n\t\t\t\"@codemirror/lint\": \"https://esm.sh/*@codemirror/lint@6.9.7\",\n\t\t\t\"@lezer/common\": \"https://esm.sh/@lezer/common@1.5.2\",\n\t\t\t\"@lezer/highlight\": \"https://esm.sh/*@lezer/highlight@1.2.3\",\n\t\t\t\"@lezer/lr\": \"https://esm.sh/*@lezer/lr@1.4.10\",\n\t\t\t\"crelt\": \"https://esm.sh/crelt@1.0.7\",\n\t\t\t\"style-mod\": \"https://esm.sh/style-mod@4.1.3\",\n\t\t\t\"w3c-keyname\": \"https://esm.sh/w3c-keyname@2.2.8\",\n\t\t\t\"sql-formatter\": \"https://esm.sh/sql-formatter@15.8.2\"\n\t\t}\n\t}\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -134,12 +147,12 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var4 == nil {
-			templ_7745c5c3_Var4 = templ.NopComponent
+		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var5 == nil {
+			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Var5 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Var6 := templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 			templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 			templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
 			if !templ_7745c5c3_IsBuffer {
@@ -151,7 +164,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"h-dvh flex flex-col\"><div class=\"navbar bg-base-100 border-b border-base-content/10 px-2 sm:px-4 min-h-14 shrink-0\"><div class=\"flex-1 flex items-center gap-2 sm:gap-8\"><div class=\"dropdown sm:hidden\"><div tabindex=\"0\" role=\"button\" class=\"btn btn-ghost btn-sm btn-square\" aria-label=\"Menu\"><svg class=\"w-5 h-5 fill-current\" viewBox=\"0 0 24 24\"><path d=\"M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z\"></path></svg></div><ul tabindex=\"0\" class=\"dropdown-content menu bg-base-100 rounded-box z-30 w-44 p-2 shadow-lg border border-base-content/10\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<div class=\"h-dvh flex flex-col\"><div class=\"navbar bg-base-100 border-b border-base-content/10 px-2 sm:px-4 min-h-14 shrink-0\"><div class=\"flex-1 flex items-center gap-2 sm:gap-8\"><div class=\"dropdown sm:hidden\"><div tabindex=\"0\" role=\"button\" class=\"btn btn-ghost btn-sm btn-square\" aria-label=\"Menu\"><svg class=\"w-5 h-5 fill-current\" viewBox=\"0 0 24 24\"><path d=\"M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z\"></path></svg></div><ul tabindex=\"0\" class=\"dropdown-content menu bg-base-100 rounded-box z-30 w-44 p-2 shadow-lg border border-base-content/10\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -179,7 +192,7 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</ul></div><a href=\"/\" class=\"flex items-center gap-2 text-lg sm:text-xl font-bold tracking-tight\"><img src=\"/logo.png\" alt=\"\" class=\"h-6 w-auto\"> pooml</a><nav class=\"tabs tabs-border hidden sm:flex\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</ul></div><a href=\"/\" class=\"flex items-center gap-2 text-lg sm:text-xl font-bold tracking-tight\"><img src=\"/logo.png\" alt=\"\" class=\"h-6 w-auto\"> pooml</a><nav class=\"tabs tabs-border hidden sm:flex\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -207,47 +220,47 @@ func Shell(title string, active string, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</nav></div><label class=\"swap swap-rotate btn btn-ghost btn-circle mr-1\" title=\"Switch theme\"><input type=\"checkbox\" id=\"theme-toggle\"> <svg class=\"swap-on w-5 h-5 fill-current\" viewBox=\"0 0 24 24\"><path d=\"M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Z\"></path></svg> <svg class=\"swap-off w-5 h-5 fill-current\" viewBox=\"0 0 24 24\"><path d=\"M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z\"></path></svg></label><form method=\"post\" action=\"/logout\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 125, Col: 61}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"> <button type=\"submit\" class=\"btn btn-ghost btn-sm sm:btn-md\">Log out</button></form></div><main class=\"flex-1 min-h-0 overflow-y-auto p-2 sm:p-4\" hx-headers=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</nav></div><label class=\"swap swap-rotate btn btn-ghost btn-circle mr-1\" title=\"Switch theme\"><input type=\"checkbox\" id=\"theme-toggle\"> <svg class=\"swap-on w-5 h-5 fill-current\" viewBox=\"0 0 24 24\"><path d=\"M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Z\"></path></svg> <svg class=\"swap-off w-5 h-5 fill-current\" viewBox=\"0 0 24 24\"><path d=\"M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z\"></path></svg></label><form method=\"post\" action=\"/logout\"><input type=\"hidden\" name=\"csrf_token\" value=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var7 string
-			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfHxHeaders(csrfToken))
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 131, Col: 96}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 125, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\"> <button type=\"submit\" class=\"btn btn-ghost btn-sm sm:btn-md\">Log out</button></form></div><main class=\"flex-1 min-h-0 overflow-y-auto p-2 sm:p-4\" hx-headers=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templ_7745c5c3_Var4.Render(ctx, templ_7745c5c3_Buffer)
+			var templ_7745c5c3_Var8 string
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfHxHeaders(csrfToken))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 131, Col: 96}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</main></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ_7745c5c3_Var5.Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</main></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = Base(title).Render(templ.WithChildren(ctx, templ_7745c5c3_Var5), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = Base(title).Render(templ.WithChildren(ctx, templ_7745c5c3_Var6), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -279,12 +292,12 @@ func contrastFixes() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var8 == nil {
-			templ_7745c5c3_Var8 = templ.NopComponent
+		templ_7745c5c3_Var9 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var9 == nil {
+			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<style>\n\t\tbody { -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }\n\t\t/* sub-16px inputs make iOS Safari zoom on focus; touch devices get 16px */\n\t\t@media (hover: none) {\n\t\t\t.input, .select, .textarea { font-size: 16px; }\n\t\t}\n\t\t/* one card treatment everywhere. Light: layered translucent shadows\n\t\t   read as physically raised. Dark: shadows are invisible, so the\n\t\t   stack collapses to a single quiet ring - alpha-white borders at\n\t\t   15% were the old \"FOSS glow\". */\n\t\t:root {\n\t\t\t--elevation-raised:\n\t\t\t\t0 0 0 1px rgb(0 0 0 / 0.05),\n\t\t\t\t0 1px 3px rgb(0 0 0 / 0.05),\n\t\t\t\t0 4px 10px -4px rgb(0 0 0 / 0.05);\n\t\t}\n\t\t[data-theme=\"dark\"] {\n\t\t\t--elevation-raised: 0 0 0 1px rgb(255 255 255 / 0.09);\n\t\t}\n\t\t.card { box-shadow: var(--elevation-raised); }\n\t\t/* hover must move AWAY from the surface: base-content alpha lightens\n\t\t   on dark and darkens on light; DaisyUI's ghost hover goes the wrong\n\t\t   way (toward black) on dark themes */\n\t\t.btn-ghost:not(:active):hover {\n\t\t\tbackground-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);\n\t\t}\n\t\t/* same wrong direction for neutral default buttons: DaisyUI mixes the\n\t\t   hover background toward black regardless of theme. Dark theme\n\t\t   lightens instead; colored buttons keep their own hover. */\n\t\t[data-theme=\"dark\"] .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(:active):hover {\n\t\t\tbackground-color: color-mix(in oklab, var(--color-base-content) 12%, var(--color-base-100));\n\t\t\tborder-color: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-100));\n\t\t}\n\t\t/* primary is a button-background token (58% indigo); as link TEXT on a\n\t\t   25% background it lands near 3:1, and whitening it only yields pale\n\t\t   periwinkle. Links in dark use the info token instead: a real light\n\t\t   blue built for dark surfaces. Hover lifts away from the surface\n\t\t   (DaisyUI's own hover goes toward black). */\n\t\t[data-theme=\"dark\"] .link-primary {\n\t\t\tcolor: color-mix(in oklch, var(--color-info) 50%, white);\n\t\t}\n\t\t[data-theme=\"dark\"] .link-primary:hover {\n\t\t\tcolor: color-mix(in oklch, var(--color-info) 30%, white);\n\t\t}\n\t\t.table thead th {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 90%, transparent);\n\t\t}\n\t\t.tabs .tab:not(.tab-active) {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 80%, transparent);\n\t\t}\n\t\tinput::placeholder,\n\t\ttextarea::placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 55%, transparent);\n\t\t}\n\t\t/* CodeMirror placeholders must read as hints, not typed content: the\n\t\t   cursor parks ON them at position 0, so styling is the only signal -\n\t\t   and once focused, the hint yields to the cursor entirely */\n\t\t.cm-editor .cm-placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 45%, transparent) !important;\n\t\t\tfont-style: italic;\n\t\t}\n\t\t/* display, not visibility: a hidden-but-laid-out placeholder still\n\t\t   stretches the line box (italic substitute-font metrics), drawing\n\t\t   the caret off-center in the empty+focused state */\n\t\t.cm-editor.cm-focused .cm-placeholder {\n\t\t\tdisplay: none;\n\t\t}\n\t</style>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<style>\n\t\tbody { -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; }\n\t\t/* sub-16px inputs make iOS Safari zoom on focus; touch devices get 16px */\n\t\t@media (hover: none) {\n\t\t\t.input, .select, .textarea { font-size: 16px; }\n\t\t}\n\t\t/* one card treatment everywhere. Light: layered translucent shadows\n\t\t   read as physically raised. Dark: shadows are invisible, so the\n\t\t   stack collapses to a single quiet ring - alpha-white borders at\n\t\t   15% were the old \"FOSS glow\". */\n\t\t:root {\n\t\t\t--elevation-raised:\n\t\t\t\t0 0 0 1px rgb(0 0 0 / 0.05),\n\t\t\t\t0 1px 3px rgb(0 0 0 / 0.05),\n\t\t\t\t0 4px 10px -4px rgb(0 0 0 / 0.05);\n\t\t}\n\t\t[data-theme=\"dark\"] {\n\t\t\t--elevation-raised: 0 0 0 1px rgb(255 255 255 / 0.09);\n\t\t}\n\t\t.card { box-shadow: var(--elevation-raised); }\n\t\t/* hover must move AWAY from the surface: base-content alpha lightens\n\t\t   on dark and darkens on light; DaisyUI's ghost hover goes the wrong\n\t\t   way (toward black) on dark themes */\n\t\t.btn-ghost:not(:active):hover {\n\t\t\tbackground-color: color-mix(in oklab, var(--color-base-content) 8%, transparent);\n\t\t}\n\t\t/* same wrong direction for neutral default buttons: DaisyUI mixes the\n\t\t   hover background toward black regardless of theme. Dark theme\n\t\t   lightens instead; colored buttons keep their own hover. */\n\t\t[data-theme=\"dark\"] .btn:not(.btn-primary):not(.btn-secondary):not(.btn-accent):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-ghost):not(.btn-link):not(:active):hover {\n\t\t\tbackground-color: color-mix(in oklab, var(--color-base-content) 12%, var(--color-base-100));\n\t\t\tborder-color: color-mix(in oklab, var(--color-base-content) 16%, var(--color-base-100));\n\t\t}\n\t\t/* primary is a button-background token (58% indigo); as link TEXT on a\n\t\t   25% background it lands near 3:1, and whitening it only yields pale\n\t\t   periwinkle. Links in dark use the info token instead: a real light\n\t\t   blue built for dark surfaces. Hover lifts away from the surface\n\t\t   (DaisyUI's own hover goes toward black). */\n\t\t[data-theme=\"dark\"] .link-primary {\n\t\t\tcolor: color-mix(in oklch, var(--color-info) 50%, white);\n\t\t}\n\t\t[data-theme=\"dark\"] .link-primary:hover {\n\t\t\tcolor: color-mix(in oklch, var(--color-info) 30%, white);\n\t\t}\n\t\t.table thead th {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 90%, transparent);\n\t\t}\n\t\t.tabs .tab:not(.tab-active) {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 80%, transparent);\n\t\t}\n\t\tinput::placeholder,\n\t\ttextarea::placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 55%, transparent);\n\t\t}\n\t\t/* CodeMirror placeholders must read as hints, not typed content: the\n\t\t   cursor parks ON them at position 0, so styling is the only signal -\n\t\t   and once focused, the hint yields to the cursor entirely */\n\t\t.cm-editor .cm-placeholder {\n\t\t\tcolor: color-mix(in oklab, var(--color-base-content) 45%, transparent) !important;\n\t\t\tfont-style: italic;\n\t\t}\n\t\t/* display, not visibility: a hidden-but-laid-out placeholder still\n\t\t   stretches the line box (italic substitute-font metrics), drawing\n\t\t   the caret off-center in the empty+focused state */\n\t\t.cm-editor.cm-focused .cm-placeholder {\n\t\t\tdisplay: none;\n\t\t}\n\t</style>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -311,12 +324,25 @@ func themeScript() templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var9 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var9 == nil {
-			templ_7745c5c3_Var9 = templ.NopComponent
+		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var10 == nil {
+			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "<script>\n\t\t(() => {\n\t\t\t// no DOM-snapshot history: pages with live JS state (CodeMirror)\n\t\t\t// restore wrong; Back re-fetches the full page instead\n\t\t\thtmx.config.historyCacheSize = 0;\n\t\t\tif (localStorage.getItem(\"pooml-theme\") === \"light\") {\n\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"light\");\n\t\t\t}\n\t\t\tdocument.addEventListener(\"change\", (e) => {\n\t\t\t\tif (e.target && e.target.id === \"theme-toggle\") {\n\t\t\t\t\tconst theme = e.target.checked ? \"light\" : \"dark\";\n\t\t\t\t\t// freeze transitions for the swap: otherwise every component\n\t\t\t\t\t// animates the theme change on its own clock - a ragged cascade\n\t\t\t\t\tconst freeze = document.createElement(\"style\");\n\t\t\t\t\tfreeze.textContent = \"* { transition: none !important; }\";\n\t\t\t\t\tdocument.head.appendChild(freeze);\n\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", theme);\n\t\t\t\t\tlocalStorage.setItem(\"pooml-theme\", theme);\n\t\t\t\t\trequestAnimationFrame(() => requestAnimationFrame(() => freeze.remove()));\n\t\t\t\t}\n\t\t\t});\n\t\t\tdocument.addEventListener(\"DOMContentLoaded\", () => {\n\t\t\t\tconst t = document.getElementById(\"theme-toggle\");\n\t\t\t\tif (t && localStorage.getItem(\"pooml-theme\") === \"light\") t.checked = true;\n\t\t\t});\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<script nonce=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.GetNonce(ctx))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 221, Col: 36}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\">\n\t\t(() => {\n\t\t\t// no DOM-snapshot history: pages with live JS state (CodeMirror)\n\t\t\t// restore wrong; Back re-fetches the full page instead\n\t\t\thtmx.config.historyCacheSize = 0;\n\t\t\tif (localStorage.getItem(\"pooml-theme\") === \"light\") {\n\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", \"light\");\n\t\t\t}\n\t\t\tdocument.addEventListener(\"change\", (e) => {\n\t\t\t\tif (e.target && e.target.id === \"theme-toggle\") {\n\t\t\t\t\tconst theme = e.target.checked ? \"light\" : \"dark\";\n\t\t\t\t\t// freeze transitions for the swap: otherwise every component\n\t\t\t\t\t// animates the theme change on its own clock - a ragged cascade\n\t\t\t\t\tconst freeze = document.createElement(\"style\");\n\t\t\t\t\tfreeze.textContent = \"* { transition: none !important; }\";\n\t\t\t\t\tdocument.head.appendChild(freeze);\n\t\t\t\t\tdocument.documentElement.setAttribute(\"data-theme\", theme);\n\t\t\t\t\tlocalStorage.setItem(\"pooml-theme\", theme);\n\t\t\t\t\trequestAnimationFrame(() => requestAnimationFrame(() => freeze.remove()));\n\t\t\t\t}\n\t\t\t});\n\t\t\tdocument.addEventListener(\"DOMContentLoaded\", () => {\n\t\t\t\tconst t = document.getElementById(\"theme-toggle\");\n\t\t\t\tif (t && localStorage.getItem(\"pooml-theme\") === \"light\") t.checked = true;\n\t\t\t});\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -340,60 +366,60 @@ func menuLink(href string, label string, active bool) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var10 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var10 == nil {
-			templ_7745c5c3_Var10 = templ.NopComponent
+		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var12 == nil {
+			templ_7745c5c3_Var12 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<li>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var11 = []any{templ.KV("menu-active", active)}
-		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var11...)
+		var templ_7745c5c3_Var13 = []any{templ.KV("menu-active", active)}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var13...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "<a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "<a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var12 templ.SafeURL
-		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
+		var templ_7745c5c3_Var14 templ.SafeURL
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 34}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\" class=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var13 string
-		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var11).String())
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 1, Col: 0}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var14 string
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(label)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</a></li>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "\" class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var15 string
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var13).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var16 string
+		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(label)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 251, Col: 86}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</a></li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -417,70 +443,70 @@ func navLink(href string, label string, active bool) templ.Component {
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var15 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var15 == nil {
-			templ_7745c5c3_Var15 = templ.NopComponent
+		templ_7745c5c3_Var17 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var17 == nil {
+			templ_7745c5c3_Var17 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		if active {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<a href=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var16 templ.SafeURL
-			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 31}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "\" class=\"tab tab-active text-base font-semibold\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var17 string
-			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(label)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 88}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "</a>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<a href=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var18 templ.SafeURL
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 31}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 31}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"tab text-base\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" class=\"tab tab-active text-base font-semibold\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 256, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "<a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var20 templ.SafeURL
+			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(href))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 31}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "\" class=\"tab text-base\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var21 string
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(label)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/layout.templ`, Line: 258, Col: 63}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
