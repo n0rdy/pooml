@@ -224,7 +224,7 @@ templ LogDetailRow(d LogDetail) {
 	<tr class="detail-row bg-base-300/40">
 		<td colspan="4" class="p-3">
 			<div class="flex flex-col gap-2 text-sm font-mono">
-				<div class="flex gap-4 opacity-80 flex-wrap">
+				<div class="flex gap-x-4 gap-y-1 flex-wrap">
 					@logDetailMeta(d)
 					<span class="js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100">✕ close</span>
 				</div>
@@ -239,7 +239,7 @@ templ LogDetailRow(d LogDetail) {
 templ LogDetailBlock(d LogDetail) {
 	<div class="stream-detail bg-base-300/40 rounded-field p-3 my-1">
 		<div class="flex flex-col gap-2 text-sm font-mono">
-			<div class="flex gap-4 opacity-80 flex-wrap">
+			<div class="flex gap-x-4 gap-y-1 flex-wrap">
 				@logDetailMeta(d)
 				<span class="js-close-detail cursor-pointer ml-auto opacity-60 hover:opacity-100">✕ close</span>
 			</div>
@@ -248,11 +248,19 @@ templ LogDetailBlock(d LogDetail) {
 	</div>
 }
 
+// labeled label/value pairs: the old one-liner ("id 105 event ... retrek-api
+// on apps-server") gave no visual anchor and never said which part was the
+// host. One notch of muting on labels, weight on values, nothing stacked.
 templ logDetailMeta(d LogDetail) {
-	<span>id { rowID(d.ID) }</span>
-	<span>event <span data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
-	<span>ingested <span data-ts={ msString(d.IngestedAt) } data-ts-full>{ utcTime(d.IngestedAt) }</span></span>
-	<span>{ d.Service + " on " + d.Host }</span>
+	@metaPair("id", rowID(d.ID))
+	<span class="whitespace-nowrap"><span class="opacity-60">event</span> <span class="font-semibold" data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
+	<span class="whitespace-nowrap"><span class="opacity-60">ingested</span> <span class="font-semibold" data-ts={ msString(d.IngestedAt) } data-ts-full>{ utcTime(d.IngestedAt) }</span></span>
+	@metaPair("service", d.Service)
+	@metaPair("host", d.Host)
+}
+
+templ metaPair(label string, value string) {
+	<span class="whitespace-nowrap"><span class="opacity-60">{ label }</span> <span class="font-semibold">{ value }</span></span>
 }
 
 templ logDetailPayload(d LogDetail) {
@@ -274,7 +282,7 @@ templ LogDetailPage(d LogDetail, csrfToken string) {
 			<div class="card bg-base-100">
 				<div class="card-body py-4">
 					<div class="flex flex-col gap-2 text-sm font-mono">
-						<div class="flex gap-4 opacity-80 flex-wrap">
+						<div class="flex gap-x-4 gap-y-1 flex-wrap">
 							@logDetailMeta(d)
 						</div>
 						@logDetailPayload(d)
@@ -644,10 +652,23 @@ templ logsScript() {
 			startLive();
 		}
 
+		// live is URL state (triage links already open ?live=1): keep the
+		// param in sync so refresh restores the stream. replaceState, not
+		// push - toggling must not mint history entries.
+		function syncLiveURL() {
+			const u = new URL(location);
+			if (liveWanted) u.searchParams.set("live", "1");
+			else u.searchParams.delete("live");
+			history.replaceState(history.state, "", u);
+		}
+		// query runs push URLs built from form fields, which drop live=1
+		document.body.addEventListener("htmx:pushedIntoHistory", syncLiveURL);
+
 		liveToggle.addEventListener("change", () => {
 			liveWanted = liveToggle.checked;
 			showResume(false);
 			if (liveWanted) { startLive(); anchorBottom(); } else { stopLive(); }
+			syncLiveURL();
 		});
 
 		// scroll-up stops the stream outright - toggle off, honest state;
