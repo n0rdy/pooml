@@ -124,7 +124,8 @@ jobs:
         # must be glibc too - alpine/musl would not run them
         cat > Dockerfile.multiarch << 'EOF'
         FROM debian:bookworm-slim
-        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates \
+        # curl: container healthchecks need a probe binary in the image
+        RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl \
             && rm -rf /var/lib/apt/lists/* \
             && groupadd -g 1001 pooml && useradd -u 1001 -g pooml -m pooml \
             && mkdir -p /data && chown pooml:pooml /data

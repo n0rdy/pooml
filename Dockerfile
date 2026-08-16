@@ -15,7 +15,7 @@ RUN CGO_ENABLED=1 go build -tags sqlite_fts5 -ldflags="-s -w" -o /pooml .
 # binary, so the image is just the binary plus TLS roots.
 FROM alpine:latest
 
-RUN apk add --no-cache ca-certificates && \
+RUN apk add --no-cache ca-certificates curl && \
     addgroup -g 1001 -S pooml && \
     adduser -u 1001 -S pooml -G pooml && \
     mkdir -p /data && chown pooml:pooml /data

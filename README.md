@@ -63,6 +63,11 @@ services:
       - "8081:8081"
     volumes:
       - ./pooml-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 ```
 
 `docker compose up -d`, and the same two ports apply. This is also the shape platforms like Coolify accept as a one-service compose deployment.
