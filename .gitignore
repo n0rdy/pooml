@@ -9,13 +9,10 @@ ROADMAP.md
 
 test_data_large.sql
 
-# Hugo build outputs
-site/public/
-docs/public/
-site/resources/_gen/
-docs/resources/_gen/
-site/hugo_stats.json
-docs/hugo_stats.json
+# Astro build outputs live in site/dist and site/node_modules,
+# covered by site/.gitignore. site/public/ is SOURCE (static assets,
+# CNAME) and must be committed - the Hugo convention from forq, where
+# public/ is output, does not apply here.
 .hugo_build.lock
 
 # Node.js dependencies  
