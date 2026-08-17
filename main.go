@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,6 +31,37 @@ const (
 	minSecretLength = 32
 )
 
+// version is stamped by the release build (-X main.version=vX.Y.Z); source
+// builds fall back to the VCS revision when the checkout carries one. One
+// glance at the boot log answers "which build is this actually running?".
+var version = "dev"
+
+func resolveVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok {
+		rev, dirty := "", ""
+		for _, kv := range bi.Settings {
+			switch kv.Key {
+			case "vcs.revision":
+				rev = kv.Value
+			case "vcs.modified":
+				if kv.Value == "true" {
+					dirty = "+dirty"
+				}
+			}
+		}
+		if rev != "" {
+			if len(rev) > 12 {
+				rev = rev[:12]
+			}
+			return "dev (" + rev + dirty + ")"
+		}
+	}
+	return version
+}
+
 func main() {
 	env := getEnv()
 	setupLogging(env)
@@ -42,6 +74,7 @@ func main() {
 	shutdownTimeout := getShutdownTimeout()
 
 	log.Info().
+		Str("version", resolveVersion()).
 		Str("env", env).
 		Str("api_addr", apiAddr).
 		Str("ui_addr", uiAddr).

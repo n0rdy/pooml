@@ -83,21 +83,35 @@ func (ar *Router) NewRouter() *chi.Mux {
 				promhttp.HandlerFor(services.PromRegistry, promhttp.HandlerOpts{}))
 	}
 
+	// Auth is scoped PER ROUTE (r.With), not per subtree (r.Use): subtree
+	// middleware runs before route matching concludes, so an unmatched path
+	// under /api/v1 would 401 instead of 404 - which reads as "wrong
+	// credentials" when the truth is "this build has no such endpoint"
+	// (a diagnosis that cost real time once). The endpoint-enumeration
+	// argument for blanket 401s does not apply: the route map is public in
+	// openapi.yaml.
 	// read-only SQL over HTTP; own secret, absent unless enabled
 	if ar.queryAPI.Secret != "" {
 		router.Route("/api/v1/query", func(r chi.Router) {
-			r.Use(secretAuth(ar.queryAPI.Secret, ar.throttlingService, ar.trustProxyHeaders))
-			r.Post("/logs", ar.queryLogs)
-			r.Post("/metrics", ar.queryMetrics)
-			r.Get("/catalog", ar.queryCatalog)
+			auth := secretAuth(ar.queryAPI.Secret, ar.throttlingService, ar.trustProxyHeaders)
+			r.With(auth).Post("/logs", ar.queryLogs)
+			r.With(auth).Post("/metrics", ar.queryMetrics)
+			r.With(auth).Get("/catalog", ar.queryCatalog)
 		})
 	}
 
 	router.Route("/api/v1", func(r chi.Router) {
-		r.Use(apiKeyTokenAuth(ar.apiKeysService, ar.throttlingService, ar.trustProxyHeaders))
+		auth := apiKeyTokenAuth(ar.apiKeysService, ar.throttlingService, ar.trustProxyHeaders)
+		r.With(auth).Post("/ingest/{service}/{host}", ar.ingestLogs)
+		r.With(auth).Post("/otlp/v1/metrics", ar.otlpMetrics)
+	})
 
-		r.Post("/ingest/{service}/{host}", ar.ingestLogs)
-		r.Post("/otlp/v1/metrics", ar.otlpMetrics)
+	// JSON 404/405 for API consistency (chi defaults to text/plain)
+	router.NotFound(func(w http.ResponseWriter, req *http.Request) {
+		ar.sendErrorResponse(w, http.StatusNotFound, common.ErrCodeNotFound)
+	})
+	router.MethodNotAllowed(func(w http.ResponseWriter, req *http.Request) {
+		ar.sendErrorResponse(w, http.StatusMethodNotAllowed, common.ErrCodeNotFound)
 	})
 
 	return router

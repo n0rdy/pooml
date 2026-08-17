@@ -131,7 +131,25 @@ func TestQueryAPIDisabled(t *testing.T) {
 	)
 	srv := httptest.NewServer(router.NewRouter())
 	defer srv.Close()
-	if code, _ := postQuery(t, srv, "/api/v1/query/logs", queryTestSecret, `{"sql":"SELECT 1 FROM logs"}`); code != http.StatusNotFound && code != http.StatusUnauthorized {
-		t.Fatalf("disabled query API = %d, want 404/401", code)
+	// strictly 404 now: auth is scoped per route, so a missing endpoint says
+	// "not found" instead of masquerading as a credentials problem
+	if code, body := postQuery(t, srv, "/api/v1/query/logs", queryTestSecret, `{"sql":"SELECT 1 FROM logs"}`); code != http.StatusNotFound || !strings.Contains(body, "not_found") {
+		t.Fatalf("disabled query API = %d, want 404 not_found", code)
+	}
+}
+
+func TestUnmatchedAPIPathIs404NotAuthError(t *testing.T) {
+	_, srv, _ := setup(t)
+	// no credentials at all: an unknown path must NOT answer 401 - that reads
+	// as "wrong secret" when the truth is "no such endpoint in this build"
+	for _, path := range []string{"/api/v1/nonexistent", "/api/v1/query/nonexistent"} {
+		code, body := postQuery(t, srv, path, "", `{}`)
+		if code != http.StatusNotFound || !strings.Contains(body, "not_found") {
+			t.Errorf("%s = %d %q, want 404 not_found", path, code, body)
+		}
+	}
+	// while a real route without credentials still 401s
+	if code, _ := postQuery(t, srv, "/api/v1/query/logs", "", `{"sql":"SELECT 1 FROM logs"}`); code != http.StatusUnauthorized {
+		t.Errorf("real route without creds = %d, want 401", code)
 	}
 }

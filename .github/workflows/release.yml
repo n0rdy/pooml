@@ -31,7 +31,7 @@ jobs:
     - name: Build AMD64 binary
       run: |
         CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags sqlite_fts5 \
-          -ldflags="-s -w" \
+          -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
           -o pooml-linux-amd64 .
 
     - name: Create AMD64 archive
@@ -65,7 +65,7 @@ jobs:
     - name: Build ARM64 binary
       run: |
         CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -tags sqlite_fts5 \
-          -ldflags="-s -w" \
+          -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
           -o pooml-linux-arm64 .
 
     - name: Create ARM64 archive
