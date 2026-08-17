@@ -127,7 +127,8 @@ func main() {
 	defer sseCancel()
 
 	// Routers
-	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders, metricsSecret)
+	queryAPI := api.QueryAPI{Secret: getQueryAPISecret(), LogsRead: pools.LogsRead, Metrics: pools.Metrics}
+	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders, metricsSecret, queryAPI)
 	uiRouter := ui.NewRouter(ui.Deps{
 		Sessions:          sessionsService,
 		Throttling:        throttlingService,
@@ -449,6 +450,31 @@ func getMetricsConfigs() (bool, string) {
 		log.Fatal().Msgf("POOML_METRICS_AUTH_SECRET is too short: must be at least %d characters", minSecretLength)
 	}
 	return true, secret
+}
+
+// getQueryAPISecret mirrors the metrics pattern: the read-only query API is
+// off by default and requires its own env secret - never an ingest API key,
+// so a leaked ingest key grants no read access to log data.
+func getQueryAPISecret() string {
+	v := os.Getenv("POOML_QUERY_API_ENABLED")
+	if v == "" {
+		return ""
+	}
+	enabled, err := strconv.ParseBool(v)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to parse POOML_QUERY_API_ENABLED")
+	}
+	if !enabled {
+		return ""
+	}
+	secret := os.Getenv("POOML_QUERY_AUTH_SECRET")
+	if secret == "" {
+		log.Fatal().Msg("POOML_QUERY_AUTH_SECRET is required when POOML_QUERY_API_ENABLED=true")
+	}
+	if len(secret) < minSecretLength {
+		log.Fatal().Msgf("POOML_QUERY_AUTH_SECRET is too short: must be at least %d characters", minSecretLength)
+	}
+	return secret
 }
 
 func getShutdownTimeout() time.Duration {

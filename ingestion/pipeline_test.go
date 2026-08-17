@@ -46,7 +46,7 @@ func setup(t *testing.T) (*db.Pools, *ingestion.Pipeline, *ingestion.Broadcaster
 	router := api.NewRouter(
 		services.NewMonitoringService(pools),
 		services.NewThrottlingService(),
-		apiKeys, pipeline, metricsPipeline, "local", false, "",
+		apiKeys, pipeline, metricsPipeline, "local", false, "", api.QueryAPI{},
 	)
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)

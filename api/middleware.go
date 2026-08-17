@@ -55,9 +55,10 @@ func apiKeyTokenAuth(keys apiKeyVerifier, throttlingService *services.Throttling
 	}
 }
 
-// metricsSecretAuth guards /metrics: one env-provided secret (not a UI-minted
-// API key) in X-API-Key, constant-time compared. Same throttling as the API.
-func metricsSecretAuth(secret string, throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
+// secretAuth guards env-secret surfaces (/metrics, the query API): one
+// env-provided secret (never a UI-minted API key) in X-API-Key, length-safe
+// constant-time compared. Same throttling as the rest of the API.
+func secretAuth(secret string, throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			ip := utils.ClientIP(req, trustProxyHeaders)

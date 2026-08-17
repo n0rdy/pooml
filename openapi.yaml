@@ -19,6 +19,8 @@ tags:
     description: Health checks and self-observability
   - name: Ingestion
     description: Log and metric ingestion
+  - name: Query
+    description: Read-only SQL over HTTP (opt-in)
 
 paths:
 
@@ -64,6 +66,108 @@ paths:
             text/plain:
               schema:
                 type: string
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/query/logs:
+    post:
+      tags:
+        - Query
+      summary: Run a read-only SQL query over logs
+      description: |
+        SQL over the logs tables (logs, logs_fts), validated through the same
+        layered validator as the UI: SELECT-only shapes, table allow-list,
+        read-only connection, 10s timeout. Registered only when
+        POOML_QUERY_API_ENABLED=true; authenticated with
+        POOML_QUERY_AUTH_SECRET (a dedicated env secret - ingest API keys do
+        not work here). Responses are budgeted for programmatic consumers:
+        max_rows defaults to 200 (cap 1000) and long cells are truncated.
+      operationId: queryLogs
+      security:
+        - QuerySecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        200:
+          description: Query result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+        400:
+          description: Invalid SQL, blocked by validation, or execution error (message carries detail)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/query/metrics:
+    post:
+      tags:
+        - Query
+      summary: Run a read-only SQL query over metrics
+      description: Same contract as /api/v1/query/logs, scoped to the metrics table.
+      operationId: queryMetrics
+      security:
+        - QuerySecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueryRequest'
+      responses:
+        200:
+          description: Query result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueryResult'
+        400:
+          description: Invalid SQL, blocked by validation, or execution error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        429:
+          $ref: '#/components/responses/TooManyRequests'
+
+  /api/v1/query/catalog:
+    get:
+      tags:
+        - Query
+      summary: List known metrics
+      description: Metric names with type (counter/gauge), service, datapoint count, and last-seen timestamp.
+      operationId: queryCatalog
+      security:
+        - QuerySecret: []
+      responses:
+        200:
+          description: Catalog rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name: { type: string }
+                    type: { type: string, enum: [counter, gauge] }
+                    service: { type: string }
+                    points: { type: integer }
+                    last_seen_ms: { type: integer, format: int64 }
         401:
           $ref: '#/components/responses/Unauthorized'
         429:
@@ -190,6 +294,11 @@ components:
       in: header
       name: X-API-Key
       description: The POOML_METRICS_AUTH_SECRET value from the environment.
+    QuerySecret:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: The POOML_QUERY_AUTH_SECRET value from the environment.
 
   responses:
     Unauthorized:
@@ -206,6 +315,32 @@ components:
             $ref: '#/components/schemas/Error'
 
   schemas:
+    QueryRequest:
+      type: object
+      required:
+        - sql
+      properties:
+        sql:
+          type: string
+          description: A SELECT statement. Timestamps are ms since epoch; log levels are 0=trace..5=fatal.
+        max_rows:
+          type: integer
+          description: Row cap for this response (default 200, max 1000).
+    QueryResult:
+      type: object
+      properties:
+        columns:
+          type: array
+          items: { type: string }
+        rows:
+          type: array
+          items:
+            type: array
+            items: {}
+        row_count: { type: integer }
+        truncated:
+          type: boolean
+          description: True when the row cap or the server-side scan cap cut the result; refine the query.
     Error:
       type: object
       required:
@@ -213,6 +348,9 @@ components:
       properties:
         code:
           type: string
+        message:
+          type: string
+          description: Actionable detail (e.g. the SQL validation error), when available.
           enum:
             - unauthorized
             - too_many_requests

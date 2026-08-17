@@ -38,6 +38,7 @@ type Router struct {
 	env               string
 	trustProxyHeaders bool
 	metricsSecret     string
+	queryAPI          QueryAPI
 
 	downcastWarned sync.Map // metric name -> struct{}; once-per-name OTLP downcast warning
 }
@@ -51,6 +52,7 @@ func NewRouter(
 	env string,
 	trustProxyHeaders bool,
 	metricsSecret string, // empty = /metrics disabled
+	queryAPI QueryAPI,
 ) *Router {
 	return &Router{
 		monitoringService: monitoringService,
@@ -61,6 +63,7 @@ func NewRouter(
 		env:               env,
 		trustProxyHeaders: trustProxyHeaders,
 		metricsSecret:     metricsSecret,
+		queryAPI:          queryAPI,
 	}
 }
 
@@ -75,9 +78,19 @@ func (ar *Router) NewRouter() *chi.Mux {
 	router.Get("/healthcheck", ar.healthcheck)
 
 	if ar.metricsSecret != "" {
-		router.With(metricsSecretAuth(ar.metricsSecret, ar.throttlingService, ar.trustProxyHeaders)).
+		router.With(secretAuth(ar.metricsSecret, ar.throttlingService, ar.trustProxyHeaders)).
 			Method(http.MethodGet, "/metrics",
 				promhttp.HandlerFor(services.PromRegistry, promhttp.HandlerOpts{}))
+	}
+
+	// read-only SQL over HTTP; own secret, absent unless enabled
+	if ar.queryAPI.Secret != "" {
+		router.Route("/api/v1/query", func(r chi.Router) {
+			r.Use(secretAuth(ar.queryAPI.Secret, ar.throttlingService, ar.trustProxyHeaders))
+			r.Post("/logs", ar.queryLogs)
+			r.Post("/metrics", ar.queryMetrics)
+			r.Get("/catalog", ar.queryCatalog)
+		})
 	}
 
 	router.Route("/api/v1", func(r chi.Router) {

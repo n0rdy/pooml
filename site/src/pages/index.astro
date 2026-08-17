@@ -38,6 +38,8 @@ const envVars = [
   ['POOML_TRUST_PROXY_HEADERS', 'false', 'Read client IPs from X-Forwarded-For. Only behind a proxy that overwrites it.'],
   ['POOML_METRICS_ENABLED', 'false', "Expose pooml's own Prometheus metrics + self-scrape."],
   ['POOML_METRICS_AUTH_SECRET', '-', 'Required when metrics are enabled, min 32 chars.'],
+  ['POOML_QUERY_API_ENABLED', 'false', 'Read-only SQL query API at /api/v1/query/*.'],
+  ['POOML_QUERY_AUTH_SECRET', '-', 'Required when the query API is enabled, min 32 chars.'],
   ['POOML_SHUTDOWN_TIMEOUT_SECONDS', '30', 'Hard deadline for graceful shutdown.'],
 ];
 ---

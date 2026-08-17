@@ -114,6 +114,8 @@ All configuration is via environment variables. Required variables fail fast at 
 | `POOML_TRUST_PROXY_HEADERS`      | `false`          | Derive client IP from `X-Forwarded-For` for throttling. Enable ONLY behind a reverse proxy that overrides the header, otherwise IPs are spoofable.   |
 | `POOML_METRICS_ENABLED`          | `false`          | Expose pooml's own Prometheus metrics at `:8080/metrics` and register a self-scrape target.                                                          |
 | `POOML_METRICS_AUTH_SECRET`      | -                | Required when metrics are enabled, min 32 chars. Sent as `X-API-Key` by scrapers.                                                                    |
+| `POOML_QUERY_API_ENABLED`        | `false`          | Expose the read-only SQL query API at `/api/v1/query/*`.                                                                                             |
+| `POOML_QUERY_AUTH_SECRET`        | -                | Required when the query API is enabled, min 32 chars. Sent as `X-API-Key`. Deliberately separate from ingest keys.                                   |
 | `POOML_SHUTDOWN_TIMEOUT_SECONDS` | `30`             | Hard deadline for graceful shutdown.                                                                                                                 |
 
 ## Shipping logs
@@ -151,6 +153,18 @@ Pooml stores exactly two metric types: **counters** and **gauges**. Everything r
 **Pull (Prometheus scrape)**: add scrape targets in Settings - URL, interval, optional auth header. Pooml scrapes them and normalizes the samples into `metrics.db`.
 
 The full HTTP API is documented in [openapi.yaml](./openapi.yaml).
+
+## Query API (SQL over HTTP)
+
+Opt-in, off by default: set `POOML_QUERY_API_ENABLED=true` and `POOML_QUERY_AUTH_SECRET` (its own secret - a leaked ingest key grants no read access). Then:
+
+```bash
+curl -X POST "http://your-pooml-host:8080/api/v1/query/logs" \
+  -H "X-API-Key: $QUERY_SECRET" -H "Content-Type: application/json" \
+  -d '{"sql": "SELECT service, COUNT(*) AS errors FROM logs WHERE level >= 4 GROUP BY service ORDER BY errors DESC"}'
+```
+
+`/api/v1/query/logs`, `/api/v1/query/metrics` (same layered SQL validation as the UI: SELECT-only, allow-listed tables, read-only connection, timeouts), and `GET /api/v1/query/catalog` for what metrics exist. Responses default to 200 rows (`max_rows` up to 1000) with long cells truncated - budgets sized for scripts and AI assistants. Details in [openapi.yaml](./openapi.yaml).
 
 ## Retention
 
