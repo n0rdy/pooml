@@ -127,6 +127,11 @@ const envVars = [
           never leaving your machine. Ask <em>"what broke last night?"</em>
           and the model writes the query.
         </p>
+        <p>
+          Off by default: enable the query API on your pooml server first
+          (<code>POOML_QUERY_API_ENABLED=true</code> plus its own <code>POOML_QUERY_AUTH_SECRET</code>),
+          then on your machine:
+        </p>
         <div class="code-block">
           <pre><code>{`claude mcp add pooml \
   -e POOML_URL=https://your-pooml-host:8080 \
