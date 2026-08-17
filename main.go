@@ -467,12 +467,12 @@ func getQueryAPISecret() string {
 	if !enabled {
 		return ""
 	}
-	secret := os.Getenv("POOML_QUERY_AUTH_SECRET")
+	secret := os.Getenv("POOML_QUERY_API_AUTH_SECRET")
 	if secret == "" {
-		log.Fatal().Msg("POOML_QUERY_AUTH_SECRET is required when POOML_QUERY_API_ENABLED=true")
+		log.Fatal().Msg("POOML_QUERY_API_AUTH_SECRET is required when POOML_QUERY_API_ENABLED=true")
 	}
 	if len(secret) < minSecretLength {
-		log.Fatal().Msgf("POOML_QUERY_AUTH_SECRET is too short: must be at least %d characters", minSecretLength)
+		log.Fatal().Msgf("POOML_QUERY_API_AUTH_SECRET is too short: must be at least %d characters", minSecretLength)
 	}
 	return secret
 }

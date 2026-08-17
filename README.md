@@ -116,7 +116,7 @@ All configuration is via environment variables. Required variables fail fast at 
 | `POOML_METRICS_ENABLED`          | `false`          | Expose pooml's own Prometheus metrics at `:8080/metrics` and register a self-scrape target.                                                          |
 | `POOML_METRICS_AUTH_SECRET`      | -                | Required when metrics are enabled, min 32 chars. Sent as `X-API-Key` by scrapers.                                                                    |
 | `POOML_QUERY_API_ENABLED`        | `false`          | Expose the read-only SQL query API at `/api/v1/query/*`.                                                                                             |
-| `POOML_QUERY_AUTH_SECRET`        | -                | Required when the query API is enabled, min 32 chars. Sent as `X-API-Key`. Deliberately separate from ingest keys.                                   |
+| `POOML_QUERY_API_AUTH_SECRET`        | -                | Required when the query API is enabled, min 32 chars. Sent as `X-API-Key`. Deliberately separate from ingest keys.                                   |
 | `POOML_SHUTDOWN_TIMEOUT_SECONDS` | `30`             | Hard deadline for graceful shutdown.                                                                                                                 |
 
 ## Shipping logs
@@ -157,7 +157,7 @@ The full HTTP API is documented in [openapi.yaml](./openapi.yaml).
 
 ## Query API (SQL over HTTP)
 
-Opt-in, off by default: set `POOML_QUERY_API_ENABLED=true` and `POOML_QUERY_AUTH_SECRET` (its own secret - a leaked ingest key grants no read access). Then:
+Opt-in, off by default: set `POOML_QUERY_API_ENABLED=true` and `POOML_QUERY_API_AUTH_SECRET` (its own secret - a leaked ingest key grants no read access). Then:
 
 ```bash
 curl -X POST "http://your-pooml-host:8080/api/v1/query/logs" \
@@ -175,7 +175,7 @@ It rides on the query API, which is **disabled by default** - enable it on the p
 
 ```
 POOML_QUERY_API_ENABLED=true
-POOML_QUERY_AUTH_SECRET=<min 32 chars, its own secret - not an ingest API key>
+POOML_QUERY_API_AUTH_SECRET=<min 32 chars, its own secret - not an ingest API key>
 ```
 
 Then, on the machine where your MCP client runs:
@@ -183,7 +183,7 @@ Then, on the machine where your MCP client runs:
 ```bash
 claude mcp add pooml \
   -e POOML_URL=https://your-pooml-host:8080 \
-  -e POOML_QUERY_AUTH_SECRET=your-query-secret \
+  -e POOML_QUERY_API_AUTH_SECRET=your-query-secret \
   -- npx -y @pooml/mcp
 ```
 

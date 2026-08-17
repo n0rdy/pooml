@@ -39,7 +39,7 @@ const envVars = [
   ['POOML_METRICS_ENABLED', 'false', "Expose pooml's own Prometheus metrics + self-scrape."],
   ['POOML_METRICS_AUTH_SECRET', '-', 'Required when metrics are enabled, min 32 chars.'],
   ['POOML_QUERY_API_ENABLED', 'false', 'Read-only SQL query API at /api/v1/query/*.'],
-  ['POOML_QUERY_AUTH_SECRET', '-', 'Required when the query API is enabled, min 32 chars.'],
+  ['POOML_QUERY_API_AUTH_SECRET', '-', 'Required when the query API is enabled, min 32 chars.'],
   ['POOML_SHUTDOWN_TIMEOUT_SECONDS', '30', 'Hard deadline for graceful shutdown.'],
 ];
 ---
@@ -129,15 +129,15 @@ const envVars = [
         </p>
         <p>
           Off by default: enable the query API on your pooml server first
-          (<code>POOML_QUERY_API_ENABLED=true</code> plus its own <code>POOML_QUERY_AUTH_SECRET</code>),
+          (<code>POOML_QUERY_API_ENABLED=true</code> plus its own <code>POOML_QUERY_API_AUTH_SECRET</code>),
           then on your machine:
         </p>
         <div class="code-block">
           <pre><code>{`claude mcp add pooml \
   -e POOML_URL=https://your-pooml-host:8080 \
-  -e POOML_QUERY_AUTH_SECRET=your-query-secret \
+  -e POOML_QUERY_API_AUTH_SECRET=your-query-secret \
   -- npx -y @pooml/mcp`}</code></pre>
-          <button class="copy" data-copy={`claude mcp add pooml -e POOML_URL=https://your-pooml-host:8080 -e POOML_QUERY_AUTH_SECRET=your-query-secret -- npx -y @pooml/mcp`}>copy</button>
+          <button class="copy" data-copy={`claude mcp add pooml -e POOML_URL=https://your-pooml-host:8080 -e POOML_QUERY_API_AUTH_SECRET=your-query-secret -- npx -y @pooml/mcp`}>copy</button>
         </div>
       </section>
 

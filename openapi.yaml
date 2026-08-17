@@ -81,7 +81,7 @@ paths:
         layered validator as the UI: SELECT-only shapes, table allow-list,
         read-only connection, 10s timeout. Registered only when
         POOML_QUERY_API_ENABLED=true; authenticated with
-        POOML_QUERY_AUTH_SECRET (a dedicated env secret - ingest API keys do
+        POOML_QUERY_API_AUTH_SECRET (a dedicated env secret - ingest API keys do
         not work here). Responses are budgeted for programmatic consumers:
         max_rows defaults to 200 (cap 1000) and long cells are truncated.
       operationId: queryLogs
@@ -298,7 +298,7 @@ components:
       type: apiKey
       in: header
       name: X-API-Key
-      description: The POOML_QUERY_AUTH_SECRET value from the environment.
+      description: The POOML_QUERY_API_AUTH_SECRET value from the environment.
 
   responses:
     Unauthorized:
