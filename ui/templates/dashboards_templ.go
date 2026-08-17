@@ -48,6 +48,9 @@ type ChartDataset struct {
 	// nullable: a null point renders as a gap in the line (Chart.js default
 	// spanGaps=false) - "no sample" for gauges is unknown, never zero
 	Data []*float64 `json:"data"`
+	// overrides the palette slot; semantic series (error counts) stay red
+	// regardless of dataset order
+	Color string `json:"color,omitempty"`
 }
 
 func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToken string) templ.Component {
@@ -95,7 +98,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 52, Col: 66}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 55, Col: 66}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -124,7 +127,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 					var templ_7745c5c3_Var4 templ.SafeURL
 					templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/dashboards/%d", d.ID)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 63, Col: 69}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 66, Col: 69}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 					if templ_7745c5c3_Err != nil {
@@ -137,7 +140,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 					var templ_7745c5c3_Var5 string
 					templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 64, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 67, Col: 46}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 					if templ_7745c5c3_Err != nil {
@@ -159,7 +162,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 						var templ_7745c5c3_Var6 string
 						templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(d.Description)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 67, Col: 84}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 70, Col: 84}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 						if templ_7745c5c3_Err != nil {
@@ -187,7 +190,7 @@ func DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToke
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 75, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 78, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 			if templ_7745c5c3_Err != nil {
@@ -247,7 +250,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 105, Col: 14}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 108, Col: 14}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -269,7 +272,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []
 				var templ_7745c5c3_Var11 string
 				templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(d.Description)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 109, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 112, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 				if templ_7745c5c3_Err != nil {
@@ -287,7 +290,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d", d.ID))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 116, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 119, Col: 53}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 			if templ_7745c5c3_Err != nil {
@@ -300,7 +303,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete dashboard %q and all its panels?", d.Name))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 117, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 120, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 			if templ_7745c5c3_Err != nil {
@@ -318,7 +321,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []
 				var templ_7745c5c3_Var14 string
 				templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 122, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 125, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 				if templ_7745c5c3_Err != nil {
@@ -340,7 +343,7 @@ func DashboardPage(d services.Dashboard, panels []services.Panel, metricNames []
 			var templ_7745c5c3_Var15 templ.SafeURL
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(fmt.Sprintf("/dashboards/%d/panels", d.ID)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 128, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 131, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -483,7 +486,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("panel-card-%d", p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 162, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 165, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var19)
 		if templ_7745c5c3_Err != nil {
@@ -509,7 +512,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 165, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 168, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 		if templ_7745c5c3_Err != nil {
@@ -522,7 +525,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(p.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 165, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 168, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -535,7 +538,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?edit=1", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 169, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 172, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var23)
 		if templ_7745c5c3_Err != nil {
@@ -548,7 +551,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 175, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 178, Col: 78}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var24)
 		if templ_7745c5c3_Err != nil {
@@ -561,7 +564,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete panel %q?", p.Title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 178, Col: 59}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 181, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var25)
 		if templ_7745c5c3_Err != nil {
@@ -574,7 +577,7 @@ func PanelCard(p services.Panel, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 183, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 186, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var26)
 		if templ_7745c5c3_Err != nil {
@@ -663,7 +666,7 @@ func streamPanel(rows []LogRow) templ.Component {
 				var templ_7745c5c3_Var29 string
 				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprint(r.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 208, Col: 147}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 147}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
 				if templ_7745c5c3_Err != nil {
@@ -676,7 +679,7 @@ func streamPanel(rows []LogRow) templ.Component {
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(r.Ts))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 209, Col: 90}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 212, Col: 90}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
 				if templ_7745c5c3_Err != nil {
@@ -689,7 +692,7 @@ func streamPanel(rows []LogRow) templ.Component {
 				var templ_7745c5c3_Var31 string
 				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(r.Ts))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 209, Col: 108}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 212, Col: 108}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 				if templ_7745c5c3_Err != nil {
@@ -724,7 +727,7 @@ func streamPanel(rows []LogRow) templ.Component {
 				var templ_7745c5c3_Var34 string
 				templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(levelName(r.Level))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 210, Col: 61}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 213, Col: 61}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 				if templ_7745c5c3_Err != nil {
@@ -737,7 +740,7 @@ func streamPanel(rows []LogRow) templ.Component {
 				var templ_7745c5c3_Var35 string
 				templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.ResolveAttributeValue(r.Message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 214, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var35)
 				if templ_7745c5c3_Err != nil {
@@ -750,7 +753,7 @@ func streamPanel(rows []LogRow) templ.Component {
 				var templ_7745c5c3_Var36 string
 				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(r.Message)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 211, Col: 85}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 214, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 				if templ_7745c5c3_Err != nil {
@@ -801,7 +804,7 @@ func Shaped(s ShapedResult) templ.Component {
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(s.ErrMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 222, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 225, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -824,7 +827,7 @@ func Shaped(s ShapedResult) templ.Component {
 			var templ_7745c5c3_Var39 string
 			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(s.Stat)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 227, Col: 55}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 230, Col: 55}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 			if templ_7745c5c3_Err != nil {
@@ -847,7 +850,7 @@ func Shaped(s ShapedResult) templ.Component {
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.ChartID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 233, Col: 34}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 236, Col: 34}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
 			if templ_7745c5c3_Err != nil {
@@ -917,7 +920,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 			var templ_7745c5c3_Var44 string
 			templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(c)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 245, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 248, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 			if templ_7745c5c3_Err != nil {
@@ -945,7 +948,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 				var templ_7745c5c3_Var45 string
 				templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.ResolveAttributeValue(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 253, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 256, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var45)
 				if templ_7745c5c3_Err != nil {
@@ -958,7 +961,7 @@ func shapedTable(s ShapedResult, heightClass string) templ.Component {
 				var templ_7745c5c3_Var46 string
 				templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(cell)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 253, Col: 58}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 256, Col: 58}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 				if templ_7745c5c3_Err != nil {
@@ -1034,7 +1037,7 @@ func PanelEditCard(p services.Panel, dashboardType string, errMsg string, csrfTo
 			var templ_7745c5c3_Var50 string
 			templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 267, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 270, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 			if templ_7745c5c3_Err != nil {
@@ -1052,7 +1055,7 @@ func PanelEditCard(p services.Panel, dashboardType string, errMsg string, csrfTo
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 270, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 273, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var51)
 		if templ_7745c5c3_Err != nil {
@@ -1073,7 +1076,7 @@ func PanelEditCard(p services.Panel, dashboardType string, errMsg string, csrfTo
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/dashboards/%d/panels/%d?card=1", p.DashboardID, p.ID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 281, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 284, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var52)
 		if templ_7745c5c3_Err != nil {
@@ -1115,7 +1118,7 @@ func panelFormFields(p services.Panel, dashboardType string, csrfToken string) t
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 292, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 295, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var54)
 		if templ_7745c5c3_Err != nil {
@@ -1128,7 +1131,7 @@ func panelFormFields(p services.Panel, dashboardType string, csrfToken string) t
 		var templ_7745c5c3_Var55 string
 		templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.ResolveAttributeValue(p.Title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 296, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 299, Col: 50}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var55)
 		if templ_7745c5c3_Err != nil {
@@ -1309,7 +1312,7 @@ func panelFormFields(p services.Panel, dashboardType string, csrfToken string) t
 		var templ_7745c5c3_Var56 string
 		templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(p.Query)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 349, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 352, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 		if templ_7745c5c3_Err != nil {
@@ -1322,7 +1325,7 @@ func panelFormFields(p services.Panel, dashboardType string, csrfToken string) t
 		var templ_7745c5c3_Var57 string
 		templ_7745c5c3_Var57, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(sqlEditorReserve(p.Query))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 352, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 355, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 		if templ_7745c5c3_Err != nil {
@@ -1335,7 +1338,7 @@ func panelFormFields(p services.Panel, dashboardType string, csrfToken string) t
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.ResolveAttributeValue(panelPlaceholder(dashboardType))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 353, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 356, Col: 53}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var58)
 		if templ_7745c5c3_Err != nil {
@@ -1414,13 +1417,13 @@ func chartScripts() templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.GetNonce(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 369, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 372, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var61)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 120, "\">\n\t\t(() => {\n\t\t\tconst PALETTE = [\"#3b82f6\", \"#f59e0b\", \"#10b981\", \"#ef4444\", \"#8b5cf6\", \"#14b8a6\"];\n\t\t\tconst GRID = \"rgba(128,128,128,0.15)\";\n\n\t\t\tfunction fmtLabel(ms, spanMs) {\n\t\t\t\tconst d = new Date(ms);\n\t\t\t\tif (spanMs > 86400000) return d.toLocaleString([], { month: \"short\", day: \"numeric\", hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t\treturn d.toLocaleTimeString([], { hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t}\n\n\t\t\tfunction renderAll(force) {\n\t\t\t\tconst fg = getComputedStyle(document.body).color;\n\t\t\t\tdocument.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst existing = Chart.getChart(c);\n\t\t\t\t\tif (existing) {\n\t\t\t\t\t\tif (!force) return;\n\t\t\t\t\t\texisting.destroy();\n\t\t\t\t\t}\n\t\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + c.dataset.chart);\n\t\t\t\t\tif (!dataEl) return;\n\t\t\t\t\tconst cfg = JSON.parse(dataEl.textContent);\n\t\t\t\t\tlet labels = cfg.labels || [];\n\t\t\t\t\tif (cfg.labelsMs) {\n\t\t\t\t\t\tconst span = cfg.labelsMs.length > 1 ? Math.abs(cfg.labelsMs[cfg.labelsMs.length - 1] - cfg.labelsMs[0]) : 0;\n\t\t\t\t\t\tlabels = cfg.labelsMs.map((ms) => fmtLabel(ms, span));\n\t\t\t\t\t}\n\t\t\t\t\tnew Chart(c, {\n\t\t\t\t\t\ttype: cfg.type,\n\t\t\t\t\t\tdata: {\n\t\t\t\t\t\t\tlabels,\n\t\t\t\t\t\t\tdatasets: cfg.datasets.map((d, i) => ({\n\t\t\t\t\t\t\t\t...d,\n\t\t\t\t\t\t\t\tborderColor: PALETTE[i % PALETTE.length],\n\t\t\t\t\t\t\t\tbackgroundColor: PALETTE[i % PALETTE.length] + (cfg.type === \"bar\" ? \"b3\" : \"33\"),\n\t\t\t\t\t\t\t\tborderWidth: 2,\n\t\t\t\t\t\t\t\tpointRadius: 0,\n\t\t\t\t\t\t\t\ttension: 0.2,\n\t\t\t\t\t\t\t})),\n\t\t\t\t\t\t},\n\t\t\t\t\t\toptions: {\n\t\t\t\t\t\t\tresponsive: true,\n\t\t\t\t\t\t\tmaintainAspectRatio: false,\n\t\t\t\t\t\t\tanimation: false,\n\t\t\t\t\t\t\tplugins: { legend: { display: cfg.datasets.length > 1, labels: { color: fg } } },\n\t\t\t\t\t\t\tscales: {\n\t\t\t\t\t\t\t\tx: { ticks: { color: fg, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: GRID } },\n\t\t\t\t\t\t\t\ty: { ticks: { color: fg }, grid: { color: GRID }, beginAtZero: true },\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t},\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t}\n\n\t\t\t// stream panels carry [data-ts] rows: compact local times, same\n\t\t\t// convention as the log viewer; detail expansions want the full date\n\t\t\tfunction fmtTs() {\n\t\t\t\tdocument.querySelectorAll(\"[data-ts]:not([data-ts-done])\").forEach((el) => {\n\t\t\t\t\tel.dataset.tsDone = \"1\";\n\t\t\t\t\tconst t = new Date(Number(el.dataset.ts));\n\t\t\t\t\tel.textContent = el.hasAttribute(\"data-ts-full\")\n\t\t\t\t\t\t? t.toLocaleString(undefined, { hour12: false })\n\t\t\t\t\t\t: t.toLocaleTimeString(undefined, { hour12: false });\n\t\t\t\t\tel.title = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t});\n\t\t\t}\n\t\t\t// newest at the bottom, pane anchored there - but only when the pane\n\t\t\t// itself (re)loaded, so expanding a row doesn't yank it back down\n\t\t\tfunction anchorStreams(root) {\n\t\t\t\troot.querySelectorAll(\".stream-scroll\").forEach((el) => {\n\t\t\t\t\tel.scrollTop = el.scrollHeight;\n\t\t\t\t});\n\t\t\t}\n\t\t\tfmtTs();\n\t\t\tanchorStreams(document);\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", (e) => {\n\t\t\t\tfmtTs();\n\t\t\t\tconst t = e.detail && e.detail.target;\n\t\t\t\tif (t && t.querySelectorAll) anchorStreams(t);\n\t\t\t});\n\n\t\t\t// stream rows expand in place, same interaction as the log viewer\n\t\t\tdocument.body.addEventListener(\"click\", (e) => {\n\t\t\t\tconst closer = e.target.closest(\".js-close-detail\");\n\t\t\t\tif (closer) { closer.closest(\".stream-detail\")?.remove(); return; }\n\t\t\t\tconst row = e.target.closest(\".stream-row\");\n\t\t\t\tif (!row || !row.dataset.id) return;\n\t\t\t\tconst next = row.nextElementSibling;\n\t\t\t\tif (next && next.classList.contains(\"stream-detail\")) { next.remove(); return; }\n\t\t\t\thtmx.ajax(\"GET\", \"/logs/\" + row.dataset.id + \"?frag=block\", { target: row, swap: \"afterend\" })\n\t\t\t\t\t.then(() => {\n\t\t\t\t\t\tconst d = row.nextElementSibling;\n\t\t\t\t\t\tif (d && d.classList.contains(\"stream-detail\")) d.scrollIntoView({ block: \"nearest\" });\n\t\t\t\t\t});\n\t\t\t});\n\n\t\t\tdocument.body.addEventListener(\"htmx:beforeSwap\", (e) => {\n\t\t\t\tif (!e.detail.target || !e.detail.target.querySelectorAll) return;\n\t\t\t\te.detail.target.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst ch = Chart.getChart(c);\n\t\t\t\t\tif (ch) ch.destroy();\n\t\t\t\t});\n\t\t\t});\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", () => renderAll(false));\n\t\t\tnew MutationObserver(() => renderAll(true))\n\t\t\t\t.observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\t\t\trenderAll(false);\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 120, "\">\n\t\t(() => {\n\t\t\tconst PALETTE = [\"#3b82f6\", \"#f59e0b\", \"#10b981\", \"#ef4444\", \"#8b5cf6\", \"#14b8a6\"];\n\t\t\tconst GRID = \"rgba(128,128,128,0.15)\";\n\n\t\t\tfunction fmtLabel(ms, spanMs) {\n\t\t\t\tconst d = new Date(ms);\n\t\t\t\tif (spanMs > 86400000) return d.toLocaleString([], { month: \"short\", day: \"numeric\", hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t\treturn d.toLocaleTimeString([], { hour: \"2-digit\", minute: \"2-digit\" });\n\t\t\t}\n\n\t\t\tfunction renderAll(force) {\n\t\t\t\tconst fg = getComputedStyle(document.body).color;\n\t\t\t\tdocument.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst existing = Chart.getChart(c);\n\t\t\t\t\tif (existing) {\n\t\t\t\t\t\tif (!force) return;\n\t\t\t\t\t\texisting.destroy();\n\t\t\t\t\t}\n\t\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + c.dataset.chart);\n\t\t\t\t\tif (!dataEl) return;\n\t\t\t\t\tconst cfg = JSON.parse(dataEl.textContent);\n\t\t\t\t\tlet labels = cfg.labels || [];\n\t\t\t\t\tif (cfg.labelsMs) {\n\t\t\t\t\t\tconst span = cfg.labelsMs.length > 1 ? Math.abs(cfg.labelsMs[cfg.labelsMs.length - 1] - cfg.labelsMs[0]) : 0;\n\t\t\t\t\t\tlabels = cfg.labelsMs.map((ms) => fmtLabel(ms, span));\n\t\t\t\t\t}\n\t\t\t\t\tnew Chart(c, {\n\t\t\t\t\t\ttype: cfg.type,\n\t\t\t\t\t\tdata: {\n\t\t\t\t\t\t\tlabels,\n\t\t\t\t\t\t\tdatasets: cfg.datasets.map((d, i) => ({\n\t\t\t\t\t\t\t\t...d,\n\t\t\t\t\t\t\t\tborderColor: d.color || PALETTE[i % PALETTE.length],\n\t\t\t\t\t\t\t\tbackgroundColor: (d.color || PALETTE[i % PALETTE.length]) + (cfg.type === \"bar\" ? \"b3\" : \"33\"),\n\t\t\t\t\t\t\t\tborderWidth: 2,\n\t\t\t\t\t\t\t\tpointRadius: 0,\n\t\t\t\t\t\t\t\ttension: 0.2,\n\t\t\t\t\t\t\t})),\n\t\t\t\t\t\t},\n\t\t\t\t\t\toptions: {\n\t\t\t\t\t\t\tresponsive: true,\n\t\t\t\t\t\t\tmaintainAspectRatio: false,\n\t\t\t\t\t\t\tanimation: false,\n\t\t\t\t\t\t\tplugins: { legend: { display: cfg.datasets.length > 1, labels: { color: fg } } },\n\t\t\t\t\t\t\tscales: {\n\t\t\t\t\t\t\t\tx: { ticks: { color: fg, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: GRID } },\n\t\t\t\t\t\t\t\ty: { ticks: { color: fg }, grid: { color: GRID }, beginAtZero: true },\n\t\t\t\t\t\t\t},\n\t\t\t\t\t\t},\n\t\t\t\t\t});\n\t\t\t\t});\n\t\t\t}\n\n\t\t\t// stream panels carry [data-ts] rows: compact local times, same\n\t\t\t// convention as the log viewer; detail expansions want the full date\n\t\t\tfunction fmtTs() {\n\t\t\t\tdocument.querySelectorAll(\"[data-ts]:not([data-ts-done])\").forEach((el) => {\n\t\t\t\t\tel.dataset.tsDone = \"1\";\n\t\t\t\t\tconst t = new Date(Number(el.dataset.ts));\n\t\t\t\t\tel.textContent = el.hasAttribute(\"data-ts-full\")\n\t\t\t\t\t\t? t.toLocaleString(undefined, { hour12: false })\n\t\t\t\t\t\t: t.toLocaleTimeString(undefined, { hour12: false });\n\t\t\t\t\tel.title = t.toLocaleString(undefined, { hour12: false });\n\t\t\t\t});\n\t\t\t}\n\t\t\t// newest at the bottom, pane anchored there - but only when the pane\n\t\t\t// itself (re)loaded, so expanding a row doesn't yank it back down\n\t\t\tfunction anchorStreams(root) {\n\t\t\t\troot.querySelectorAll(\".stream-scroll\").forEach((el) => {\n\t\t\t\t\tel.scrollTop = el.scrollHeight;\n\t\t\t\t});\n\t\t\t}\n\t\t\tfmtTs();\n\t\t\tanchorStreams(document);\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", (e) => {\n\t\t\t\tfmtTs();\n\t\t\t\tconst t = e.detail && e.detail.target;\n\t\t\t\tif (t && t.querySelectorAll) anchorStreams(t);\n\t\t\t});\n\n\t\t\t// stream rows expand in place, same interaction as the log viewer\n\t\t\tdocument.body.addEventListener(\"click\", (e) => {\n\t\t\t\tconst closer = e.target.closest(\".js-close-detail\");\n\t\t\t\tif (closer) { closer.closest(\".stream-detail\")?.remove(); return; }\n\t\t\t\tconst row = e.target.closest(\".stream-row\");\n\t\t\t\tif (!row || !row.dataset.id) return;\n\t\t\t\tconst next = row.nextElementSibling;\n\t\t\t\tif (next && next.classList.contains(\"stream-detail\")) { next.remove(); return; }\n\t\t\t\thtmx.ajax(\"GET\", \"/logs/\" + row.dataset.id + \"?frag=block\", { target: row, swap: \"afterend\" })\n\t\t\t\t\t.then(() => {\n\t\t\t\t\t\tconst d = row.nextElementSibling;\n\t\t\t\t\t\tif (d && d.classList.contains(\"stream-detail\")) d.scrollIntoView({ block: \"nearest\" });\n\t\t\t\t\t});\n\t\t\t});\n\n\t\t\tfunction destroyCharts(e) {\n\t\t\t\tif (!e.detail.target || !e.detail.target.querySelectorAll) return;\n\t\t\t\te.detail.target.querySelectorAll(\"canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst ch = Chart.getChart(c);\n\t\t\t\t\tif (ch) ch.destroy();\n\t\t\t\t});\n\t\t\t}\n\t\t\tdocument.body.addEventListener(\"htmx:beforeSwap\", destroyCharts);\n\t\t\t// OOB swaps (the War Room's follow refresh) replace canvases without\n\t\t\t// a regular beforeSwap for that target\n\t\t\tdocument.body.addEventListener(\"htmx:oobBeforeSwap\", destroyCharts);\n\t\t\tdocument.body.addEventListener(\"htmx:afterSettle\", () => renderAll(false));\n\t\t\tnew MutationObserver(() => renderAll(true))\n\t\t\t\t.observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\t\t\trenderAll(false);\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1456,7 +1459,7 @@ func dashboardTypeBadge(dtype string) templ.Component {
 		var templ_7745c5c3_Var63 string
 		templ_7745c5c3_Var63, templ_7745c5c3_Err = templ.JoinStringErrs(dtype)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 481, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/dashboards.templ`, Line: 488, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var63))
 		if templ_7745c5c3_Err != nil {

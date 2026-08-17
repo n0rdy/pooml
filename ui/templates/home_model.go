@@ -44,6 +44,14 @@ func serviceLogsURL(service string) string {
 	return "/logs?" + url.Values{"q": {q}}.Encode()
 }
 
+// serviceMetricsURL lands on the explorer with that service's catalog: which
+// metrics it reports, how fresh - the natural first question.
+func serviceMetricsURL(service string) string {
+	q := "SELECT name, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics WHERE service = " +
+		sqlString(service) + " GROUP BY name ORDER BY last_seen DESC LIMIT 100"
+	return "/metrics-explorer?" + url.Values{"q": {q}, "view": {"table"}}.Encode()
+}
+
 func serviceErrorsURL(service string) string {
 	q := "SELECT * FROM logs WHERE service = " + sqlString(service) +
 		" AND level >= 4 AND timestamp > unixepoch() * 1000 - 86400000 ORDER BY timestamp DESC LIMIT 100"

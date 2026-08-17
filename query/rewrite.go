@@ -119,6 +119,24 @@ func (v *Validated) ApplyQuickFilter(column, value string) error {
 	return nil
 }
 
+// ApplyWindow ANDs `timestamp BETWEEN fromMs AND toMs` into WHERE: the War
+// Room's time lock, injected at execution and never written back into the
+// canonical q (unlike quick filters), so the URL query stays window-free.
+// Aggregations are fine - the predicate applies before grouping.
+func (v *Validated) ApplyWindow(fromMs, toMs int64) error {
+	if v.Compound {
+		return ErrUnsupportedShape
+	}
+	cond := mustParse(fmt.Sprintf(
+		"SELECT * FROM logs WHERE timestamp BETWEEN %d AND %d", fromMs, toMs)).WhereExpr
+	if v.stmt.WhereExpr == nil {
+		v.stmt.WhereExpr = cond
+	} else {
+		v.stmt.WhereExpr = &sqlp.BinaryExpr{X: paren(v.stmt.WhereExpr), Op: sqlp.AND, Y: cond}
+	}
+	return nil
+}
+
 // HasConditions reports whether the query has a WHERE clause; live tail uses
 // it to pick the broadcaster fast path (strategy A) for unfiltered queries.
 func (v *Validated) HasConditions() bool { return v.stmt.WhereExpr != nil }

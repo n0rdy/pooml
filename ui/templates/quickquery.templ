@@ -235,8 +235,13 @@ templ QuickQueryModule() {
 			const ph = container.querySelector(".qq-ph");
 			const setPh = (t) => { ph.textContent = t; };
 
+			// mirror scope: a [data-qq-scope] wrapper narrows which SQL editor
+			// this instance mirrors into - the War Room packs several quick
+			// queries plus a logs SQL editor into ONE form, and an unscoped
+			// lookup would write compiled metrics SQL into the logs editor
+			const scope = container.closest("[data-qq-scope]") || form;
 			const sqlView = () => {
-				const h = form.querySelector(".sql-editor-host");
+				const h = scope.querySelector(".sql-editor-host");
 				return h && window.poomlSQL ? window.poomlSQL.editors.get(h) : null;
 			};
 
@@ -429,8 +434,8 @@ templ QuickQueryModule() {
 				}
 			});
 
-			// hand-editing this form's SQL detaches its quick query
-			const sqlHost = form.querySelector(".sql-editor-host");
+			// hand-editing this scope's SQL detaches its quick query
+			const sqlHost = scope.querySelector(".sql-editor-host");
 			if (sqlHost) sqlHost.addEventListener("pooml:user-edit", detach);
 
 			new MutationObserver(() => {

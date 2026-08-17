@@ -162,3 +162,47 @@ func TestSettingsChannels(t *testing.T) {
 		t.Errorf("pushover test fragment: %.200s", tbody)
 	}
 }
+
+func TestAlertWarRoomToggleRoundTrip(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+
+	_, body := cl.get("/alerts")
+	m := csrfRe.FindStringSubmatch(body)
+	cl.postForm("/settings/campfire", url.Values{
+		"csrf_token": {m[1]},
+		"base_url":   {"https://chat.example.com"},
+		"bot_key":    {"k"},
+	})
+	_, body = cl.get("/alerts")
+	if !strings.Contains(body, "Include a War Room link") {
+		t.Fatal("war room toggle missing from the alert form")
+	}
+	// PublicURL unset in tests: the form must say what's missing
+	if !strings.Contains(body, "POOML_PUBLIC_URL") {
+		t.Error("unavailable state should name the env var")
+	}
+
+	m = csrfRe.FindStringSubmatch(body)
+	form := createAlertForm("with link", "SELECT * FROM logs WHERE level >= 4")
+	form.Set("csrf_token", m[1])
+	form.Set("war_room", "on")
+	if resp := cl.postForm("/alerts", form); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("create = %d", resp.StatusCode)
+	}
+
+	var target string
+	if err := cl.pools.Meta.QueryRow("SELECT target FROM alerts WHERE name = 'with link'").Scan(&target); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(target, `"war_room":true`) {
+		t.Errorf("stored target = %s", target)
+	}
+
+	// the edit form restores the checked state
+	eresp := cl.getWith("/alerts/1/edit", map[string]string{"HX-Request": "true"})
+	ebody := readBody(t, eresp)
+	if !strings.Contains(ebody, `name="war_room" checked`) {
+		t.Errorf("edit form loses the toggle: %.300s", ebody)
+	}
+}

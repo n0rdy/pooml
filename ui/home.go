@@ -121,6 +121,37 @@ func (ur *Router) homePageServicesSegment(w http.ResponseWriter, req *http.Reque
 	ur.render(w, req, http.StatusOK, templates.HomeServices(out))
 }
 
+// homePageMetricsServicesSegment mirrors the logs services card for the
+// metrics signal (M13 parity): same 7-day bound, same reasoning.
+func (ur *Router) homePageMetricsServicesSegment(w http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
+	defer cancel()
+
+	rows, err := ur.Pools.LogsRead.QueryContext(ctx,
+		"SELECT service, MAX(timestamp), COUNT(*) FROM metrics WHERE timestamp > ? GROUP BY service ORDER BY 2 DESC LIMIT 25",
+		time.Now().UnixMilli()-7*24*60*60*1000)
+	if err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	defer rows.Close()
+
+	var out []templates.HomeServiceRow
+	for rows.Next() {
+		var r templates.HomeServiceRow
+		if err := rows.Scan(&r.Service, &r.LastSeenMs, &r.Count); err != nil {
+			ur.homeFragmentError(w, req, err)
+			return
+		}
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	ur.render(w, req, http.StatusOK, templates.HomeMetricsServices(out))
+}
+
 // homePageMetricsSegment is ingest HEALTH, not metric values: values need
 // user-defined thresholds to mean "on fire" (that's what alerts are for);
 // failing scrapers and silent pipelines are facts.

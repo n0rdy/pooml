@@ -11,8 +11,20 @@ templ HomePage(csrfToken string) {
 			<div class="card bg-base-100">
 				<div class="card-body items-center text-center py-8">
 					<h2 class="text-xl font-bold">Something on fire?</h2>
-					<p class="text-sm opacity-70 -mt-1">Errors and fatals from the last hour, live tail already running.</p>
-					<a href={ templ.SafeURL(triageURL()) } class="btn btn-error btn-wide mt-2 text-lg">Triage</a>
+					// two doors into the same incident: the mirrored captions carry
+					// the difference (live error stream vs time-locked correlation)
+					<div class="flex gap-x-10 gap-y-4 mt-2 flex-wrap justify-center">
+						<div class="flex flex-col items-center gap-1.5">
+							<a href={ templ.SafeURL(triageURL()) } class="btn btn-error btn-wide text-lg">Triage</a>
+							<span class="text-sm opacity-70">follow the errors as they happen</span>
+						</div>
+						<div class="flex flex-col items-center gap-1.5">
+							// solid primary, not outline/soft: anything translucent sinks
+							// into the dark card, and the two doors are peers anyway
+							<a href="/war-room" class="btn btn-primary btn-wide text-lg">War Room</a>
+							<span class="text-sm opacity-70">line up metrics and logs on one timeline</span>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div class="grid md:grid-cols-2 gap-6">
@@ -40,10 +52,18 @@ templ HomePage(csrfToken string) {
 						</div>
 					</div>
 				</div>
-				<div class="card bg-base-100 md:col-span-2 min-w-0">
+				<div class="card bg-base-100 min-w-0">
 					<div class="card-body py-4">
 						<h3 class="card-title">Metrics ingest</h3>
 						<div hx-get="/home/metrics" hx-trigger="load, every 30s" hx-swap="innerHTML">
+							<span class="loading loading-dots loading-sm opacity-40"></span>
+						</div>
+					</div>
+				</div>
+				<div class="card bg-base-100 min-w-0">
+					<div class="card-body py-4">
+						<h3 class="card-title">Services reporting metrics <span class="text-sm font-normal opacity-60">(last 7 days)</span></h3>
+						<div hx-get="/home/metrics-services" hx-trigger="load, every 30s" hx-swap="innerHTML">
 							<span class="loading loading-dots loading-sm opacity-40"></span>
 						</div>
 					</div>
@@ -96,6 +116,25 @@ templ HomeServices(rows []HomeServiceRow) {
 			for _, r := range rows {
 				<li>
 					<a href={ templ.SafeURL(serviceLogsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-1">
+						<span class="font-mono text-sm truncate min-w-0">{ r.Service }</span>
+						<span class="text-sm opacity-60 whitespace-nowrap" data-reltime={ msString(r.LastSeenMs) }>{ utcTime(r.LastSeenMs) }</span>
+					</a>
+				</li>
+			}
+		</ul>
+	}
+}
+
+// HomeMetricsServices is the logs services card's metrics twin (M13 parity):
+// same row shape, links land on that service's explorer catalog.
+templ HomeMetricsServices(rows []HomeServiceRow) {
+	if len(rows) == 0 {
+		<p class="text-sm opacity-60 italic py-2">No services reporting metrics yet. Add a scrape target in <a href="/settings" class="link link-primary">Settings</a> or push OTLP.</p>
+	} else {
+		<ul class="flex flex-col gap-1">
+			for _, r := range rows {
+				<li>
+					<a href={ templ.SafeURL(serviceMetricsURL(r.Service)) } class="flex items-center justify-between gap-2 hover:bg-base-content/5 rounded-field px-2 py-1">
 						<span class="font-mono text-sm truncate min-w-0">{ r.Service }</span>
 						<span class="text-sm opacity-60 whitespace-nowrap" data-reltime={ msString(r.LastSeenMs) }>{ utcTime(r.LastSeenMs) }</span>
 					</a>

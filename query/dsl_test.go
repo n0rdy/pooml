@@ -147,3 +147,38 @@ func TestDSLNeedsServices(t *testing.T) {
 		}
 	}
 }
+
+func TestDSLOverrideWindow(t *testing.T) {
+	d, err := ParseDSL("avg(queue_depth) per 10m last 24h")
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.OverrideWindow(1_000_000, 4_600_000)
+	sql, err := d.SQL(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sql, "timestamp BETWEEN 1000000 AND 4600000") {
+		t.Errorf("override missing BETWEEN: %s", sql)
+	}
+	if strings.Contains(sql, "unixepoch") {
+		t.Errorf("relative window survived the override: %s", sql)
+	}
+	if _, err := ValidateIn(sql, ScopeMetrics); err != nil {
+		t.Errorf("overridden SQL fails validation: %v", err)
+	}
+
+	// rate's per-second denominator must follow the overridden span
+	r, err := ParseDSL("rate(requests_total)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.OverrideWindow(10_000, 70_000) // 60s span
+	sql, err = r.SQL(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(sql, "/ 60.0") {
+		t.Errorf("rate denominator ignores the override span: %s", sql)
+	}
+}

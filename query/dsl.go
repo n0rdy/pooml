@@ -30,6 +30,17 @@ type DSLQuery struct {
 	BucketMs  int64 // 0 = no `per`
 	WindowMs  int64 // defaulted to 24h when absent
 	ByService bool
+
+	// set via OverrideWindow: an absolute window replaces the relative `last`
+	fromMs, toMs int64
+}
+
+// OverrideWindow pins the query to [fromMs, toMs] regardless of its `last`
+// clause - the War Room's "one time window rules the page" contract. WindowMs
+// follows the span so rate()'s per-second denominator stays honest.
+func (d *DSLQuery) OverrideWindow(fromMs, toMs int64) {
+	d.fromMs, d.toMs = fromMs, toMs
+	d.WindowMs = toMs - fromMs
 }
 
 const dslDefaultWindowMs = 24 * 3600 * 1000
@@ -225,7 +236,11 @@ func (d *DSLQuery) whereClause() string {
 			conds = append(conds, fmt.Sprintf("json_extract(labels, '$.%s') = '%s'", dslQuoteStr(f.Key), dslQuoteStr(f.Value)))
 		}
 	}
-	conds = append(conds, fmt.Sprintf("timestamp > (unixepoch() - %d) * 1000", d.WindowMs/1000))
+	if d.toMs > 0 {
+		conds = append(conds, fmt.Sprintf("timestamp BETWEEN %d AND %d", d.fromMs, d.toMs))
+	} else {
+		conds = append(conds, fmt.Sprintf("timestamp > (unixepoch() - %d) * 1000", d.WindowMs/1000))
+	}
 	return strings.Join(conds, " AND ")
 }
 

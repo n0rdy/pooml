@@ -1,9 +1,13 @@
 package ui
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"io/fs"
 	"net/http"
+
+	"github.com/n0rdy/pooml/ui/templates"
 )
 
 // All frontend assets ship inside the binary: styles.css (built by
@@ -15,6 +19,13 @@ var staticFS embed.FS
 
 //go:embed static/logo.png
 var logoPNG []byte
+
+func init() {
+	if b, err := staticFS.ReadFile("static/styles.css"); err == nil {
+		sum := sha256.Sum256(b)
+		templates.StaticVersion = hex.EncodeToString(sum[:8])
+	}
+}
 
 func (ur *Router) logo(w http.ResponseWriter, req *http.Request) {
 	w.Header().Set("Content-Type", "image/png")

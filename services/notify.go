@@ -23,6 +23,9 @@ type Target struct {
 	Priority int    `json:"priority,omitempty"`
 	Sound    string `json:"sound,omitempty"`
 	RoomID   int64  `json:"room_id,omitempty"`
+	// notifications carry a War Room link centered on the firing time
+	// (needs PublicURL to build an absolute link)
+	WarRoom bool `json:"war_room,omitempty"`
 }
 
 func ParseTarget(raw string) (Target, error) {
@@ -51,6 +54,9 @@ type NotificationService struct {
 	settings        *SettingsService
 	httpClient      *http.Client
 	PushoverBaseURL string
+	// where THIS pooml lives from the outside (POOML_PUBLIC_URL); empty
+	// disables War Room links - the server cannot guess its public address
+	PublicURL string
 }
 
 func NewNotificationService(settings *SettingsService) *NotificationService {
@@ -70,29 +76,49 @@ func NewNotificationService(settings *SettingsService) *NotificationService {
 // SendAlert routes by the alert's target. Message content is built from the
 // matched rows: plain text for Pushover, escaped HTML for Campfire (log
 // content is untrusted text).
-func (n *NotificationService) SendAlert(ctx context.Context, name, targetRaw string, res *query.Result) error {
-	t, err := ParseTarget(targetRaw)
+func (n *NotificationService) SendAlert(ctx context.Context, a Alert, res *query.Result) error {
+	t, err := ParseTarget(a.Target)
 	if err != nil {
 		return err
 	}
+	link := ""
+	if t.WarRoom && n.PublicURL != "" {
+		link = n.warRoomLink(a.Query, time.Now().UnixMilli())
+	}
 	switch t.Type {
 	case "pushover":
-		return n.sendPushover(ctx, t, "🔥 "+name, plainRows(res))
+		return n.sendPushover(ctx, t, "🔥 "+a.Name, plainRows(res), link)
 	case "campfire":
-		return n.sendCampfire(ctx, t.RoomID, campfireHTML(name, res))
+		msg := campfireHTML(a.Name, res)
+		if link != "" {
+			msg += fmt.Sprintf(`<br><a href="%s">Open the War Room</a>`, html.EscapeString(link))
+		}
+		return n.sendCampfire(ctx, t.RoomID, msg)
 	}
 	return fmt.Errorf("unknown target type %q", t.Type)
 }
 
+// warRoomLink centers a 30-minute window on the firing moment and prefills
+// the logs pane with the alert's query.
+func (n *NotificationService) warRoomLink(alertQuery string, firedAtMs int64) string {
+	const halfWindowMs = 15 * 60 * 1000
+	vals := url.Values{
+		"from": {fmt.Sprint(firedAtMs - halfWindowMs)},
+		"to":   {fmt.Sprint(firedAtMs + halfWindowMs)},
+		"q":    {alertQuery},
+	}
+	return strings.TrimSuffix(n.PublicURL, "/") + "/war-room?" + vals.Encode()
+}
+
 func (n *NotificationService) TestPushover(ctx context.Context) error {
-	return n.sendPushover(ctx, Target{}, "pooml test", "Don't panic - this is only a test.")
+	return n.sendPushover(ctx, Target{}, "pooml test", "Don't panic - this is only a test.", "")
 }
 
 func (n *NotificationService) TestCampfire(ctx context.Context, roomID int64) error {
 	return n.sendCampfire(ctx, roomID, "<b>pooml test</b> - don't panic, this is only a test.")
 }
 
-func (n *NotificationService) sendPushover(ctx context.Context, t Target, title, message string) error {
+func (n *NotificationService) sendPushover(ctx context.Context, t Target, title, message, link string) error {
 	token, err := n.settings.Get(ctx, SettingPushoverAppToken)
 	if err != nil {
 		return err
@@ -119,6 +145,11 @@ func (n *NotificationService) sendPushover(ctx context.Context, t Target, title,
 	}
 	if t.Sound != "" {
 		form.Set("sound", t.Sound)
+	}
+	// the supplementary-URL slot renders as a tappable link under the message
+	if link != "" {
+		form.Set("url", link)
+		form.Set("url_title", "Open the War Room")
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,

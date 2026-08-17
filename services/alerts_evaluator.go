@@ -15,7 +15,7 @@ import (
 // AlertNotifier is what the evaluator needs from the notification layer;
 // tests substitute a recorder.
 type AlertNotifier interface {
-	SendAlert(ctx context.Context, name, targetRaw string, res *query.Result) error
+	SendAlert(ctx context.Context, a Alert, res *query.Result) error
 }
 
 // Evaluator is the alert master loop from CONTEXT.md > Alerting: one ticker,
@@ -110,7 +110,7 @@ func (e *Evaluator) evaluate(ctx context.Context, a Alert) {
 		return
 	}
 
-	notifyErr := e.notifier.SendAlert(ctx, a.Name, a.Target, res)
+	notifyErr := e.notifier.SendAlert(ctx, a, res)
 	matched, _ := json.Marshal(matchedRowsPayload(res))
 	if err := e.store.RecordFiring(ctx, a.ID, now, string(matched), notifyErr == nil); err != nil {
 		log.Error().Err(err).Int64("alert", a.ID).Msg("alert firing audit")

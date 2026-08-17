@@ -13,6 +13,8 @@ type AlertsView struct {
 
 	PushoverConfigured bool
 	CampfireConfigured bool
+	// POOML_PUBLIC_URL set: War Room links in notifications can actually work
+	WarRoomAvailable bool
 }
 
 templ AlertsPage(v AlertsView, csrfToken string) {
@@ -114,21 +116,21 @@ templ alertCreateCard(v AlertsView, csrfToken string) {
 			if v.ErrMsg != "" {
 				<div role="alert" class="alert alert-error text-sm">{ v.ErrMsg }</div>
 			}
-			@alertForm("POST", "/alerts", services.Alert{CheckIntervalMs: 60000, CooldownMs: 900000, Enabled: true, Target: defaultTarget(v.PushoverConfigured, v.CampfireConfigured)}, v.PushoverConfigured, v.CampfireConfigured, csrfToken)
+			@alertForm("POST", "/alerts", services.Alert{CheckIntervalMs: 60000, CooldownMs: 900000, Enabled: true, Target: defaultTarget(v.PushoverConfigured, v.CampfireConfigured)}, v.PushoverConfigured, v.CampfireConfigured, v.WarRoomAvailable, csrfToken)
 		</div>
 	</div>
 }
 
 // alertForm serves create (POST /alerts, plain submit) and edit (hx-put).
-templ alertForm(method string, action string, a services.Alert, poConfigured bool, cfConfigured bool, csrfToken string) {
+templ alertForm(method string, action string, a services.Alert, poConfigured bool, cfConfigured bool, warAvailable bool, csrfToken string) {
 	if method == "POST" {
 		<form method="post" action={ templ.SafeURL(action) } class="flex flex-col gap-3">
-			@alertFormFields(a, poConfigured, cfConfigured, csrfToken)
+			@alertFormFields(a, poConfigured, cfConfigured, warAvailable, csrfToken)
 			<div><button type="submit" class="btn btn-primary btn-sm">Create alert</button></div>
 		</form>
 	} else {
 		<form hx-put={ action } hx-target="#alerts-region" hx-swap="outerHTML" class="flex flex-col gap-3">
-			@alertFormFields(a, poConfigured, cfConfigured, csrfToken)
+			@alertFormFields(a, poConfigured, cfConfigured, warAvailable, csrfToken)
 			<div class="flex gap-2">
 				<button type="submit" class="btn btn-primary btn-sm">Save</button>
 				<button type="button" class="btn btn-ghost btn-sm" hx-get="/alerts" hx-target="#alerts-region" hx-swap="outerHTML">Cancel</button>
@@ -137,7 +139,7 @@ templ alertForm(method string, action string, a services.Alert, poConfigured boo
 	}
 }
 
-templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, csrfToken string) {
+templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, warAvailable bool, csrfToken string) {
 	<input type="hidden" name="csrf_token" value={ csrfToken }/>
 	<div class="grid gap-3 md:grid-cols-3">
 		<label class="flex flex-col gap-1">
@@ -206,10 +208,19 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, cs
 			</label>
 		</div>
 	</div>
-	<label class="flex items-center gap-2 cursor-pointer text-sm">
-		<input type="checkbox" name="enabled" checked?={ a.Enabled } class="toggle toggle-sm toggle-success"/>
-		Enabled
-	</label>
+	<div class="flex items-center gap-6 flex-wrap">
+		<label class="flex items-center gap-2 cursor-pointer text-sm">
+			<input type="checkbox" name="enabled" checked?={ a.Enabled } class="toggle toggle-sm toggle-success"/>
+			Enabled
+		</label>
+		<label class="flex items-center gap-2 cursor-pointer text-sm">
+			<input type="checkbox" name="war_room" checked?={ targetOf(a.Target).WarRoom } class="toggle toggle-sm"/>
+			Include a War Room link in notifications
+			if !warAvailable {
+				<span class="opacity-60">(needs POOML_PUBLIC_URL set to work)</span>
+			}
+		</label>
+	</div>
 }
 
 // alertsScript keeps only alert-specific behavior; the editor itself (mount,
@@ -227,10 +238,10 @@ templ alertsScript() {
 }
 
 // AlertEditRow replaces the alert's table row with an inline edit form.
-templ AlertEditRow(a services.Alert, poConfigured bool, cfConfigured bool, csrfToken string) {
+templ AlertEditRow(a services.Alert, poConfigured bool, cfConfigured bool, warAvailable bool, csrfToken string) {
 	<tr>
 		<td colspan="5" class="bg-base-200/50 p-3">
-			@alertForm("PUT", fmt.Sprintf("/alerts/%d", a.ID), a, poConfigured, cfConfigured, csrfToken)
+			@alertForm("PUT", fmt.Sprintf("/alerts/%d", a.ID), a, poConfigured, cfConfigured, warAvailable, csrfToken)
 		</td>
 	</tr>
 }

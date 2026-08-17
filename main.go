@@ -109,6 +109,7 @@ func main() {
 	settingsService := services.NewSettingsService(pools.Meta, encryptionService)
 	alertsService := services.NewAlertsService(pools.Meta)
 	notifier := services.NewNotificationService(settingsService)
+	notifier.PublicURL = getPublicURL()
 	evaluator := services.NewEvaluator(alertsService, pools.LogsRead, notifier)
 	scrapeTargetsService := services.NewScrapeTargetsService(pools.Meta, encryptionService)
 
@@ -178,6 +179,7 @@ func main() {
 		AuthSecret:        uiSecret,
 		Env:               env,
 		TrustProxyHeaders: trustProxyHeaders,
+		PublicURL:         notifier.PublicURL,
 	})
 
 	// internet-facing heuristic (CONTEXT.md > Network Security defense 2):
@@ -508,6 +510,19 @@ func getQueryAPISecret() string {
 		log.Fatal().Msgf("POOML_QUERY_API_AUTH_SECRET is too short: must be at least %d characters", minSecretLength)
 	}
 	return secret
+}
+
+// getPublicURL is optional: pooml can't know its own public address behind a
+// proxy, and War Room links in notifications need an absolute URL.
+func getPublicURL() string {
+	v := strings.TrimSpace(os.Getenv("POOML_PUBLIC_URL"))
+	if v == "" {
+		return ""
+	}
+	if !strings.HasPrefix(v, "http://") && !strings.HasPrefix(v, "https://") {
+		log.Fatal().Str("value", v).Msg("POOML_PUBLIC_URL must start with http:// or https://")
+	}
+	return strings.TrimSuffix(v, "/")
 }
 
 func getShutdownTimeout() time.Duration {

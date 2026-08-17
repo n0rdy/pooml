@@ -11,6 +11,7 @@ The assumption is that you will self-host pooml on a VPS or a small cloud instan
 - **Logs**: FluentBit-compatible HTTP ingestion with automatic format detection per line (JSON, Common Log Format, plain text), full-text search (SQLite FTS5), live tail, infinite scroll, SQL querying
 - **Metrics**: OTLP/HTTP push and Prometheus scrape targets, a quick-query builder that compiles to SQL (`increase(http_requests_total) per 1h last 24h by service`), charts. Two metric types on purpose: counters and gauges - histograms and summaries are downcast to their `_sum`/`_count` counter series
 - **Dashboards**: typed logs/metrics dashboards with stream, chart, and number panels
+- **War Room**: metrics and logs on one timeline for incidents - one time window rules the page, drag across any chart to zoom, every view is a shareable URL. Alerts can carry a War Room link centered on the firing moment
 - **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire
 - **Ops**: hourly retention cleanup, scheduled S3 backups, Prometheus `/metrics` self-observability - pooml can monitor itself
 - **AI-ready (MCP)**: [`@pooml/mcp`](https://www.npmjs.com/package/@pooml/mcp) gives Claude (or any MCP client) read-only SQL access to your logs and metrics - LLMs already speak SQL, so there's no query DSL for the model to hallucinate around
@@ -117,6 +118,7 @@ All configuration is via environment variables. Required variables fail fast at 
 | `POOML_METRICS_AUTH_SECRET`      | -                | Required when metrics are enabled, min 32 chars. Sent as `X-API-Key` by scrapers.                                                                    |
 | `POOML_QUERY_API_ENABLED`        | `false`          | Expose the read-only SQL query API at `/api/v1/query/*`.                                                                                             |
 | `POOML_QUERY_API_AUTH_SECRET`        | -                | Required when the query API is enabled, min 32 chars. Sent as `X-API-Key`. Deliberately separate from ingest keys.                                   |
+| `POOML_PUBLIC_URL`               | -                | Where this pooml lives from the outside (e.g. `https://logs.example.com`). Optional; enables War Room links in alert notifications.                  |
 | `POOML_SHUTDOWN_TIMEOUT_SECONDS` | `30`             | Hard deadline for graceful shutdown.                                                                                                                 |
 
 ## Shipping logs

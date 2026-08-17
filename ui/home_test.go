@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHomePageAndTriage(t *testing.T) {
@@ -79,5 +80,39 @@ func TestHomeFragmentsRequireAuth(t *testing.T) {
 	cl := newClient(t)
 	if resp := cl.getWith("/home/errors", nil); resp.StatusCode != http.StatusFound {
 		t.Errorf("unauthenticated fragment = %d, want 302", resp.StatusCode)
+	}
+}
+
+func TestHomeMetricsServicesFragment(t *testing.T) {
+	cl := newClient(t)
+	cl.login(testSecret, cl.csrfToken())
+	hx := map[string]string{"HX-Request": "true"}
+
+	resp := cl.getWith("/home/metrics-services", hx)
+	if body := readBody(t, resp); !strings.Contains(body, "No services reporting metrics") {
+		t.Errorf("metrics-services empty state: %.200s", body)
+	}
+
+	// recent point shows up; a stale one (beyond the 7-day bound) does not
+	now := time.Now().UnixMilli()
+	if _, err := cl.pools.Metrics.Exec(`INSERT INTO metrics(timestamp, name, type, value, service, host, labels) VALUES
+		(?, 'queue_depth', 1, 7, 'shop', 'h1', NULL),
+		(?, 'queue_depth', 1, 9, 'ancient-svc', 'h1', NULL)`,
+		now-60_000, now-8*24*60*60*1000); err != nil {
+		t.Fatal(err)
+	}
+	resp = cl.getWith("/home/metrics-services", hx)
+	body := readBody(t, resp)
+	if !strings.Contains(body, "shop") || strings.Contains(body, "ancient-svc") {
+		t.Errorf("metrics-services fragment: %.300s", body)
+	}
+	// link lands on the explorer scoped to that service
+	if !strings.Contains(body, "/metrics-explorer?") || !strings.Contains(body, "shop") {
+		t.Error("metrics-services drill-down link missing")
+	}
+
+	// the home page itself wires the new card
+	if _, page := cl.get("/"); !strings.Contains(page, `hx-get="/home/metrics-services"`) {
+		t.Error("home page missing the metrics-services card")
 	}
 }

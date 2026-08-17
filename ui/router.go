@@ -44,6 +44,8 @@ type Deps struct {
 	AuthSecret        string
 	Env               string
 	TrustProxyHeaders bool
+	// POOML_PUBLIC_URL; empty = War Room links in notifications unavailable
+	PublicURL string
 }
 
 type Router struct {
@@ -81,6 +83,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Get("/errors", ur.homePageErrorsSegment)
 		r.Get("/services", ur.homePageServicesSegment)
 		r.Get("/metrics", ur.homePageMetricsSegment)
+		r.Get("/metrics-services", ur.homePageMetricsServicesSegment)
 	})
 
 	router.Route("/logs", func(r chi.Router) {
@@ -130,6 +133,9 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Get("/filter-options", ur.filterOptions)
 		r.Post("/save-panel", ur.saveExplorerPanel)
 	})
+
+	router.With(sessionAuth(ur.Sessions)).
+		Get("/war-room", ur.warRoomPage)
 
 	router.Route("/dashboards", func(r chi.Router) {
 		r.Use(sessionAuth(ur.Sessions))

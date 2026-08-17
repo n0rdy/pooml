@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -127,7 +129,7 @@ func TestPushoverSend(t *testing.T) {
 	_ = settings.Set(ctx, SettingPushoverUserKey, "usr", true)
 
 	res := &query.Result{Columns: []string{"service", "message"}, Rows: [][]any{{"payment-svc", "boom"}}}
-	if err := n.SendAlert(ctx, "High errors", `{"type":"pushover","priority":1,"device":"phone"}`, res); err != nil {
+	if err := n.SendAlert(ctx, Alert{Name: "High errors", Target: `{"type":"pushover","priority":1,"device":"phone"}`}, res); err != nil {
 		t.Fatal(err)
 	}
 	if gotForm["token"][0] != "tok" || gotForm["user"][0] != "usr" {
@@ -169,7 +171,7 @@ func TestCampfireSend(t *testing.T) {
 	_ = settings.Set(ctx, SettingCampfireBotKey, "bot-key-secret", true)
 
 	res := &query.Result{Columns: []string{"message"}, Rows: [][]any{{`<script>alert(1)</script>`}}}
-	if err := n.SendAlert(ctx, "XSS <alert>", `{"type":"campfire","room_id":42}`, res); err != nil {
+	if err := n.SendAlert(ctx, Alert{Name: "XSS <alert>", Target: `{"type":"campfire","room_id":42}`}, res); err != nil {
 		t.Fatal(err)
 	}
 	if gotPath != "/rooms/42/bot-key-secret/messages" {
@@ -207,7 +209,7 @@ type recorder struct {
 	fail  atomic.Bool
 }
 
-func (r *recorder) SendAlert(ctx context.Context, name, target string, res *query.Result) error {
+func (r *recorder) SendAlert(ctx context.Context, a Alert, res *query.Result) error {
 	r.calls.Add(1)
 	if r.fail.Load() {
 		return context.DeadlineExceeded
@@ -353,5 +355,69 @@ func TestAlertValidation(t *testing.T) {
 	}
 	if err := store.Create(ctx, base); err != nil {
 		t.Errorf("valid alert rejected: %v", err)
+	}
+}
+
+func TestWarRoomLinkInNotifications(t *testing.T) {
+	n, settings := newNotifyFixture(t)
+	ctx := context.Background()
+
+	var gotForm map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		gotForm = r.PostForm
+		w.Write([]byte(`{"status":1}`))
+	}))
+	defer srv.Close()
+	n.PushoverBaseURL = srv.URL
+	_ = settings.Set(ctx, SettingPushoverAppToken, "tok", true)
+	_ = settings.Set(ctx, SettingPushoverUserKey, "usr", true)
+
+	a := Alert{
+		Name:   "High errors",
+		Query:  "SELECT * FROM logs WHERE level >= 4",
+		Target: `{"type":"pushover","war_room":true}`,
+	}
+	res := &query.Result{Columns: []string{"raw"}, Rows: [][]any{{"boom"}}}
+
+	// toggle on but no public URL: no link (pooml can't guess its address)
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	if len(gotForm["url"]) != 0 {
+		t.Errorf("link sent without PublicURL: %v", gotForm["url"])
+	}
+
+	n.PublicURL = "https://logs.example.com"
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	link := gotForm["url"][0]
+	if !strings.HasPrefix(link, "https://logs.example.com/war-room?") {
+		t.Errorf("link = %q", link)
+	}
+	u, err := url.Parse(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Query().Get("q") != a.Query {
+		t.Errorf("link q = %q", u.Query().Get("q"))
+	}
+	from, _ := strconv.ParseInt(u.Query().Get("from"), 10, 64)
+	to, _ := strconv.ParseInt(u.Query().Get("to"), 10, 64)
+	if to-from != 30*60*1000 {
+		t.Errorf("window span = %dms, want 30m centered on firing", to-from)
+	}
+	if gotForm["url_title"][0] == "" {
+		t.Error("url_title missing")
+	}
+
+	// toggle off: no link even with PublicURL set
+	a.Target = `{"type":"pushover"}`
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	if len(gotForm["url"]) != 0 {
+		t.Errorf("link sent with the toggle off: %v", gotForm["url"])
 	}
 }

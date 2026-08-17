@@ -36,7 +36,7 @@ func (ur *Router) renderAlerts(w http.ResponseWriter, req *http.Request, errMsg 
 		return
 	}
 	po, cf := ur.channelStates(req)
-	v := templates.AlertsView{Alerts: alerts, ErrMsg: errMsg, PushoverConfigured: po, CampfireConfigured: cf}
+	v := templates.AlertsView{Alerts: alerts, ErrMsg: errMsg, PushoverConfigured: po, CampfireConfigured: cf, WarRoomAvailable: ur.PublicURL != ""}
 	// region-only for HTMX flows (delete, edit-cancel); full page otherwise
 	if req.Header.Get("HX-Request") == "true" && req.Method == http.MethodGet && errMsg == "" && req.Header.Get("HX-History-Restore-Request") != "true" {
 		ur.render(w, req, http.StatusOK, templates.AlertsRegion(v))
@@ -68,7 +68,7 @@ func alertFromForm(req *http.Request) (services.Alert, error) {
 	a.CooldownMs = cooldownM * 60_000
 	a.Enabled = req.PostFormValue("enabled") != ""
 
-	t := services.Target{Type: req.PostFormValue("target_type")}
+	t := services.Target{Type: req.PostFormValue("target_type"), WarRoom: req.PostFormValue("war_room") != ""}
 	switch t.Type {
 	case "pushover":
 		t.Device = strings.TrimSpace(req.PostFormValue("po_device"))
@@ -124,7 +124,7 @@ func (ur *Router) editAlertPage(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	po, cf := ur.channelStates(req)
-	ur.render(w, req, http.StatusOK, templates.AlertEditRow(a, po, cf, nosurf.Token(req)))
+	ur.render(w, req, http.StatusOK, templates.AlertEditRow(a, po, cf, ur.PublicURL != "", nosurf.Token(req)))
 }
 
 func (ur *Router) updateAlert(w http.ResponseWriter, req *http.Request) {

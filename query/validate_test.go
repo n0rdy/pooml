@@ -423,3 +423,39 @@ func TestPrettify(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyWindow(t *testing.T) {
+	t.Run("merges with existing WHERE", func(t *testing.T) {
+		v, _ := Validate("SELECT * FROM logs WHERE level >= 3 ORDER BY timestamp DESC LIMIT 500")
+		if err := v.ApplyWindow(1000, 2000); err != nil {
+			t.Fatal(err)
+		}
+		want := `SELECT * FROM logs WHERE (level >= 3) AND timestamp BETWEEN 1000 AND 2000 ORDER BY timestamp DESC LIMIT 500`
+		if v.SQL() != want {
+			t.Errorf("SQL() = %q\nwant     %q", v.SQL(), want)
+		}
+		if _, err := Validate(v.SQL()); err != nil {
+			t.Errorf("re-Validate: %v", err)
+		}
+	})
+
+	t.Run("no WHERE yet", func(t *testing.T) {
+		v, _ := Validate("SELECT service, count(*) FROM logs GROUP BY service")
+		if err := v.ApplyWindow(5, 9); err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(v.SQL(), "WHERE timestamp BETWEEN 5 AND 9") {
+			t.Errorf("SQL() = %q", v.SQL())
+		}
+	})
+
+	t.Run("compound refused", func(t *testing.T) {
+		v, err := Validate("SELECT id FROM logs UNION SELECT id FROM logs")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := v.ApplyWindow(1, 2); !errors.Is(err, ErrUnsupportedShape) {
+			t.Errorf("err = %v, want ErrUnsupportedShape", err)
+		}
+	})
+}

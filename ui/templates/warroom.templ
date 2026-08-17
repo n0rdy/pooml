@@ -1,0 +1,417 @@
+package templates
+
+// The War Room (M12): one time window rules the page. Metrics rows reuse the
+// explorer's quick-query component, the logs pane reuses the Logs page's
+// controls, and the window's `timestamp BETWEEN` is injected server-side.
+// See CONTEXT.md > War Room.
+templ WarRoomPage(v WarRoomView, csrfToken string) {
+	@Shell("war room · pooml", "warroom", csrfToken) {
+		<div id="war-main" class="max-w-6xl mx-auto w-full">
+			<form id="war-form" method="get" action="/war-room" class="flex flex-col gap-4">
+				@warWindowCard(v)
+				for _, row := range v.Metrics {
+					@warMetricCard(row, false)
+				}
+				@warLogsCard(v)
+			</form>
+		</div>
+		@QuickQueryData(v.MetricNames)
+		@sqlEditorModule()
+		@chartScripts()
+		@QuickQueryModule()
+		@warRoomScript()
+	}
+}
+
+// WarRoomPanes answers the follow-now refresh (?frag=panes): out-of-band
+// swaps replace only the chart/log regions, never the editors mid-typing.
+templ WarRoomPanes(v WarRoomView) {
+	@warWindowLabel(v, true)
+	for _, row := range v.Metrics {
+		@warMetricChart(row, true)
+	}
+	@warMini(v, true)
+	@warLogs(v, true)
+}
+
+templ warWindowCard(v WarRoomView) {
+	<div class="card bg-base-100">
+		<div class="card-body py-3">
+			<div class="flex items-center gap-x-4 gap-y-2 flex-wrap">
+				<h2 class="card-title text-base">War Room</h2>
+				@warWindowLabel(v, false)
+				<input type="hidden" name="from" value={ msString(v.FromMs) }/>
+				<input type="hidden" name="to" value={ msString(v.ToMs) }/>
+				<div class="join">
+					@warPreset("15m", 15*60*1000)
+					@warPreset("1h", 60*60*1000)
+					@warPreset("6h", 6*60*60*1000)
+					@warPreset("24h", 24*60*60*1000)
+				</div>
+				<label class="flex items-center gap-1 cursor-pointer text-sm shrink-0" title="Pin the right edge to now; everything refreshes on its own">
+					<input type="checkbox" id="war-follow" name="follow" value="1" checked?={ v.Follow } class="toggle toggle-sm toggle-success"/>
+					Follow now
+				</label>
+				<span class="text-sm opacity-60 ml-auto hidden lg:inline">drag any chart to zoom (Back undoes) · click pins a time line (Esc clears)</span>
+			</div>
+		</div>
+	</div>
+}
+
+templ warWindowLabel(v WarRoomView, oob bool) {
+	<span
+		id="war-window-label"
+		{ oobAttr(oob)... }
+		class="font-mono text-sm opacity-80 whitespace-nowrap"
+		data-win-from={ msString(v.FromMs) }
+		data-win-to={ msString(v.ToMs) }
+	>{ utcTime(v.FromMs) } → { utcTime(v.ToMs) }</span>
+}
+
+templ warPreset(label string, spanMs int64) {
+	<button type="button" class="join-item btn btn-sm" data-span-ms={ msString(spanMs) }>{ label }</button>
+}
+
+// warMetricCard: chart + collapsible authoring row. data-qq-scope keeps this
+// row's DSL mirror away from the logs SQL editor sharing the form.
+templ warMetricCard(row WarMetricRow, oob bool) {
+	<div class="card bg-base-100">
+		<div class="card-body py-3 gap-2" data-qq-scope>
+			<details open?={ row.DSL == "" && row.Index == 0 }>
+				<summary class="cursor-pointer text-sm">
+					if row.DSL != "" {
+						<span class="font-mono">{ row.DSL }</span>
+						<span class="opacity-50"> · edit</span>
+					} else {
+						<span class="opacity-70">+ add a metric row</span>
+					}
+				</summary>
+				<div class="flex flex-col gap-2 pt-2">
+					@QuickQueryBlock(row.DSL, false)
+					<span class="text-sm opacity-60">the page window replaces the query's <code class="font-mono">last</code> clause</span>
+					<div><button type="submit" class="btn btn-primary btn-sm">Run</button></div>
+				</div>
+			</details>
+			@warMetricChart(row, oob)
+		</div>
+	</div>
+}
+
+templ warMetricChart(row WarMetricRow, oob bool) {
+	<div id={ warChartID(row.Index) } { oobAttr(oob)... }>
+		if row.Err != "" {
+			<p class="text-error text-sm break-words py-1">{ row.Err }</p>
+		} else if row.Shaped.Kind != "" {
+			@Shaped(row.Shaped)
+		}
+	</div>
+}
+
+templ warLogsCard(v WarRoomView) {
+	<div class="card bg-base-100">
+		<div class="card-body py-3 gap-2">
+			<h3 class="card-title text-base">Logs in window</h3>
+			@warMini(v, false)
+			// the Logs page's search controls, verbatim (parity rule)
+			<div class="flex gap-2 items-center">
+				@FTSSearchInput(v.Logs.FTS)
+				@FTSOpToggle(v.Logs.Op, "")
+			</div>
+			<div class="flex flex-col gap-1">
+				<span class="flex items-center justify-between">
+					<span class="text-sm opacity-80">SQL over <code class="font-mono">logs</code> <span class="opacity-60">- the window's <code class="font-mono">timestamp BETWEEN</code> is added on top; default keeps it to warnings and up</span></span>
+					<span class="text-sm opacity-60 hidden sm:flex items-center gap-3">
+						<button type="button" class="fmt-sql link link-primary" title="Format the SQL (Cmd/Ctrl+Shift+F)">format</button>
+						Cmd/Ctrl+Enter runs
+					</span>
+				</span>
+				<textarea name="q" class="hidden">{ v.Logs.Q }</textarea>
+				<div
+					class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors"
+					style={ sqlEditorReserve(v.Logs.Q) }
+					data-placeholder={ WarDefaultLogsQuery }
+				></div>
+			</div>
+			<div class="flex items-center gap-2">
+				<button type="submit" class="btn btn-primary btn-sm">Run</button>
+				<a href="/war-room" class="btn btn-ghost btn-sm" title="Back to the default view: last hour, warnings and up">Reset</a>
+			</div>
+			@warLogs(v, false)
+		</div>
+	</div>
+}
+
+// warMini: the auto log-volume/error chart above the logs pane, aligned to
+// the window (M12 point 4 - built to be judged visually).
+templ warMini(v WarRoomView, oob bool) {
+	<div id="war-mini" { oobAttr(oob)... } class="flex flex-col gap-1">
+		if v.MiniChart != nil {
+			<div class="h-28 relative">
+				<canvas data-chart="wmini"></canvas>
+			</div>
+			@templ.JSONScript("chart-data-wmini", v.MiniChart)
+			<span class="text-sm opacity-60">{ warMiniLabel(v) }</span>
+		}
+	</div>
+}
+
+templ warLogs(v WarRoomView, oob bool) {
+	<div id="war-logs" { oobAttr(oob)... } class="flex flex-col gap-1">
+		if v.Logs.Error != "" {
+			<div role="alert" class="alert alert-error text-sm">{ v.Logs.Error }</div>
+		} else if v.Logs.IsViewer {
+			<span class="text-sm opacity-70">{ rowsLabel(len(v.Logs.Rows), v.Logs.Truncated) }</span>
+			if len(v.Logs.Rows) == 0 {
+				<p class="text-sm opacity-60 italic py-2">Nothing in this window at these levels. Widen the window, or loosen the query.</p>
+			} else {
+				<div class="stream-scroll overflow-y-auto overflow-x-hidden h-[45vh] border border-base-content/15 rounded-box bg-base-100 flex flex-col p-1">
+					for _, r := range v.Logs.Rows {
+						@warStreamRow(r)
+					}
+				</div>
+			}
+		} else {
+			// aggregation shape: plain table, same as the logs page fallback
+			<div class="overflow-x-auto max-h-96 border border-base-content/15 rounded-box bg-base-100">
+				<table class="table table-sm font-mono">
+					<thead>
+						<tr>
+							for _, c := range v.Logs.Columns {
+								<th>{ c }</th>
+							}
+						</tr>
+					</thead>
+					<tbody>
+						for _, row := range v.Logs.Cells {
+							<tr>
+								for _, cell := range row {
+									<td class="max-w-md truncate" title={ cell }>{ cell }</td>
+								}
+							</tr>
+						}
+						if len(v.Logs.Cells) == 0 {
+							<tr><td colspan="99" class="text-center py-6 opacity-60 italic">Zero rows in this window.</td></tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	</div>
+}
+
+// warStreamRow reuses the stream-row interaction (click expands the detail,
+// wired in chartScripts) plus the service badge the panel variant lacks.
+templ warStreamRow(r LogRow) {
+	<div class="stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer" data-id={ rowID(r.ID) }>
+		<span class="font-mono text-sm opacity-70 whitespace-nowrap" data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span>
+		<span class={ levelClass(r.Level) }>{ levelName(r.Level) }</span>
+		<span class="badge badge-sm badge-outline font-mono shrink-0 max-w-28 min-w-0"><span class="truncate">{ r.Service }</span></span>
+		<span class="font-mono text-sm truncate min-w-0" title={ r.Message }>{ r.Message }</span>
+	</div>
+}
+
+templ warRoomScript() {
+	<style>
+		#war-main canvas[data-chart] { cursor: crosshair; touch-action: none; }
+		.war-brush-box {
+			position: absolute; top: 0; bottom: 0; z-index: 5;
+			background: color-mix(in oklab, var(--color-primary) 25%, transparent);
+			border-left: 1px solid var(--color-primary);
+			border-right: 1px solid var(--color-primary);
+			pointer-events: none;
+		}
+		/* the pinned time line, mirrored across every chart */
+		.war-pin {
+			position: absolute; top: 0; bottom: 0; width: 0; z-index: 4;
+			border-left: 1px dashed var(--color-warning);
+			pointer-events: none;
+		}
+		.war-pin[data-t]::after {
+			content: attr(data-t);
+			position: absolute; top: 2px; left: 5px;
+			font-family: monospace; font-size: 11px; white-space: nowrap;
+			color: var(--color-warning);
+			background: color-mix(in oklab, var(--color-base-100) 85%, transparent);
+			padding: 0 4px; border-radius: 4px;
+		}
+		.war-pin-flip[data-t]::after { left: auto; right: 5px; }
+		/* the log line nearest the pinned moment; inset shadow, not border,
+		   so marking never shifts the row's content */
+		.war-pin-row {
+			box-shadow: inset 3px 0 0 var(--color-warning);
+			background: color-mix(in oklab, var(--color-warning) 8%, transparent);
+		}
+		@keyframes war-pin-flash {
+			0% { background: color-mix(in oklab, var(--color-warning) 35%, transparent); }
+			100% { background: color-mix(in oklab, var(--color-warning) 8%, transparent); }
+		}
+		.war-pin-row-flash { animation: war-pin-flash 1.2s ease-out; }
+	</style>
+	<script nonce={ templ.GetNonce(ctx) }>
+		(() => {
+			const form = document.getElementById("war-form");
+			const follow = document.getElementById("war-follow");
+
+			function submitWindow(from, to) {
+				form.elements.from.value = Math.round(from);
+				form.elements.to.value = Math.round(to);
+				form.requestSubmit();
+			}
+
+			document.addEventListener("click", (e) => {
+				const btn = e.target.closest("[data-span-ms]");
+				if (!btn) return;
+				const now = Date.now();
+				submitWindow(now - Number(btn.dataset.spanMs), now);
+			});
+
+			follow.addEventListener("change", () => form.requestSubmit());
+
+			// the label is server-rendered UTC; show it in local time
+			function fmtWindow() {
+				const el = document.getElementById("war-window-label");
+				if (!el) return;
+				const f = (ms) => new Date(Number(ms)).toLocaleString(undefined, { hour12: false });
+				el.textContent = f(el.dataset.winFrom) + " → " + f(el.dataset.winTo);
+			}
+			fmtWindow();
+			document.body.addEventListener("htmx:afterSettle", fmtWindow);
+
+			// follow-now refresh: OOB fragments update charts and logs in place
+			setInterval(() => {
+				if (!follow.checked) return;
+				const u = new URL(location);
+				u.searchParams.set("frag", "panes");
+				htmx.ajax("GET", u.pathname + u.search, { swap: "none" });
+			}, 15000);
+
+			// hand-rolled brush: drag across any chart selects the new window.
+			// Charts use a category axis, so getValueForPixel yields an INDEX
+			// into the payload's labelsMs - the index maps back to epoch ms.
+			let brush = null;
+			function updateBox(e) {
+				const r = brush.wrap.getBoundingClientRect();
+				const a = Math.min(brush.x0, e.clientX) - r.left;
+				const b = Math.max(brush.x0, e.clientX) - r.left;
+				brush.box.style.left = a + "px";
+				brush.box.style.width = Math.max(1, b - a) + "px";
+			}
+			document.addEventListener("pointerdown", (e) => {
+				const canvas = e.target.closest("#war-main canvas[data-chart]");
+				if (!canvas || e.button !== 0) return;
+				const chart = Chart.getChart(canvas);
+				const dataEl = document.getElementById("chart-data-" + canvas.dataset.chart);
+				if (!chart || !dataEl) return;
+				const ms = JSON.parse(dataEl.textContent).labelsMs || [];
+				if (ms.length < 2) return;
+				e.preventDefault();
+				const box = document.createElement("div");
+				box.className = "war-brush-box";
+				canvas.parentElement.appendChild(box);
+				brush = { canvas, chart, ms, wrap: canvas.parentElement, box, x0: e.clientX };
+				updateBox(e);
+			});
+			document.addEventListener("pointermove", (e) => { if (brush) updateBox(e); });
+			document.addEventListener("pointerup", (e) => {
+				if (!brush) return;
+				const { chart, ms, canvas, box, x0 } = brush;
+				box.remove();
+				brush = null;
+				const r = canvas.getBoundingClientRect();
+				const px0 = Math.min(x0, e.clientX) - r.left;
+				const px1 = Math.max(x0, e.clientX) - r.left;
+				if (px1 - px0 < 5) { // a click, not a drag: pin the time line
+					const i = Math.max(0, Math.min(ms.length - 1, Math.round(chart.scales.x.getValueForPixel(px0))));
+					const bucket = ms[1] - ms[0];
+					const t = ms[i] + bucket / 2; // bucket center lands right on coarser charts too
+					pinnedMs = pinnedMs === t ? null : t; // same spot toggles off
+					renderPins({ scroll: true, flash: true, smooth: true });
+					return;
+				}
+				const clamp = (i) => Math.max(0, Math.min(ms.length - 1, Math.round(i)));
+				const i0 = clamp(chart.scales.x.getValueForPixel(px0));
+				const i1 = clamp(chart.scales.x.getValueForPixel(px1));
+				if (i1 <= i0) return;
+				const bucket = ms[1] - ms[0];
+				const from = ms[i0];
+				let to = ms[i1] + bucket; // the last selected bucket counts too
+				if (to - from < 60000) to = from + 60000;
+				follow.checked = false; // zooming into the past is not "now"
+				submitWindow(from, to);
+			});
+
+			// pinned time line: a click on any chart drops the same vertical
+			// line on every chart, so metrics and logs read at one moment.
+			// Fractional category index = (t - labels[0]) / bucket, and
+			// getPixelForValue interpolates it - buckets differ per chart.
+			let pinnedMs = null;
+			function renderPins(opts) {
+				opts = opts || {};
+				document.querySelectorAll(".war-pin").forEach((el) => el.remove());
+				markLogRow(opts);
+				if (pinnedMs === null) return;
+				let labeled = false;
+				document.querySelectorAll("#war-main canvas[data-chart]").forEach((c) => {
+					const chart = Chart.getChart(c);
+					const dataEl = document.getElementById("chart-data-" + c.dataset.chart);
+					if (!chart || !dataEl) return;
+					const ms = JSON.parse(dataEl.textContent).labelsMs || [];
+					if (ms.length < 2) return;
+					const idx = (pinnedMs - ms[0]) / (ms[1] - ms[0]);
+					if (idx < -0.5 || idx > ms.length - 0.5) return;
+					const x = chart.scales.x.getPixelForValue(idx);
+					if (!isFinite(x)) return;
+					const line = document.createElement("div");
+					line.className = "war-pin";
+					line.style.left = x + "px";
+					if (!labeled) { // the time itself, once - on the topmost chart
+						line.dataset.t = new Date(pinnedMs).toLocaleTimeString(undefined, { hour12: false });
+						if (x > c.getBoundingClientRect().width - 80) line.classList.add("war-pin-flip");
+						labeled = true;
+					}
+					c.parentElement.appendChild(line);
+				});
+			}
+			// markLogRow scrolls the logs pane to the line nearest the pinned
+			// moment and marks it. Container scroll ONLY - the page viewport
+			// never jumps because of a chart click. onlyIfMissing skips the
+			// work when the marked row survived the swap (e.g. a detail
+			// expansion settled, not a pane refresh) so it can't re-yank a
+			// pane the user has scrolled elsewhere.
+			function markLogRow(opts) {
+				if (pinnedMs !== null && opts.onlyIfMissing && document.querySelector(".war-pin-row")) return;
+				document.querySelectorAll(".war-pin-row").forEach((el) => el.classList.remove("war-pin-row", "war-pin-row-flash"));
+				if (pinnedMs === null) return;
+				const rows = document.querySelectorAll("#war-logs .stream-row");
+				let target = null;
+				for (const row of rows) {
+					const ts = row.querySelector("[data-ts]");
+					if (ts && Number(ts.dataset.ts) >= pinnedMs) { target = row; break; }
+				}
+				// pin past the newest loaded line: the last row is the nearest
+				if (!target && rows.length) target = rows[rows.length - 1];
+				if (!target) return; // aggregation table, or an empty window
+				target.classList.add("war-pin-row");
+				if (opts.flash) target.classList.add("war-pin-row-flash");
+				if (opts.scroll) {
+					const pane = target.closest(".stream-scroll");
+					if (!pane) return;
+					const top = target.getBoundingClientRect().top - pane.getBoundingClientRect().top
+						+ pane.scrollTop - pane.clientHeight / 2 + target.offsetHeight / 2;
+					pane.scrollTo({ top, behavior: opts.smooth ? "smooth" : "auto" });
+				}
+			}
+			document.addEventListener("keydown", (e) => {
+				if (e.key === "Escape" && pinnedMs !== null) { pinnedMs = null; renderPins(); }
+			});
+			// charts are rebuilt on follow refreshes and theme flips; re-drop
+			// the line after they settle (chartScripts renders first: it
+			// registered its afterSettle listener before this one). The row
+			// re-marks and re-scrolls only when the pane was actually replaced.
+			document.body.addEventListener("htmx:afterSettle", () =>
+				requestAnimationFrame(() => renderPins({ scroll: true, onlyIfMissing: true })));
+			new MutationObserver(() => requestAnimationFrame(() => renderPins({ onlyIfMissing: true })))
+				.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+		})();
+	</script>
+}

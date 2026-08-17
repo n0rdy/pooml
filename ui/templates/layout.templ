@@ -17,7 +17,9 @@ templ Base(title string) {
 			// all frontend assets are vendored + embedded (tools/vendor-assets.sh,
 			// ui/assets for the CSS build): pooml works fully offline and no
 			// page load ever talks to a CDN. See CONTEXT.md > Static Assets.
-			<link href="/static/styles.css" rel="stylesheet" type="text/css"/>
+			// ?v= busts the 24h static cache when the stylesheet changes;
+			// without it, an upgrade pairs new markup with yesterday's CSS
+			<link href={ templ.SafeURL("/static/styles.css?v=" + StaticVersion) } rel="stylesheet" type="text/css"/>
 			<script src="/static/vendor/htmx.min.js"></script>
 			@importMap()
 			@contrastFixes()

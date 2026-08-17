@@ -40,6 +40,9 @@ type ChartDataset struct {
 	// nullable: a null point renders as a gap in the line (Chart.js default
 	// spanGaps=false) - "no sample" for gauges is unknown, never zero
 	Data []*float64 `json:"data"`
+	// overrides the palette slot; semantic series (error counts) stay red
+	// regardless of dataset order
+	Color string `json:"color,omitempty"`
 }
 
 templ DashboardsListPage(dashboards []services.Dashboard, errMsg string, csrfToken string) {
@@ -399,8 +402,8 @@ templ chartScripts() {
 							labels,
 							datasets: cfg.datasets.map((d, i) => ({
 								...d,
-								borderColor: PALETTE[i % PALETTE.length],
-								backgroundColor: PALETTE[i % PALETTE.length] + (cfg.type === "bar" ? "b3" : "33"),
+								borderColor: d.color || PALETTE[i % PALETTE.length],
+								backgroundColor: (d.color || PALETTE[i % PALETTE.length]) + (cfg.type === "bar" ? "b3" : "33"),
 								borderWidth: 2,
 								pointRadius: 0,
 								tension: 0.2,
@@ -462,13 +465,17 @@ templ chartScripts() {
 					});
 			});
 
-			document.body.addEventListener("htmx:beforeSwap", (e) => {
+			function destroyCharts(e) {
 				if (!e.detail.target || !e.detail.target.querySelectorAll) return;
 				e.detail.target.querySelectorAll("canvas[data-chart]").forEach((c) => {
 					const ch = Chart.getChart(c);
 					if (ch) ch.destroy();
 				});
-			});
+			}
+			document.body.addEventListener("htmx:beforeSwap", destroyCharts);
+			// OOB swaps (the War Room's follow refresh) replace canvases without
+			// a regular beforeSwap for that target
+			document.body.addEventListener("htmx:oobBeforeSwap", destroyCharts);
 			document.body.addEventListener("htmx:afterSettle", () => renderAll(false));
 			new MutationObserver(() => renderAll(true))
 				.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
