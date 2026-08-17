@@ -13,6 +13,7 @@ The assumption is that you will self-host pooml on a VPS or a small cloud instan
 - **Dashboards**: typed logs/metrics dashboards with stream, chart, and number panels
 - **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire
 - **Ops**: hourly retention cleanup, scheduled S3 backups, Prometheus `/metrics` self-observability - pooml can monitor itself
+- **AI-ready (MCP)**: [`@pooml/mcp`](https://www.npmjs.com/package/@pooml/mcp) gives Claude (or any MCP client) read-only SQL access to your logs and metrics - LLMs already speak SQL, so there's no query DSL for the model to hallucinate around
 - **One login**: a single shared secret for the UI, API keys for ingestion
 
 ## Open-source but closed-contribution
@@ -165,6 +166,28 @@ curl -X POST "http://your-pooml-host:8080/api/v1/query/logs" \
 ```
 
 `/api/v1/query/logs`, `/api/v1/query/metrics` (same layered SQL validation as the UI: SELECT-only, allow-listed tables, read-only connection, timeouts), and `GET /api/v1/query/catalog` for what metrics exist. Responses default to 200 rows (`max_rows` up to 1000) with long cells truncated - budgets sized for scripts and AI assistants. Details in [openapi.yaml](./openapi.yaml).
+
+## MCP: ask your AI what broke
+
+Because pooml's query language is SQL, your AI assistant already knows how to use it. [`@pooml/mcp`](https://www.npmjs.com/package/@pooml/mcp) is a small MCP server that runs on your machine and connects any MCP client (Claude Code, Claude Desktop, ...) to the query API above - strictly read-only, through the same validation stack, with your credentials never leaving your machine.
+
+It rides on the query API, which is **disabled by default** - enable it on the pooml server first:
+
+```
+POOML_QUERY_API_ENABLED=true
+POOML_QUERY_AUTH_SECRET=<min 32 chars, its own secret - not an ingest API key>
+```
+
+Then, on the machine where your MCP client runs:
+
+```bash
+claude mcp add pooml \
+  -e POOML_URL=https://your-pooml-host:8080 \
+  -e POOML_QUERY_AUTH_SECRET=your-query-secret \
+  -- npx -y @pooml/mcp
+```
+
+Then ask things like *"what broke in payment-svc last night?"* or *"chart-worthy: which service's error rate spiked this week?"* - the model writes the SQL, pooml answers it. Setup details (including running behind a Cloudflare Tunnel) in the [pooml-mcp repo](https://github.com/n0rdy/pooml-mcp).
 
 ## Retention
 

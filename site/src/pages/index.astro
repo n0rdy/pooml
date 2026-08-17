@@ -117,6 +117,25 @@ const envVars = [
         </div>
       </section>
 
+      <section class="mcp">
+        <h2>Your AI assistant already speaks pooml</h2>
+        <p>
+          Because the query language is SQL, there's no custom DSL for an LLM
+          to hallucinate around. <a href="https://www.npmjs.com/package/@pooml/mcp"><code>@pooml/mcp</code></a>
+          connects Claude - or any MCP client - to your instance: strictly
+          read-only, through the same SQL validation as the UI, credentials
+          never leaving your machine. Ask <em>"what broke last night?"</em>
+          and the model writes the query.
+        </p>
+        <div class="code-block">
+          <pre><code>{`claude mcp add pooml \
+  -e POOML_URL=https://your-pooml-host:8080 \
+  -e POOML_QUERY_AUTH_SECRET=your-query-secret \
+  -- npx -y @pooml/mcp`}</code></pre>
+          <button class="copy" data-copy={`claude mcp add pooml -e POOML_URL=https://your-pooml-host:8080 -e POOML_QUERY_AUTH_SECRET=your-query-secret -- npx -y @pooml/mcp`}>copy</button>
+        </div>
+      </section>
+
       <section class="features">
         <h2>What's in the binary</h2>
         <div class="grid">
@@ -402,6 +421,17 @@ const envVars = [
       }
       .why p code {
         color: var(--text);
+      }
+      .mcp p {
+        color: var(--muted);
+        margin-bottom: 1.2rem;
+      }
+      .mcp p code,
+      .mcp p em {
+        color: var(--text);
+      }
+      .mcp a {
+        color: var(--peanut-bright);
       }
       .queries {
         display: grid;
