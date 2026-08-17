@@ -6,6 +6,8 @@ dist
 
 CONTEXT.md
 ROADMAP.md
+# internal deep-dives split out of CONTEXT.md; same status as it
+docs/
 
 test_data_large.sql
 
