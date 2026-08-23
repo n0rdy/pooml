@@ -60,12 +60,42 @@ jobs:
 
       - name: Check compiled CSS is fresh
         working-directory: ui/assets
+        env:
+          HEAD_REF: ${{ github.head_ref || github.ref_name }}
+          BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
           npm ci
           npx tailwindcss -i input.css -o ../static/styles.css --minify
           if [ -n "$(git status --porcelain ../static/styles.css)" ]; then
-            echo "ui/static/styles.css is stale - run 'npm run css' in ui/assets and commit"
-            git diff --stat ../static/styles.css
+            # the file is minified onto one line, so a plain git diff is useless;
+            # split both versions on '}' to get one rule per line before diffing
+            git show HEAD:ui/static/styles.css | tr '}' '\n' > /tmp/css.committed
+            tr '}' '\n' < ../static/styles.css > /tmp/css.rebuilt
+            {
+              echo "## ui/static/styles.css is stale"
+              echo
+              git fetch --quiet --depth=1 origin "$BASE_REF"
+              if [ -n "$(git diff --name-only "origin/$BASE_REF" HEAD -- package.json package-lock.json)" ]; then
+                echo "**Cause:** this PR bumps the CSS toolchain (tailwindcss / daisyui), so the compiled output changed."
+              else
+                echo "**Cause:** a template or input.css changed without recompiling the stylesheet."
+              fi
+              echo
+              echo "**Fix:**"
+              echo '```'
+              echo "git fetch origin && git checkout \"$HEAD_REF\""
+              echo "cd ui/assets && npm ci && npm run css"
+              echo "git add ../static/styles.css && git commit -m 'css: rebuild stylesheet' && git push"
+              echo '```'
+              echo
+              echo "<details><summary>What changed (one CSS rule per line)</summary>"
+              echo
+              echo '```diff'
+              diff -u /tmp/css.committed /tmp/css.rebuilt | tail -n +3 | grep -E '^[+-]' | head -200
+              echo '```'
+              echo "</details>"
+            } | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "::error file=ui/static/styles.css::compiled CSS is stale - see the job summary for the cause, the fix commands, and the diff"
             exit 1
           fi
 
