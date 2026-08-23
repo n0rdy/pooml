@@ -1,7 +1,7 @@
 # Build stage: CGO is required (mattn/go-sqlite3 with the vendored SQLite
 # amalgamation), and the sqlite_fts5 tag is mandatory - without it the binary
 # fails at startup on the logs migration (no such module: fts5).
-FROM golang:1.26-alpine AS build
+FROM golang:1.27-alpine AS build
 
 RUN apk add --no-cache build-base
 
