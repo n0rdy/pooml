@@ -4,8 +4,7 @@ import (
 	"context"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
+	"uuid"
 )
 
 const (
