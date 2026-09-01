@@ -29,7 +29,6 @@ type MetricsExplorerView struct {
 type CatalogRow struct {
 	Name       string
 	Service    string
-	Points     int64
 	LastSeenMs int64
 	DSL        string // "" = name not linkable
 }
@@ -97,7 +96,6 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 									<tr>
 										<th>metric</th>
 										<th>service</th>
-										<th>datapoints</th>
 										<th>last seen</th>
 									</tr>
 								</thead>
@@ -112,7 +110,6 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 												}
 											</td>
 											<td class="font-mono">{ c.Service }</td>
-											<td>{ strconv.FormatInt(c.Points, 10) }</td>
 											<td class="opacity-70"><span data-reltime={ msString(c.LastSeenMs) }>{ utcTime(c.LastSeenMs) }</span></td>
 										</tr>
 									}

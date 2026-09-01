@@ -19,10 +19,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// defaultMetricsQuery is a catalog view: which metrics exist, from which
-// services, how fresh - the natural first question on this page.
+// defaultMetricsQuery is the editable starting query in the SQL editor. The
+// full catalog is already shown fast by the landing widget (metricsCatalog);
+// this is a teaching example the user adapts, so it is bounded to the last 24h.
+// The bound keeps a Run of the unedited query cheap - an unbounded
+// GROUP BY COUNT(*) scans the whole retention window - and models the
+// timestamp-filter idiom every metrics query should use.
 const defaultMetricsQuery = `SELECT name, service, COUNT(*) AS points, MAX(timestamp) AS last_seen
 FROM metrics
+WHERE timestamp > (unixepoch() - 86400) * 1000
 GROUP BY name, service
 ORDER BY last_seen DESC
 LIMIT 100`
@@ -323,9 +328,22 @@ func (ur *Router) servicesForMetric(req *http.Request, metric string) []string {
 	return services
 }
 
+// metricsCatalog lists the distinct (name, service) series with their type and
+// recency. It deliberately avoids GROUP BY + COUNT(*), which scans every row in
+// the retention window (millions, from the 30s self-scrape) and made this page
+// take seconds. Instead DISTINCT skip-scans the (name, service, timestamp)
+// index and per-series type/last_seen are single index seeks, so the cost
+// scales with the number of series, not the number of datapoints. The exact
+// per-series datapoint count is dropped: it is the one value that is inherently
+// O(rows). See docs/performance.md > Metrics catalog.
 func (ur *Router) metricsCatalog(req *http.Request) []templates.CatalogRow {
 	res, err := query.Execute(req.Context(), ur.Pools.LogsRead,
-		"SELECT name, MIN(type) AS type, service, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics GROUP BY name, service ORDER BY last_seen DESC LIMIT 100")
+		`SELECT d.name, d.service,
+       (SELECT type FROM metrics t WHERE t.name = d.name AND t.service = d.service ORDER BY timestamp DESC LIMIT 1) AS type,
+       (SELECT MAX(timestamp) FROM metrics mx WHERE mx.name = d.name AND mx.service = d.service) AS last_seen
+FROM (SELECT DISTINCT name, service FROM metrics) d
+ORDER BY last_seen DESC
+LIMIT 100`)
 	if err != nil {
 		return nil
 	}
@@ -333,12 +351,11 @@ func (ur *Router) metricsCatalog(req *http.Request) []templates.CatalogRow {
 	for _, row := range res.Rows {
 		c := templates.CatalogRow{
 			Name:       cellString(row[0]),
-			Service:    cellString(row[2]),
-			Points:     asInt64(row[3]),
-			LastSeenMs: asInt64(row[4]),
+			Service:    cellString(row[1]),
+			LastSeenMs: asInt64(row[3]),
 		}
 		if !strings.Contains(c.Name, ")") { // a ')' would break the DSL head
-			if asInt64(row[1]) == 0 {
+			if asInt64(row[2]) == 0 {
 				c.DSL = "increase(" + c.Name + ") per 1h last 24h"
 			} else {
 				c.DSL = "avg(" + c.Name + ") per 10m last 24h"

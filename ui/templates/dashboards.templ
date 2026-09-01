@@ -149,9 +149,9 @@ templ PanelsRegion(dashboardID int64, dashboardType string, panels []services.Pa
 			<p class="text-sm opacity-60 italic md:col-span-3">
 				Empty so far. Add a panel below - try
 				if dashboardType == "logs" {
-					<code class="font-mono">SELECT timestamp / 600000 * 600000 AS bucket, COUNT(*) FROM logs WHERE level >= 4 GROUP BY bucket ORDER BY bucket</code>
+					<code class="font-mono">SELECT timestamp / 600000 * 600000 AS bucket, COUNT(*) FROM logs WHERE level >= 4 AND timestamp > (unixepoch() - 86400) * 1000 GROUP BY bucket ORDER BY bucket</code>
 				} else {
-					<code class="font-mono">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp</code>
+					<code class="font-mono">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' AND timestamp > (unixepoch() - 86400) * 1000 ORDER BY timestamp</code>
 				}
 			</p>
 		}
