@@ -50,7 +50,7 @@ func setup(t *testing.T) (*db.Pools, *httptest.Server, string) {
 		services.NewThrottlingService(),
 		apiKeys, pipeline, metricsPipeline, "local", false,
 		"metrics-test-secret-0123456789012345",
-		api.QueryAPI{Secret: "query-test-secret-01234567890123456", LogsRead: pools.LogsRead, Metrics: pools.Metrics},
+		api.QueryAPI{Secret: "query-test-secret-01234567890123456", LogsRead: pools.LogsRead, Metrics: pools.LogsRead},
 	)
 	srv := httptest.NewServer(router.NewRouter())
 	t.Cleanup(srv.Close)

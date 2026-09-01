@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/rs/zerolog/log"
@@ -26,6 +27,11 @@ const (
 	batchChanSize = 100
 	batchSize     = 500
 	flushTimeout  = 1 * time.Second
+
+	// The channel counts batches, so 100 x maxOTLPRowsPerRequest (50K) could
+	// queue ~5M rows before the writer drains. Bound the queued row count too
+	// (mirrors ingestion's byte budget): crossing it 429s like a full channel.
+	maxBufferedRows = 500_000
 )
 
 const insertPrefix = "INSERT INTO metrics(timestamp,name,type,value,service,host,labels) VALUES "
@@ -44,6 +50,8 @@ type Pipeline struct {
 	db       *sql.DB
 	batchCh  chan []Row
 	writerWG sync.WaitGroup
+
+	bufferedRows atomic.Int64 // rows admitted to batchCh but not yet consumed
 
 	// guards TryPush against send-on-closed-channel when a shutdown deadline
 	// expires mid-request; RLock held across the send (see ingestion.Pipeline)
@@ -75,10 +83,16 @@ func (p *Pipeline) TryPush(rows []Row) bool {
 	if p.closed {
 		return false
 	}
+	n := int64(len(rows))
+	if p.bufferedRows.Add(n) > maxBufferedRows {
+		p.bufferedRows.Add(-n)
+		return false
+	}
 	select {
 	case p.batchCh <- rows:
 		return true
 	default:
+		p.bufferedRows.Add(-n)
 		return false
 	}
 }
@@ -132,6 +146,7 @@ func (p *Pipeline) writer() {
 				}
 				return
 			}
+			p.bufferedRows.Add(-int64(len(rows)))
 			buf = append(buf, rows...)
 		case <-ticker.C:
 			tryFlush()

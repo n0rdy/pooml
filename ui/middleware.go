@@ -58,8 +58,33 @@ func securityHeaders(env string) func(http.Handler) http.Handler {
 			h.Set("X-Frame-Options", "DENY")
 			h.Set("X-Content-Type-Options", "nosniff")
 			h.Set("Referrer-Policy", "same-origin")
+			// authenticated pages carry API-key labels, log content, channel
+			// config; keep them out of the disk cache so Back after logout on a
+			// shared machine can't re-render them. Static assets reset this to a
+			// public max-age in their own handler.
+			h.Set("Cache-Control", "no-store")
 			if env == common.ProEnv {
 				h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			}
+			next.ServeHTTP(w, req)
+		})
+	}
+}
+
+// maxUIBodyBytes caps UI request bodies. UI forms are tiny (secrets, SQL,
+// settings); without this, handlers fall back to net/http's 10 MB form default
+// (5x the ingest cap), and nosurf reads the whole body for its token before the
+// CSRF check runs - an unauthenticated 10 MB parse on /login.
+const maxUIBodyBytes = 1 << 20
+
+// bodyLimit wraps the request body so a read past the cap fails instead of
+// buffering unboundedly. Must sit before csrfPrevention: nosurf reads the body
+// for token extraction, so the cap has to be in place first.
+func bodyLimit(max int64) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if req.Body != nil {
+				req.Body = http.MaxBytesReader(w, req.Body, max)
 			}
 			next.ServeHTTP(w, req)
 		})

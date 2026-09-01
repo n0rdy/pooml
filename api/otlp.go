@@ -97,6 +97,11 @@ func (ar *Router) otlpToRows(req *metricspb.MetricsData, receivedAt int64) []met
 		for _, sm := range rm.GetScopeMetrics() {
 			for _, m := range sm.GetMetrics() {
 				rows = ar.appendMetric(rows, m, service, host, receivedAt)
+				// stop materializing once over the cap: the caller rejects
+				// the request anyway, no need to build the rest of the slice
+				if len(rows) > maxOTLPRowsPerRequest {
+					return rows
+				}
 			}
 		}
 	}

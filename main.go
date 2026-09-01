@@ -100,7 +100,13 @@ func main() {
 	// Services
 	monitoringService := services.NewMonitoringService(pools)
 	sessionsService := services.NewSessionsService()
-	throttlingService := services.NewThrottlingService()
+	// Separate throttle state per server: the API and UI are split into
+	// distinct servers precisely so exposing the API can't endanger the UI.
+	// A shared instance would re-couple them - behind a proxy every request
+	// collapses to one client IP, so hammering the public API with bad keys
+	// would lock the admin out of UI login.
+	apiThrottlingService := services.NewThrottlingService()
+	uiThrottlingService := services.NewThrottlingService()
 	apiKeysService := services.NewApiKeysService(pools.Meta)
 	encryptionService, err := services.NewEncryptionService(encryptionKey, pools.Meta)
 	if err != nil {
@@ -126,7 +132,8 @@ func main() {
 	retentionService := services.NewRetentionService(settingsService, pools.LogsWrite, pools.Metrics, pools.Meta)
 
 	startJob(appCtx, &jobsWG, "sessions-sweeper", sessionsService.RunSweeper)
-	startJob(appCtx, &jobsWG, "throttling-sweeper", throttlingService.RunSweeper)
+	startJob(appCtx, &jobsWG, "throttling-sweeper-api", apiThrottlingService.RunSweeper)
+	startJob(appCtx, &jobsWG, "throttling-sweeper-ui", uiThrottlingService.RunSweeper)
 	startJob(appCtx, &jobsWG, "alert-evaluator", evaluator.Run)
 	startJob(appCtx, &jobsWG, "retention-sweeper", retentionService.Run)
 	backupService := services.NewBackupService(settingsService, dbDir, pools.LogsRead, pools.Metrics, pools.Meta)
@@ -161,11 +168,13 @@ func main() {
 	defer sseCancel()
 
 	// Routers
-	queryAPI := api.QueryAPI{Secret: getQueryAPISecret(), LogsRead: pools.LogsRead, Metrics: pools.Metrics}
-	apiRouter := api.NewRouter(monitoringService, throttlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders, metricsSecret, queryAPI)
+	// Metrics deliberately gets the logs-read pool: metrics.db is ATTACHed
+	// mode=ro there, keeping every query-API statement engine-read-only.
+	queryAPI := api.QueryAPI{Secret: getQueryAPISecret(), LogsRead: pools.LogsRead, Metrics: pools.LogsRead}
+	apiRouter := api.NewRouter(monitoringService, apiThrottlingService, apiKeysService, pipeline, metricsPipeline, env, trustProxyHeaders, metricsSecret, queryAPI)
 	uiRouter := ui.NewRouter(ui.Deps{
 		Sessions:          sessionsService,
-		Throttling:        throttlingService,
+		Throttling:        uiThrottlingService,
 		ApiKeys:           apiKeysService,
 		Settings:          settingsService,
 		Alerts:            alertsService,
@@ -464,7 +473,10 @@ func getTrustProxyHeaders() bool {
 }
 
 // getMetricsConfigs mirrors forq: metrics are off by default, and enabling
-// them requires a dedicated auth secret (env-only, never stored in meta.db).
+// them requires a dedicated auth secret. The secret's source of truth is the
+// env var, but EnsureSelfScrape re-stores it (AES-GCM encrypted) into the
+// self-scrape target in meta.db each boot so rotation sticks - so it is
+// recoverable from a backup only with POOML_ENCRYPTION_KEY.
 func getMetricsConfigs() (bool, string) {
 	v := os.Getenv("POOML_METRICS_ENABLED")
 	if v == "" {

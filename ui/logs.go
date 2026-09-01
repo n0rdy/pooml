@@ -327,7 +327,7 @@ func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 	for _, row := range res.Rows {
 		cells := make([]string, len(row))
 		for j, cell := range row {
-			cells[j] = cellString(cell)
+			cells[j] = csvSafe(cellString(cell))
 		}
 		_ = cw.Write(cells)
 	}
@@ -375,6 +375,25 @@ func asInt64(v any) int64 {
 		return int64(t)
 	}
 	return 0
+}
+
+// csvSafe neutralizes spreadsheet formula injection: log content is hostile,
+// and a cell starting with =, +, -, @, tab or CR is executed as a formula by
+// Excel/Sheets/LibreOffice on open (encoding/csv quotes for CSV correctness,
+// not for this). Prefixing a single quote defuses it. Genuine numbers
+// (including negatives like -1.5) are left alone so they still import numeric.
+func csvSafe(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		if _, err := strconv.ParseFloat(s, 64); err == nil {
+			return s
+		}
+		return "'" + s
+	}
+	return s
 }
 
 func cellString(v any) string {

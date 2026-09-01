@@ -18,12 +18,18 @@ import (
 // clients - otherwise attackers can spoof their IP and bypass throttling.
 // Assumes a single proxy hop; multi-hop deployments should canonicalize the
 // header at the edge proxy before it reaches pooml.
+//
+// Header.Values (not Get) is used so a proxy that emits its own separate
+// X-Forwarded-For line rather than appending to the client's still yields the
+// proxy-added value as the rightmost entry - Get returns only the first line.
 func ClientIP(req *http.Request, trustProxyHeaders bool) string {
 	if trustProxyHeaders {
-		if xff := req.Header.Get("X-Forwarded-For"); xff != "" {
-			parts := strings.Split(xff, ",")
-			rightmost := strings.TrimSpace(parts[len(parts)-1])
-			if ip := net.ParseIP(rightmost); ip != nil {
+		var parts []string
+		for _, line := range req.Header.Values("X-Forwarded-For") {
+			parts = append(parts, strings.Split(line, ",")...)
+		}
+		for i := len(parts) - 1; i >= 0; i-- {
+			if ip := net.ParseIP(strings.TrimSpace(parts[i])); ip != nil {
 				return ip.String()
 			}
 		}
