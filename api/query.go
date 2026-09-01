@@ -108,8 +108,18 @@ func (ar *Router) runQuery(w http.ResponseWriter, req *http.Request, scope query
 // GET /api/v1/query/catalog - what metrics exist, so a consumer can orient
 // without guessing names.
 func (ar *Router) queryCatalog(w http.ResponseWriter, req *http.Request) {
+	// DISTINCT + per-series index seeks, not GROUP BY + COUNT(*): the latter
+	// scans every row in the retention window and can time out on a busy
+	// metrics.db. Cost scales with series count, not datapoints. The exact
+	// per-series datapoint count is dropped - it is inherently O(rows). See
+	// docs/performance.md > Metrics catalog.
 	rows, err := ar.queryAPI.Metrics.QueryContext(req.Context(),
-		"SELECT name, MIN(type) AS type, service, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics GROUP BY name, service ORDER BY last_seen DESC LIMIT 200")
+		`SELECT d.name, d.service,
+       (SELECT type FROM metrics t WHERE t.name = d.name AND t.service = d.service ORDER BY timestamp DESC LIMIT 1) AS type,
+       (SELECT MAX(timestamp) FROM metrics mx WHERE mx.name = d.name AND mx.service = d.service) AS last_seen
+FROM (SELECT DISTINCT name, service FROM metrics) d
+ORDER BY last_seen DESC
+LIMIT 200`)
 	if err != nil {
 		ar.sendErrorResponse(w, http.StatusInternalServerError, common.ErrCodeInternal)
 		return
@@ -120,14 +130,13 @@ func (ar *Router) queryCatalog(w http.ResponseWriter, req *http.Request) {
 		Name       string `json:"name"`
 		Type       string `json:"type"`
 		Service    string `json:"service"`
-		Points     int64  `json:"points"`
 		LastSeenMs int64  `json:"last_seen_ms"`
 	}
 	out := []catalogRow{}
 	for rows.Next() {
 		var r catalogRow
 		var typ int
-		if err := rows.Scan(&r.Name, &typ, &r.Service, &r.Points, &r.LastSeenMs); err != nil {
+		if err := rows.Scan(&r.Name, &r.Service, &typ, &r.LastSeenMs); err != nil {
 			ar.sendErrorResponse(w, http.StatusInternalServerError, common.ErrCodeInternal)
 			return
 		}

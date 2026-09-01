@@ -48,7 +48,7 @@ func serviceLogsURL(service string) string {
 // metrics it reports, how fresh - the natural first question.
 func serviceMetricsURL(service string) string {
 	q := "SELECT name, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics WHERE service = " +
-		sqlString(service) + " GROUP BY name ORDER BY last_seen DESC LIMIT 100"
+		sqlString(service) + " AND timestamp > (unixepoch() - 86400) * 1000 GROUP BY name ORDER BY last_seen DESC LIMIT 100"
 	return "/metrics-explorer?" + url.Values{"q": {q}, "view": {"table"}}.Encode()
 }
 

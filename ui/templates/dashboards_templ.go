@@ -424,12 +424,12 @@ func PanelsRegion(dashboardID int64, dashboardType string, panels []services.Pan
 				return templ_7745c5c3_Err
 			}
 			if dashboardType == "logs" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<code class=\"font-mono\">SELECT timestamp / 600000 * 600000 AS bucket, COUNT(*) FROM logs WHERE level >= 4 GROUP BY bucket ORDER BY bucket</code>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<code class=\"font-mono\">SELECT timestamp / 600000 * 600000 AS bucket, COUNT(*) FROM logs WHERE level >= 4 AND timestamp > (unixepoch() - 86400) * 1000 GROUP BY bucket ORDER BY bucket</code>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<code class=\"font-mono\">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' ORDER BY timestamp</code>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<code class=\"font-mono\">SELECT timestamp, value FROM metrics WHERE name = 'queue_depth' AND timestamp > (unixepoch() - 86400) * 1000 ORDER BY timestamp</code>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
