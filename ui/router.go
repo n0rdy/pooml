@@ -60,6 +60,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 	router := chi.NewRouter()
 
 	router.Use(securityHeaders(ur.Env))
+	router.Use(bodyLimit(maxUIBodyBytes))
 	router.Use(csrfPrevention(ur.csrfErrorHandler, ur.Env))
 
 	// unprotected: login + static assets (the login page needs CSS and the

@@ -10,6 +10,13 @@ import (
 // statement through sqlite3_interrupt.
 const Timeout = 10 * time.Second
 
+// MaxResultBytes caps the total string/blob bytes a single result set may
+// accumulate. MaxRows alone doesn't bound memory: `raw` can be up to the 2 MiB
+// ingest cap, so 10K such rows is tens of GB. The cell-width clamp in the query
+// API runs only after Execute returns, and export/SSE-refresh/alert-eval apply
+// none, so the bound belongs here.
+const MaxResultBytes = 64 << 20
+
 type Result struct {
 	Columns   []string
 	Rows      [][]any
@@ -35,6 +42,7 @@ func Execute(ctx context.Context, db *sql.DB, q string, args ...any) (*Result, e
 	}
 
 	res := &Result{Columns: cols}
+	var resultBytes int
 	for rows.Next() {
 		if len(res.Rows) >= MaxRows {
 			res.Truncated = true
@@ -49,11 +57,19 @@ func Execute(ctx context.Context, db *sql.DB, q string, args ...any) (*Result, e
 			return nil, err
 		}
 		for i, v := range vals {
-			if b, ok := v.([]byte); ok {
+			switch b := v.(type) {
+			case []byte:
+				resultBytes += len(b)
 				vals[i] = string(b)
+			case string:
+				resultBytes += len(b)
 			}
 		}
 		res.Rows = append(res.Rows, vals)
+		if resultBytes >= MaxResultBytes {
+			res.Truncated = true
+			break
+		}
 	}
 	return res, rows.Err()
 }

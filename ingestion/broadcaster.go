@@ -6,21 +6,17 @@ import (
 	"github.com/n0rdy/pooml/common"
 )
 
-const (
-	subscriberBufSize = 100
-	ringSize          = 1000
-)
+const subscriberBufSize = 100
 
-// Broadcaster fans freshly-parsed logs out to SSE subscribers and keeps a ring
-// of recent logs for backfill on connect. Sends never block: a slow subscriber
-// drops logs (its problem), ingestion is never held up.
+// Broadcaster fans freshly-parsed logs out to SSE subscribers. Sends never
+// block: a slow subscriber drops logs (its problem), ingestion is never held
+// up. No recent-log retention: a ring of full StandardLogs would pin up to
+// N x the 2 MiB ingest cap of Raw bytes indefinitely, and the stream path
+// does no backfill (the page render already shows current state).
 type Broadcaster struct {
 	mu     sync.Mutex
 	subs   map[int]chan common.StandardLog
 	nextID int
-	ring   [ringSize]common.StandardLog
-	pos    int
-	count  int
 }
 
 func NewBroadcaster() *Broadcaster {
@@ -30,12 +26,6 @@ func NewBroadcaster() *Broadcaster {
 func (b *Broadcaster) broadcast(l common.StandardLog) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
-	b.ring[b.pos] = l
-	b.pos = (b.pos + 1) % ringSize
-	if b.count < ringSize {
-		b.count++
-	}
 
 	for _, ch := range b.subs {
 		select {
@@ -65,20 +55,4 @@ func (b *Broadcaster) Subscribe() (<-chan common.StandardLog, func()) {
 			close(ch)
 		}
 	}
-}
-
-// Backfill returns a copy of the ring buffer, oldest first.
-func (b *Broadcaster) Backfill() []common.StandardLog {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
-	out := make([]common.StandardLog, 0, b.count)
-	start := b.pos - b.count
-	if start < 0 {
-		start += ringSize
-	}
-	for i := 0; i < b.count; i++ {
-		out = append(out, b.ring[(start+i)%ringSize])
-	}
-	return out
 }

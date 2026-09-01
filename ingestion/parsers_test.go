@@ -251,21 +251,13 @@ func TestNonEnvelopeJSONArrayFallsThrough(t *testing.T) {
 	}
 }
 
-func TestBroadcasterRingAndSubscribers(t *testing.T) {
+func TestBroadcasterSubscribers(t *testing.T) {
 	b := NewBroadcaster()
 	ch, unsub := b.Subscribe()
 
 	for i := range 1500 {
 		msg := string(rune('a' + i%26))
 		b.broadcast(common.StandardLog{Raw: msg, Timestamp: int64(i)})
-	}
-
-	back := b.Backfill()
-	if len(back) != ringSize {
-		t.Fatalf("backfill len = %d, want %d", len(back), ringSize)
-	}
-	if back[0].Timestamp != 500 || back[ringSize-1].Timestamp != 1499 {
-		t.Errorf("ring window = [%d, %d], want [500, 1499]", back[0].Timestamp, back[ringSize-1].Timestamp)
 	}
 
 	// subscriber channel holds only subscriberBufSize; the rest were dropped,

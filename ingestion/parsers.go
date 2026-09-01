@@ -10,7 +10,14 @@ import (
 	"time"
 
 	"github.com/n0rdy/pooml/common"
+
+	"github.com/rs/zerolog/log"
 )
+
+// maxRecordsPerPayload bounds how many logs one HTTP payload can expand into,
+// so a pathological body of ultra-short lines can't amplify the byte budget
+// into an OOM. Far above any real log density in a 2 MiB payload.
+const maxRecordsPerPayload = 100_000
 
 var (
 	// Combined Log Format with the referer/user-agent tail optional, so plain
@@ -45,10 +52,28 @@ func parsePayload(service, host string, payload []byte, receivedAt int64) []comm
 	}
 
 	var out []common.StandardLog
-	for _, line := range bytes.Split(payload, []byte("\n")) {
+	// Iterate lines without bytes.Split: Split materializes the whole [][]byte
+	// up front, so a 2 MiB payload of tiny lines ("a\n" repeated) allocates
+	// ~1 M slice headers plus ~1 M StandardLog structs before anything drains -
+	// a ~80x blow-up of the byte budget, held per parser worker. maxRecords
+	// caps the expansion; the ingest byte cap makes hitting it require lines so
+	// short they can't be real log content.
+	rest := payload
+	for len(rest) > 0 {
+		var line []byte
+		if i := bytes.IndexByte(rest, '\n'); i >= 0 {
+			line, rest = rest[:i], rest[i+1:]
+		} else {
+			line, rest = rest, nil
+		}
 		line = bytes.TrimSpace(line)
 		if len(line) == 0 {
 			continue
+		}
+		if len(out) >= maxRecordsPerPayload {
+			log.Warn().Str("service", service).Str("host", host).
+				Int("cap", maxRecordsPerPayload).Msg("payload exceeded max records; extra lines dropped")
+			break
 		}
 		l := parseLine(line)
 		l.Service, l.Host, l.IngestedAt = service, host, receivedAt

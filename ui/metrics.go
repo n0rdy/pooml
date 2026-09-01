@@ -444,7 +444,7 @@ func (ur *Router) exportMetrics(w http.ResponseWriter, req *http.Request) {
 	for _, row := range res.Rows {
 		cells := make([]string, len(row))
 		for j, cell := range row {
-			cells[j] = cellString(cell)
+			cells[j] = csvSafe(cellString(cell))
 		}
 		_ = cw.Write(cells)
 	}

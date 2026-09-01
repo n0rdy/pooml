@@ -257,18 +257,30 @@ func parseDSLDuration(s string) (int64, error) {
 	if m == nil {
 		return 0, fmt.Errorf("bad duration %q - use forms like 5m, 1h, 2d", s)
 	}
-	n, _ := strconv.ParseInt(m[1], 10, 64)
+	// ParseInt's range error must not be dropped: on overflow it returns
+	// MaxInt64, and the *_000 multiply below wraps to a negative or zero
+	// BucketMs that flows into the generated SQL as nonsense instead of a
+	// clean "bad duration".
+	n, err := strconv.ParseInt(m[1], 10, 64)
+	if err != nil || n < 0 {
+		return 0, fmt.Errorf("duration out of range in %q - use forms like 5m, 1h, 2d", s)
+	}
 	if n == 0 {
 		return 0, fmt.Errorf("duration can't be zero")
 	}
+	var mult int64
 	switch m[2] {
 	case "m":
-		return n * 60_000, nil
+		mult = 60_000
 	case "h":
-		return n * 3_600_000, nil
+		mult = 3_600_000
 	default:
-		return n * 86_400_000, nil
+		mult = 86_400_000
 	}
+	if n > (1<<63-1)/mult {
+		return 0, fmt.Errorf("duration out of range in %q - use forms like 5m, 1h, 2d", s)
+	}
+	return n * mult, nil
 }
 
 func dslQuoteStr(s string) string   { return strings.ReplaceAll(s, "'", "''") }

@@ -34,6 +34,9 @@ func parseFluentBit(service, host string, payload []byte, receivedAt int64) ([]c
 		return nil, false
 	}
 
+	if len(records) > maxRecordsPerPayload {
+		records = records[:maxRecordsPerPayload]
+	}
 	out := make([]common.StandardLog, 0, len(records))
 	for _, r := range records {
 		var l common.StandardLog

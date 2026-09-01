@@ -102,6 +102,9 @@ func (ur *Router) streamBroadcast(req *http.Request, sw *sseWriter, q string) {
 		case <-flushTicker.C:
 			sw.flush()
 		case <-heartbeat.C:
+			if !ur.sessionActive(req) {
+				return
+			}
 			sw.comment("ping")
 			sw.flush()
 		}
@@ -148,6 +151,9 @@ func (ur *Router) streamPolling(req *http.Request, sw *sseWriter, lr logsRequest
 		case <-ur.StreamCtx.Done():
 			return
 		case <-heartbeat.C:
+			if !ur.sessionActive(req) {
+				return
+			}
 			sw.comment("ping")
 			sw.flush()
 		case <-poll.C:
@@ -209,6 +215,9 @@ func (ur *Router) streamRefresh(req *http.Request, sw *sseWriter, lr logsRequest
 		case <-ur.StreamCtx.Done():
 			return
 		case <-heartbeat.C:
+			if !ur.sessionActive(req) {
+				return
+			}
 			sw.comment("ping")
 			sw.flush()
 		case <-refresh.C:
@@ -228,6 +237,15 @@ func (ur *Router) streamRefresh(req *http.Request, sw *sseWriter, lr logsRequest
 			sw.flush()
 		}
 	}
+}
+
+// sessionActive re-checks the session mid-stream. sessionAuth runs once at
+// connect, so without this a stream keeps pushing every ingested log after the
+// viewer logs out or the 7-day expiry passes. Checked on the heartbeat tick, so
+// teardown lags by at most one heartbeat interval.
+func (ur *Router) sessionActive(req *http.Request) bool {
+	c, err := req.Cookie(sessionCookieName)
+	return err == nil && ur.Sessions.IsSessionValid(c.Value)
 }
 
 // sseWriter frames SSE events; flushing is the caller's batching decision.

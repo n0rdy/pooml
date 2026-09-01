@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/metrics"
 
 	dto "github.com/prometheus/client_model/go"
@@ -24,6 +27,9 @@ const (
 	// node_exporter with everything on emits ~2 MB; 10 MB flags a target that
 	// is not really a metrics endpoint
 	maxScrapeBodyBytes = 10 << 20
+	// even inside the body cap, a target of minimal `m{} 1` lines can yield
+	// ~1.6 M rows from 10 MB; cap the expansion the way OTLP caps its request
+	maxScrapeRows = 500_000
 )
 
 // MetricsPusher is what the scraper needs from the metrics pipeline; tests
@@ -113,7 +119,7 @@ func (s *Scraper) scrape(ctx context.Context, t ScrapeTarget) {
 	if err != nil {
 		msg := err.Error()
 		errMsg = &msg
-		log.Warn().Err(err).Int64("target", t.ID).Str("url", t.URL).Msg("scrape failed")
+		log.Warn().Err(err).Int64("target", t.ID).Str("url", redactURL(t.URL)).Msg("scrape failed")
 	}
 	if recErr := s.store.RecordScrape(ctx, t.ID, now, errMsg); recErr != nil {
 		log.Error().Err(recErr).Int64("target", t.ID).Msg("scrape state update")
@@ -126,7 +132,9 @@ func (s *Scraper) fetch(ctx context.Context, t ScrapeTarget, now int64) ([]metri
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.URL, nil)
 	if err != nil {
-		return nil, err
+		// a bad target URL fails here as a *url.Error embedding the raw URL
+		// (query-string token included); strip it like the client.Do path
+		return nil, redactURLError(err)
 	}
 	if t.AuthHeader != "" {
 		name, value, _ := strings.Cut(t.AuthHeader, ":")
@@ -135,7 +143,8 @@ func (s *Scraper) fetch(ctx context.Context, t ScrapeTarget, now int64) ([]metri
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return nil, err
+		// *url.Error embeds the full URL (incl. any query-string token); drop it
+		return nil, redactURLError(err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
@@ -163,12 +172,24 @@ func (s *Scraper) familiesToRows(families map[string]*dto.MetricFamily, t Scrape
 	var rows []metrics.Row
 	base := metrics.Row{Service: t.Service, Host: t.Host}
 
+	capped := false
 	appendRow := func(m *dto.Metric, name string, typ int, value float64) {
+		if len(rows) >= maxScrapeRows {
+			if !capped {
+				capped = true
+				log.Warn().Int64("target", t.ID).Int("cap", maxScrapeRows).
+					Msg("scrape exceeded max rows; extra samples dropped")
+			}
+			return
+		}
 		r := base
 		r.Name, r.Type, r.Value = name, typ, value
 		r.Timestamp = now
+		// clamp exporter-supplied timestamps like the OTLP path: an unclamped
+		// far-future value is never retention-swept and pins the top of every
+		// "newest first" view (see common.ClampTimestamp)
 		if m.GetTimestampMs() != 0 {
-			r.Timestamp = m.GetTimestampMs()
+			r.Timestamp = common.ClampTimestamp(m.GetTimestampMs(), now)
 		}
 		r.Labels = promLabelsJSON(m.GetLabel())
 		rows = append(rows, r)
@@ -195,6 +216,27 @@ func (s *Scraper) familiesToRows(families map[string]*dto.MetricFamily, t Scrape
 		}
 	}
 	return rows
+}
+
+// redactURL strips userinfo and query string from a scrape-target URL, leaving
+// scheme://host/path, so a token carried in the query string never reaches a
+// log line or the stored last-error.
+func redactURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "[unparseable url]"
+	}
+	return u.Scheme + "://" + u.Host + u.Path
+}
+
+// redactURLError drops the URL that *url.Error embeds in its message (which may
+// carry a query-string token), keeping the operation and underlying cause.
+func redactURLError(err error) error {
+	var uerr *url.Error
+	if errors.As(err, &uerr) {
+		return fmt.Errorf("%s: %w", uerr.Op, uerr.Err)
+	}
+	return err
 }
 
 func (s *Scraper) warnDowncast(name, kind string) {
