@@ -44,8 +44,9 @@ func serviceLogsURL(service string) string {
 	return "/logs?" + url.Values{"q": {q}}.Encode()
 }
 
-// serviceMetricsURL lands on the explorer with that service's catalog: which
-// metrics it reports, how fresh - the natural first question.
+// serviceMetricsURL lands on the explorer with that service's recent catalog:
+// which metrics it reported in the last 24h, how fresh - the natural first
+// question. The 24h bound keeps this generated query cheap on a large table.
 func serviceMetricsURL(service string) string {
 	q := "SELECT name, COUNT(*) AS points, MAX(timestamp) AS last_seen FROM metrics WHERE service = " +
 		sqlString(service) + " AND timestamp > (unixepoch() - 86400) * 1000 GROUP BY name ORDER BY last_seen DESC LIMIT 100"

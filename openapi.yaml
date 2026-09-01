@@ -149,7 +149,7 @@ paths:
       tags:
         - Query
       summary: List known metrics
-      description: Metric names with type (counter/gauge), service, datapoint count, and last-seen timestamp.
+      description: Metric names with type (counter/gauge), service, and last-seen timestamp.
       operationId: queryCatalog
       security:
         - QuerySecret: []
