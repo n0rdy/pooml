@@ -11,8 +11,8 @@ const subscriberBufSize = 100
 // Broadcaster fans freshly-parsed logs out to SSE subscribers. Sends never
 // block: a slow subscriber drops logs (its problem), ingestion is never held
 // up. No recent-log retention: a ring of full StandardLogs would pin up to
-// ringSize x the 2 MiB ingest cap of Raw bytes indefinitely, and the stream
-// path does no backfill (the page render already shows current state).
+// N x the 2 MiB ingest cap of Raw bytes indefinitely, and the stream path
+// does no backfill (the page render already shows current state).
 type Broadcaster struct {
 	mu     sync.Mutex
 	subs   map[int]chan common.StandardLog

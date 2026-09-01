@@ -132,7 +132,9 @@ func (s *Scraper) fetch(ctx context.Context, t ScrapeTarget, now int64) ([]metri
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, t.URL, nil)
 	if err != nil {
-		return nil, err
+		// a bad target URL fails here as a *url.Error embedding the raw URL
+		// (query-string token included); strip it like the client.Do path
+		return nil, redactURLError(err)
 	}
 	if t.AuthHeader != "" {
 		name, value, _ := strings.Cut(t.AuthHeader, ":")
