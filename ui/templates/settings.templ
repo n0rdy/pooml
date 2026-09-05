@@ -48,6 +48,12 @@ templ SettingsPage(v SettingsView, csrfToken string) {
 			@ScrapeTargetsSection(v.ScrapeTargets, v.ScrapeErrMsg, csrfToken)
 			@RetentionSection(v.RetentionLogsDays, v.RetentionMetricsDays, v.RetentionFiringsDays, "", false, csrfToken)
 			@BackupSection(v.Backup, "", false, csrfToken)
+			<p class="text-sm opacity-60 text-center">
+				Made by Myko Nordy<br/>
+				<a href="https://x.com/_n0rdy_" class="link" target="_blank" rel="noopener">x.com/_n0rdy_</a>
+				&nbsp;·&nbsp;
+				<a href="https://n0rdy.foo" class="link" target="_blank" rel="noopener">n0rdy.foo</a>
+			</p>
 		</div>
 		@homeScript()
 	}
