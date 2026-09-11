@@ -263,10 +263,55 @@ templ metaPair(label string, value string) {
 	<span class="whitespace-nowrap"><span class="opacity-60">{ label }</span> <span class="font-semibold">{ value }</span></span>
 }
 
+// A JSON log renders as labeled fields (raw would only repeat them, so it
+// folds away); anything else keeps the raw text first. Multi-line values
+// collapse to their first line so a stack trace never dominates the pane.
 templ logDetailPayload(d LogDetail) {
-	<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2">{ d.Raw }</pre>
-	if d.Parsed != "" {
-		<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80">{ d.Parsed }</pre>
+	if len(d.Fields) > 0 {
+		<dl class="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-1 bg-base-100 rounded-field p-2">
+			for _, f := range d.Fields {
+				<dt class="opacity-60 whitespace-nowrap">{ f.Key }</dt>
+				<dd class="min-w-0">
+					@multilineValue(f.Value)
+				</dd>
+			}
+		</dl>
+		if d.RawIsParsed {
+			<details class="group bg-base-100 rounded-field p-2">
+				<summary class="cursor-pointer opacity-60 hover:opacity-100 select-none">
+					<span class="group-open:hidden">show raw</span><span class="hidden group-open:inline">hide raw</span>
+				</summary>
+				<pre class="whitespace-pre-wrap break-all mt-1">{ d.Raw }</pre>
+			</details>
+		} else {
+			<div class="bg-base-100 rounded-field p-2">
+				@multilineValue(d.Raw)
+			</div>
+		}
+	} else {
+		<div class="bg-base-100 rounded-field p-2">
+			@multilineValue(d.Raw)
+		</div>
+		if d.Parsed != "" {
+			<pre class="whitespace-pre-wrap break-all bg-base-100 rounded-field p-2 opacity-80">{ d.Parsed }</pre>
+		}
+	}
+}
+
+templ multilineValue(value string) {
+	{{ first, rest, more := splitFirstLine(value) }}
+	if more == 0 {
+		<span class="whitespace-pre-wrap break-all">{ first }</span>
+	} else {
+		<details class="group">
+			<summary class="cursor-pointer list-none select-none flex flex-wrap gap-x-3 items-baseline">
+				<span class="whitespace-pre-wrap break-all">{ first }</span>
+				<span class="opacity-60 group-hover:opacity-100 whitespace-nowrap">
+					<span class="group-open:hidden">▸ { moreLinesLabel(more) }</span><span class="hidden group-open:inline">▾ collapse</span>
+				</span>
+			</summary>
+			<pre class="whitespace-pre-wrap break-all max-h-96 overflow-y-auto mt-1 pl-3 border-l border-base-content/15">{ rest }</pre>
+		</details>
 	}
 }
 
