@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -262,7 +263,13 @@ func (ur *Router) logDetailsPage(w http.ResponseWriter, req *http.Request) {
 		d.Level = &n
 	}
 	if parsed != nil {
-		d.Parsed = prettyJSON(cellString(parsed))
+		ps := cellString(parsed)
+		d.RawIsParsed = ps == d.Raw
+		if fields, ok := flattenJSONObject(ps); ok {
+			d.Fields = fields
+		} else {
+			d.Parsed = prettyJSON(ps)
+		}
 	}
 	// inline expansions: the logs page swaps in a table-row fragment, stream
 	// panels a div-based one (frag=block); direct navigation gets a real page
@@ -409,6 +416,67 @@ func cellString(v any) string {
 	default:
 		return fmt.Sprint(t)
 	}
+}
+
+// flattenJSONObject renders a JSON object as dotted-key fields in document
+// order (a map would lose it), nesting objects and keeping arrays verbatim.
+func flattenJSONObject(s string) ([]templates.DetailField, bool) {
+	dec := json.NewDecoder(strings.NewReader(s))
+	dec.UseNumber()
+	if tok, err := dec.Token(); err != nil || tok != json.Delim('{') {
+		return nil, false
+	}
+	var out []templates.DetailField
+	if err := flattenObjectBody(dec, "", &out); err != nil || len(out) == 0 {
+		return nil, false
+	}
+	return out, true
+}
+
+func flattenObjectBody(dec *json.Decoder, prefix string, out *[]templates.DetailField) error {
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		key, ok := tok.(string)
+		if !ok {
+			return fmt.Errorf("object key is %T", tok)
+		}
+		if prefix != "" {
+			key = prefix + "." + key
+		}
+		var raw json.RawMessage
+		if err := dec.Decode(&raw); err != nil {
+			return err
+		}
+		raw = bytes.TrimSpace(raw)
+		switch {
+		case len(raw) > 0 && raw[0] == '{':
+			sub := json.NewDecoder(bytes.NewReader(raw))
+			sub.UseNumber()
+			if _, err := sub.Token(); err != nil {
+				return err
+			}
+			if err := flattenObjectBody(sub, key, out); err != nil {
+				return err
+			}
+		case len(raw) > 0 && raw[0] == '"':
+			var str string
+			if err := json.Unmarshal(raw, &str); err != nil {
+				return err
+			}
+			*out = append(*out, templates.DetailField{Key: key, Value: str})
+		default:
+			var compact bytes.Buffer
+			if err := json.Compact(&compact, raw); err != nil {
+				return err
+			}
+			*out = append(*out, templates.DetailField{Key: key, Value: compact.String()})
+		}
+	}
+	_, err := dec.Token()
+	return err
 }
 
 func prettyJSON(s string) string {

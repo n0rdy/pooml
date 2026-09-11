@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -49,6 +50,16 @@ type LogDetail struct {
 	Host       string
 	Raw        string
 	Parsed     string
+	// Fields is parsed flattened to dotted keys in document order when it is a
+	// JSON object; Parsed then serves only as the fallback for other shapes.
+	Fields []DetailField
+	// RawIsParsed marks a JSON log, where raw and parsed hold the same text.
+	RawIsParsed bool
+}
+
+type DetailField struct {
+	Key   string
+	Value string
 }
 
 var levelNames = map[int]string{0: "TRACE", 1: "DEBUG", 2: "INFO", 3: "WARN", 4: "ERROR", 5: "FATAL"}
@@ -157,4 +168,22 @@ func rowsLabel(n int, truncated bool) string {
 		label += " (capped at 10000; narrow the query for the rest)"
 	}
 	return label
+}
+
+// splitFirstLine separates a value into its first line and the rest, with
+// the count of remaining lines; a trailing newline does not count as a line.
+func splitFirstLine(s string) (first, rest string, more int) {
+	s = strings.TrimRight(s, "\r\n")
+	first, rest, found := strings.Cut(s, "\n")
+	if !found {
+		return s, "", 0
+	}
+	return first, rest, strings.Count(rest, "\n") + 1
+}
+
+func moreLinesLabel(n int) string {
+	if n == 1 {
+		return "1 more line"
+	}
+	return fmt.Sprintf("%d more lines", n)
 }
