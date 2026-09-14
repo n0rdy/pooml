@@ -568,7 +568,7 @@ templ logsScript() {
 		});
 
 		// server-rejected SQL comes back with an exact position; underline it
-		document.body.addEventListener("sqlError", (e) => {
+		document.addEventListener("sqlError", (e) => {
 			const d = e.detail;
 			let from = 0;
 			try {
@@ -579,8 +579,8 @@ templ logsScript() {
 		});
 
 		const form = document.getElementById("query-form");
-		form.addEventListener("htmx:configRequest", (e) => {
-			e.detail.parameters.q = view.state.doc.toString();
+		form.addEventListener("htmx:config:request", (e) => {
+			e.detail.ctx.request.body.set("q", view.state.doc.toString());
 		});
 		host.addEventListener("keydown", (e) => {
 			if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
@@ -588,7 +588,7 @@ templ logsScript() {
 				form.requestSubmit();
 			}
 		}, true);
-		document.body.addEventListener("setQuery", (e) => {
+		document.addEventListener("setQuery", (e) => {
 			view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: e.detail.q } });
 			host.classList.add("query-updated");
 			setTimeout(() => host.classList.remove("query-updated"), 800);
@@ -597,16 +597,17 @@ templ logsScript() {
 		// prepends shift content down; compensate manually so the viewport
 		// stays put (native scroll anchoring is off - Safari doesn't have it)
 		let heightBefore = 0;
-		document.body.addEventListener("htmx:beforeRequest", (e) => {
+		document.addEventListener("htmx:before:request", (e) => {
 			const p = pane();
-			heightBefore = p && e.detail.elt.closest("#log-scroll") ? p.scrollHeight : 0;
+			heightBefore = p && e.detail.ctx.sourceElement.closest("#log-scroll") ? p.scrollHeight : 0;
 		});
-		document.body.addEventListener("htmx:afterSettle", (e) => {
+		document.addEventListener("htmx:after:swap", (e) => {
 			fmtTimes();
 			applyWrap();
 			const p = pane();
 			if (!p) return;
-			if (e.detail.target && e.detail.target.id === "results") {
+			const target = e.detail.ctx.target;
+			if (target && target.id === "results") {
 				anchorBottom();
 				if (liveWanted) startLive();
 			} else if (heightBefore > 0) {
@@ -707,7 +708,7 @@ templ logsScript() {
 			history.replaceState(history.state, "", u);
 		}
 		// query runs push URLs built from form fields, which drop live=1
-		document.body.addEventListener("htmx:pushedIntoHistory", syncLiveURL);
+		document.addEventListener("htmx:after:history:push", syncLiveURL);
 
 		liveToggle.addEventListener("change", () => {
 			liveWanted = liveToggle.checked;
@@ -734,7 +735,7 @@ templ logsScript() {
 			showResume(false);
 			liveWanted = true;
 			liveToggle.checked = true;
-			// fresh snapshot covers the gap, then afterSettle reconnects
+			// fresh snapshot covers the gap, then after:swap reconnects
 			form.requestSubmit();
 		});
 

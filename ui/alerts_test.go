@@ -102,6 +102,17 @@ func TestAlertsCRUDFlow(t *testing.T) {
 		t.Errorf("edit form: %.400s", ebody)
 	}
 
+	// a failed hx-put edit answers with the region (htmx 4 swaps 4xx), never
+	// a nested full page
+	badEdit := createAlertForm("errors present", "DROP TABLE logs")
+	status, rbody := cl.htmxForm(http.MethodPut, "/alerts/1", m[1], badEdit)
+	if status != http.StatusBadRequest || !strings.Contains(rbody, `id="alerts-region"`) || strings.Contains(rbody, "<title") {
+		t.Errorf("bad edit = %d %.300s", status, rbody)
+	}
+	if !strings.Contains(rbody, "alert-error") {
+		t.Errorf("bad edit region lacks the error banner: %.300s", rbody)
+	}
+
 	// delete via HTMX
 	dreq, _ := http.NewRequest(http.MethodDelete, cl.srv.URL+"/alerts/1", nil)
 	dreq.Header.Set("X-CSRF-Token", m[1])

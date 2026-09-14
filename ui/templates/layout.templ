@@ -20,6 +20,10 @@ templ Base(title string) {
 			// ?v= busts the 24h static cache when the stylesheet changes;
 			// without it, an upgrade pairs new markup with yesterday's CSS
 			<link href={ templ.SafeURL("/static/styles.css?v=" + StaticVersion) } rel="stylesheet" type="text/css"/>
+			// Back reloads for real: a fetched-and-swapped page can't run its
+			// inline scripts (fresh nonce vs the document's CSP), so editors
+			// never remounted. Must precede the htmx script.
+			<meta name="htmx-config" content='{"history":"reload"}'/>
 			<script src="/static/vendor/htmx.min.js"></script>
 			@importMap()
 			@contrastFixes()
@@ -109,9 +113,10 @@ templ Shell(title string, active string, csrfToken string) {
 					<button type="submit" class="btn btn-ghost btn-sm sm:btn-md">Log out</button>
 				</form>
 			</div>
-			// hx-headers inherits: every HTMX request from inside main carries
-			// the CSRF token (nosurf checks X-CSRF-Token for non-form requests)
-			<main class="flex-1 min-h-0 overflow-y-auto p-2 sm:p-4" hx-headers={ csrfHxHeaders(csrfToken) }>
+			// :inherited is load-bearing (htmx 4 inheritance is opt-in): every
+			// HTMX request inside main carries the CSRF token (nosurf checks
+			// X-CSRF-Token for non-form requests)
+			<main class="flex-1 min-h-0 overflow-y-auto p-2 sm:p-4" hx-headers:inherited={ csrfHxHeaders(csrfToken) }>
 				{ children... }
 			</main>
 		</div>
@@ -203,9 +208,6 @@ templ contrastFixes() {
 templ themeScript() {
 	<script nonce={ templ.GetNonce(ctx) }>
 		(() => {
-			// no DOM-snapshot history: pages with live JS state (CodeMirror)
-			// restore wrong; Back re-fetches the full page instead
-			htmx.config.historyCacheSize = 0;
 			if (localStorage.getItem("pooml-theme") === "light") {
 				document.documentElement.setAttribute("data-theme", "light");
 			}

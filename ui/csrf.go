@@ -14,17 +14,13 @@ func (ur *Router) csrfErrorHandler(w http.ResponseWriter, r *http.Request) {
 		AnErr("reason", nosurf.Reason(r)).
 		Msg("CSRF validation failed")
 
-	// For HTMX requests, return appropriate error
+	// Redirect rather than render in place: a fresh GET of /login issues a
+	// clean token/cookie pair (err=stale picks the friendly message). HTMX
+	// callers need HX-Redirect - fetch follows a real 3xx transparently.
 	if r.Header.Get("HX-Request") == "true" {
-		w.Header().Set("HX-Retarget", "body")
-		w.Header().Set("HX-Reswap", "innerHTML")
-		http.Error(w, "Security validation failed. Please refresh the page and try again.", http.StatusForbidden)
+		w.Header().Set("HX-Redirect", "/login?err=stale")
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
-
-	// Regular requests: redirect rather than render in place. A fresh GET of
-	// /login issues a clean token/cookie pair, which is the reliable way out
-	// of whatever staleness caused the failure; err=stale picks the friendly
-	// message on the login page.
 	http.Redirect(w, r, "/login?err=stale", http.StatusSeeOther)
 }

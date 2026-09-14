@@ -37,14 +37,15 @@ func (ur *Router) renderAlerts(w http.ResponseWriter, req *http.Request, errMsg 
 	}
 	po, cf := ur.channelStates(req)
 	v := templates.AlertsView{Alerts: alerts, ErrMsg: errMsg, PushoverConfigured: po, CampfireConfigured: cf, WarRoomAvailable: ur.PublicURL != ""}
-	// region-only for HTMX flows (delete, edit-cancel); full page otherwise
-	if req.Header.Get("HX-Request") == "true" && req.Method == http.MethodGet && errMsg == "" && req.Header.Get("HX-History-Restore-Request") != "true" {
-		ur.render(w, req, http.StatusOK, templates.AlertsRegion(v))
-		return
-	}
 	status := http.StatusOK
 	if errMsg != "" {
 		status = http.StatusBadRequest
+	}
+	// region-only for HTMX flows (delete, edit save/cancel, incl. their error
+	// banner - htmx 4 swaps 4xx too); full page otherwise
+	if req.Header.Get("HX-Request") == "true" && req.Header.Get("HX-History-Restore-Request") != "true" {
+		ur.render(w, req, status, templates.AlertsRegion(v))
+		return
 	}
 	ur.render(w, req, status, templates.AlertsPage(v, nosurf.Token(req)))
 }

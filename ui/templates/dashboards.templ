@@ -444,9 +444,9 @@ templ chartScripts() {
 			}
 			fmtTs();
 			anchorStreams(document);
-			document.body.addEventListener("htmx:afterSettle", (e) => {
+			document.addEventListener("htmx:after:swap", (e) => {
 				fmtTs();
-				const t = e.detail && e.detail.target;
+				const t = e.detail.ctx && e.detail.ctx.target;
 				if (t && t.querySelectorAll) anchorStreams(t);
 			});
 
@@ -465,18 +465,18 @@ templ chartScripts() {
 					});
 			});
 
-			function destroyCharts(e) {
-				if (!e.detail.target || !e.detail.target.querySelectorAll) return;
-				e.detail.target.querySelectorAll("canvas[data-chart]").forEach((c) => {
-					const ch = Chart.getChart(c);
-					if (ch) ch.destroy();
-				});
-			}
-			document.body.addEventListener("htmx:beforeSwap", destroyCharts);
-			// OOB swaps (the War Room's follow refresh) replace canvases without
-			// a regular beforeSwap for that target
-			document.body.addEventListener("htmx:oobBeforeSwap", destroyCharts);
-			document.body.addEventListener("htmx:afterSettle", () => renderAll(false));
+			// one event per request; tasks cover the main target and every OOB
+			// target (the War Room's follow refresh replaces canvases that way)
+			document.addEventListener("htmx:before:swap", (e) => {
+				for (const task of e.detail.tasks || []) {
+					if (!task.target || !task.target.querySelectorAll) continue;
+					task.target.querySelectorAll("canvas[data-chart]").forEach((c) => {
+						const ch = Chart.getChart(c);
+						if (ch) ch.destroy();
+					});
+				}
+			});
+			document.addEventListener("htmx:after:swap", () => renderAll(false));
 			new MutationObserver(() => renderAll(true))
 				.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 			renderAll(false);

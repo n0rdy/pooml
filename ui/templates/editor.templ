@@ -215,7 +215,7 @@ templ sqlEditorModule() {
 		}).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
 		mountAll();
-		document.body.addEventListener("htmx:afterSettle", mountAll);
+		document.addEventListener("htmx:after:swap", mountAll);
 
 		// CodeMirror measures a hidden element as zero-height and never looks
 		// again - editors mounted inside a collapsed <details> come up with

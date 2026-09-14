@@ -275,7 +275,7 @@ templ warRoomScript() {
 				el.textContent = f(el.dataset.winFrom) + " → " + f(el.dataset.winTo);
 			}
 			fmtWindow();
-			document.body.addEventListener("htmx:afterSettle", fmtWindow);
+			document.addEventListener("htmx:after:swap", fmtWindow);
 
 			// follow-now refresh: OOB fragments update charts and logs in place
 			setInterval(() => {
@@ -406,9 +406,9 @@ templ warRoomScript() {
 			});
 			// charts are rebuilt on follow refreshes and theme flips; re-drop
 			// the line after they settle (chartScripts renders first: it
-			// registered its afterSettle listener before this one). The row
+			// registered its after:swap listener before this one). The row
 			// re-marks and re-scrolls only when the pane was actually replaced.
-			document.body.addEventListener("htmx:afterSettle", () =>
+			document.addEventListener("htmx:after:swap", () =>
 				requestAnimationFrame(() => renderPins({ scroll: true, onlyIfMissing: true })));
 			new MutationObserver(() => requestAnimationFrame(() => renderPins({ onlyIfMissing: true })))
 				.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
