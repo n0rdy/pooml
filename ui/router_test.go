@@ -210,6 +210,20 @@ func TestCSRFFailureRedirectsToStaleLogin(t *testing.T) {
 	if !strings.Contains(body, "stale") {
 		t.Error("stale login page missing explanation")
 	}
+
+	// HTMX callers take the same trip via HX-Redirect on a non-3xx status
+	req, _ := http.NewRequest(http.MethodPost, cl.srv.URL+"/login", strings.NewReader("secret="+testSecret))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("HX-Request", "true")
+	req.Header.Set("X-CSRF-Token", "forged-token")
+	hresp, err := cl.c.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	hresp.Body.Close()
+	if hresp.StatusCode != http.StatusForbidden || hresp.Header.Get("HX-Redirect") != "/login?err=stale" {
+		t.Errorf("htmx forged token = %d HX-Redirect=%q, want 403 + /login?err=stale", hresp.StatusCode, hresp.Header.Get("HX-Redirect"))
+	}
 }
 
 func TestSettingsApiKeysFlow(t *testing.T) {

@@ -21,16 +21,26 @@ templ AlertsPage(v AlertsView, csrfToken string) {
 	@Shell("alerts · pooml", "alerts", csrfToken) {
 		<div class="max-w-5xl mx-auto flex flex-col gap-6">
 			@alertCreateCard(v, csrfToken)
-			@AlertsRegion(v)
+			@AlertsRegion(withoutErr(v))
 		</div>
 		@homeScript()
 		@alertsScript()
 	}
 }
 
+// the full page shows the banner in the create card; the region carries it
+// only when it is the whole response (an hx-put edit that failed)
+func withoutErr(v AlertsView) AlertsView {
+	v.ErrMsg = ""
+	return v
+}
+
 // AlertsRegion is the swap target for edit/delete/test flows.
 templ AlertsRegion(v AlertsView) {
 	<div id="alerts-region" class="flex flex-col gap-3">
+		if v.ErrMsg != "" {
+			<div role="alert" class="alert alert-error text-sm">{ v.ErrMsg }</div>
+		}
 		<div id="dry-run"></div>
 		if len(v.Alerts) == 0 {
 			<p class="text-sm opacity-60 italic">No alerts yet. Define one above - a query that returns rows is a firing alert.</p>

@@ -203,7 +203,7 @@ templ homeScript() {
 				});
 			}
 			fmt();
-			document.body.addEventListener("htmx:afterSettle", fmt);
+			document.addEventListener("htmx:after:swap", fmt);
 		})();
 	</script>
 }

@@ -401,7 +401,7 @@ templ BackupSection(b BackupView, msg string, ok bool, csrfToken string) {
 						hx-target="#backup-section"
 						hx-swap="outerHTML"
 						hx-headers={ csrfHeader(csrfToken) }
-						hx-disabled-elt="this"
+						hx-disable="this"
 					>Back up now</button>
 					@backupLastRun(b)
 				</div>

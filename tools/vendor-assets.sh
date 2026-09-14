@@ -82,7 +82,7 @@ npx -y esbuild "$WORK/sf/node_modules/sql-formatter/dist/esm/index.js" --bundle 
 echo "vendored sql-formatter -> sql-formatter.js (bundled)"
 
 # non-module scripts
-dir=$(fetch "htmx.org@2.0.10")
+dir=$(fetch "htmx.org@4.0.0")
 cp "$dir/dist/htmx.min.js" "$VENDOR/htmx.min.js"
 echo "vendored htmx.org -> htmx.min.js"
 

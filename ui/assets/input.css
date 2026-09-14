@@ -12,3 +12,6 @@
    plus a few handler-level Go files that build class strings */
 @source "../templates";
 @source "../*.go";
+/* the htmx 4 event name "htmx:after:swap" reads as an after: variant of
+   DaisyUI's swap class; keep that junk rule out of the build */
+@source not inline("after:swap");

@@ -472,7 +472,7 @@ templ QuickQueryModule() {
 
 		const mountAll = () => document.querySelectorAll(".quick-query").forEach(mount);
 		mountAll();
-		document.body.addEventListener("htmx:afterSettle", mountAll);
+		document.addEventListener("htmx:after:swap", mountAll);
 
 		// same hidden-mount fix as the SQL editors: re-measure DSL editors
 		// when their collapsed <details> opens
