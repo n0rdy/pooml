@@ -108,7 +108,7 @@ func SettingsPage(v SettingsView, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"text-sm opacity-60 text-center\">Made by Myko Nordy<br><a href=\"https://x.com/_n0rdy_\" class=\"link\" target=\"_blank\" rel=\"noopener\">x.com/_n0rdy_</a> &nbsp;·&nbsp; <a href=\"https://n0rdy.foo\" class=\"link\" target=\"_blank\" rel=\"noopener\">n0rdy.foo</a></p></div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<p class=\"text-sm opacity-60 text-center\">Made by <a href=\"https://myko.n0rdy.foo\" class=\"link\" target=\"_blank\" rel=\"noopener\">Myko Nordy</a></p></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -196,7 +196,7 @@ func ChannelTestResult(errMsg string) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 74, Col: 43}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 71, Col: 43}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -247,7 +247,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 91, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 88, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 		if templ_7745c5c3_Err != nil {
@@ -260,7 +260,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.ResolveAttributeValue(secretPlaceholder(configured))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 94, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 91, Col: 88}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var8)
 		if templ_7745c5c3_Err != nil {
@@ -273,7 +273,7 @@ func PushoverSection(configured bool, csrfToken string) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(secretPlaceholder(configured))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 98, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 95, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
 		if templ_7745c5c3_Err != nil {
@@ -323,7 +323,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 129, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 126, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var11)
 		if templ_7745c5c3_Err != nil {
@@ -336,7 +336,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.ResolveAttributeValue(baseURL)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 132, Col: 54}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 129, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12)
 		if templ_7745c5c3_Err != nil {
@@ -349,7 +349,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.ResolveAttributeValue(secretPlaceholder(keySet))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 136, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 133, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var13)
 		if templ_7745c5c3_Err != nil {
@@ -362,7 +362,7 @@ func CampfireSection(baseURL string, keySet bool, csrfToken string) templ.Compon
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 141, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 138, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var14)
 		if templ_7745c5c3_Err != nil {
@@ -410,7 +410,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 164, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 161, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -429,7 +429,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(newKey)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 169, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 166, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -459,7 +459,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var18 string
 				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(k.Label)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 187, Col: 21}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 184, Col: 21}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
@@ -472,7 +472,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(formatMs(k.CreatedAt))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 188, Col: 54}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 185, Col: 54}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -485,7 +485,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/settings/api-keys/%d", k.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 192, Col: 64}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 189, Col: 64}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var20)
 				if templ_7745c5c3_Err != nil {
@@ -498,7 +498,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Revoke %q? Anything still using it stops ingesting immediately.", k.Label))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 195, Col: 110}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 192, Col: 110}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 				if templ_7745c5c3_Err != nil {
@@ -521,7 +521,7 @@ func ApiKeysSection(keys []services.ApiKey, newKey string, errMsg string, csrfTo
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 204, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 201, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var22)
 		if templ_7745c5c3_Err != nil {
@@ -569,7 +569,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(errMsg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 233, Col: 64}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 230, Col: 64}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {
@@ -616,7 +616,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var27 string
 				templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(t.Service)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 252, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 249, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 				if templ_7745c5c3_Err != nil {
@@ -629,7 +629,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var28 string
 				templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.ResolveAttributeValue(t.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 253, Col: 70}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 250, Col: 70}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28)
 				if templ_7745c5c3_Err != nil {
@@ -642,7 +642,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var29 string
 				templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(t.URL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 253, Col: 80}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 250, Col: 80}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 				if templ_7745c5c3_Err != nil {
@@ -655,7 +655,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var30 string
 				templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(humanMs(t.ScrapeIntervalMs))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 254, Col: 68}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 251, Col: 68}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 				if templ_7745c5c3_Err != nil {
@@ -676,7 +676,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var31 string
 				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/settings/scrape-targets/%d/toggle", t.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 261, Col: 76}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 258, Col: 76}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 				if templ_7745c5c3_Err != nil {
@@ -704,7 +704,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var32 string
 				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/settings/scrape-targets/%d", t.ID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 273, Col: 71}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 270, Col: 71}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32)
 				if templ_7745c5c3_Err != nil {
@@ -717,7 +717,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("Delete scrape target %q? Already-collected metrics stay.", t.Service))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 276, Col: 106}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 273, Col: 106}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
 				if templ_7745c5c3_Err != nil {
@@ -740,7 +740,7 @@ func ScrapeTargetsSection(targets []services.ScrapeTarget, errMsg string, csrfTo
 		var templ_7745c5c3_Var34 string
 		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 286, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 283, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
 		if templ_7745c5c3_Err != nil {
@@ -788,7 +788,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var36 string
 			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(t.LastError.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 317, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 314, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
 			if templ_7745c5c3_Err != nil {
@@ -801,7 +801,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var37 string
 			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.ResolveAttributeValue(t.LastError.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 318, Col: 78}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 315, Col: 78}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
 			if templ_7745c5c3_Err != nil {
@@ -814,7 +814,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var38 string
 			templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(t.LastError.String)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 318, Col: 101}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 315, Col: 101}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 			if templ_7745c5c3_Err != nil {
@@ -843,7 +843,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var39 string
 			templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(t.LastScrapedAt.Int64))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 325, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 322, Col: 80}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var39)
 			if templ_7745c5c3_Err != nil {
@@ -856,7 +856,7 @@ func scrapeTargetStatus(t services.ScrapeTarget) templ.Component {
 			var templ_7745c5c3_Var40 string
 			templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(t.LastScrapedAt.Int64))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 325, Col: 115}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 322, Col: 115}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 			if templ_7745c5c3_Err != nil {
@@ -899,7 +899,7 @@ func RetentionSection(logsDays, metricsDays, firingsDays int, msg string, ok boo
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 335, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 332, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var42)
 		if templ_7745c5c3_Err != nil {
@@ -934,7 +934,7 @@ func RetentionSection(logsDays, metricsDays, firingsDays int, msg string, ok boo
 				var templ_7745c5c3_Var43 string
 				templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 343, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 340, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 				if templ_7745c5c3_Err != nil {
@@ -952,7 +952,7 @@ func RetentionSection(logsDays, metricsDays, firingsDays int, msg string, ok boo
 				var templ_7745c5c3_Var44 string
 				templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 345, Col: 40}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 342, Col: 40}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 				if templ_7745c5c3_Err != nil {
@@ -1000,7 +1000,7 @@ func retentionField(name, label string, days int) templ.Component {
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 354, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 351, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {
@@ -1013,7 +1013,7 @@ func retentionField(name, label string, days int) templ.Component {
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 355, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 352, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var47)
 		if templ_7745c5c3_Err != nil {
@@ -1026,7 +1026,7 @@ func retentionField(name, label string, days int) templ.Component {
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.Itoa(days))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 355, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 352, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var48)
 		if templ_7745c5c3_Err != nil {
@@ -1068,7 +1068,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 368, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 365, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var50)
 		if templ_7745c5c3_Err != nil {
@@ -1097,7 +1097,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.ResolveAttributeValue(b.Endpoint)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 377, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 374, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var51)
 		if templ_7745c5c3_Err != nil {
@@ -1118,7 +1118,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 		var templ_7745c5c3_Var52 string
 		templ_7745c5c3_Var52, templ_7745c5c3_Err = templ.ResolveAttributeValue(secretPlaceholder(b.CredsSet))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 384, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 381, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var52)
 		if templ_7745c5c3_Err != nil {
@@ -1131,7 +1131,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 		var templ_7745c5c3_Var53 string
 		templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.ResolveAttributeValue(secretPlaceholder(b.CredsSet))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 388, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 385, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var53)
 		if templ_7745c5c3_Err != nil {
@@ -1154,7 +1154,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 		var templ_7745c5c3_Var54 string
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfHeader(csrfToken))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 403, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 400, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var54)
 		if templ_7745c5c3_Err != nil {
@@ -1181,7 +1181,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 				var templ_7745c5c3_Var55 string
 				templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 411, Col: 42}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 408, Col: 42}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 				if templ_7745c5c3_Err != nil {
@@ -1199,7 +1199,7 @@ func BackupSection(b BackupView, msg string, ok bool, csrfToken string) templ.Co
 				var templ_7745c5c3_Var56 string
 				templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(msg)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 413, Col: 52}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 410, Col: 52}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 				if templ_7745c5c3_Err != nil {
@@ -1247,7 +1247,7 @@ func backupField(name, label, value, placeholder, typ string) templ.Component {
 		var templ_7745c5c3_Var58 string
 		templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 422, Col: 42}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 419, Col: 42}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 		if templ_7745c5c3_Err != nil {
@@ -1260,7 +1260,7 @@ func backupField(name, label, value, placeholder, typ string) templ.Component {
 		var templ_7745c5c3_Var59 string
 		templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.ResolveAttributeValue(typ)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 423, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 420, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var59)
 		if templ_7745c5c3_Err != nil {
@@ -1273,7 +1273,7 @@ func backupField(name, label, value, placeholder, typ string) templ.Component {
 		var templ_7745c5c3_Var60 string
 		templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.ResolveAttributeValue(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 423, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 420, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var60)
 		if templ_7745c5c3_Err != nil {
@@ -1286,7 +1286,7 @@ func backupField(name, label, value, placeholder, typ string) templ.Component {
 		var templ_7745c5c3_Var61 string
 		templ_7745c5c3_Var61, templ_7745c5c3_Err = templ.ResolveAttributeValue(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 423, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 420, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var61)
 		if templ_7745c5c3_Err != nil {
@@ -1299,7 +1299,7 @@ func backupField(name, label, value, placeholder, typ string) templ.Component {
 		var templ_7745c5c3_Var62 string
 		templ_7745c5c3_Var62, templ_7745c5c3_Err = templ.ResolveAttributeValue(placeholder)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 423, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 420, Col: 77}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var62)
 		if templ_7745c5c3_Err != nil {
@@ -1342,7 +1342,7 @@ func backupLastRun(b BackupView) templ.Component {
 			var templ_7745c5c3_Var64 string
 			templ_7745c5c3_Var64, templ_7745c5c3_Err = templ.JoinStringErrs(time.UnixMilli(b.LastRunAt).UTC().Format("2006-01-02 15:04"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 430, Col: 74}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 427, Col: 74}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var64))
 			if templ_7745c5c3_Err != nil {
@@ -1365,7 +1365,7 @@ func backupLastRun(b BackupView) templ.Component {
 				var templ_7745c5c3_Var65 string
 				templ_7745c5c3_Var65, templ_7745c5c3_Err = templ.ResolveAttributeValue(b.LastResult)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 434, Col: 49}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 431, Col: 49}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var65)
 				if templ_7745c5c3_Err != nil {
@@ -1417,7 +1417,7 @@ func comingLater(title string, note string) templ.Component {
 		var templ_7745c5c3_Var67 string
 		templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinStringErrs(title)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 447, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 444, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 		if templ_7745c5c3_Err != nil {
@@ -1430,7 +1430,7 @@ func comingLater(title string, note string) templ.Component {
 		var templ_7745c5c3_Var68 string
 		templ_7745c5c3_Var68, templ_7745c5c3_Err = templ.JoinStringErrs(note)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 448, Col: 28}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/settings.templ`, Line: 445, Col: 28}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var68))
 		if templ_7745c5c3_Err != nil {
