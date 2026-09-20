@@ -117,7 +117,7 @@ func LoginPage(kind string, message string, csrfToken string) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"> <input type=\"password\" name=\"secret\" placeholder=\"Your secret\" class=\"input input-bordered w-full\" autocomplete=\"current-password\" required autofocus> <button type=\"submit\" class=\"btn btn-primary w-full\">Come on in</button></form><p class=\"mt-4 text-sm opacity-60 text-center\">Made by Myko Nordy<br><a href=\"https://x.com/_n0rdy_\" class=\"link\" target=\"_blank\" rel=\"noopener\">x.com/_n0rdy_</a> &nbsp;·&nbsp; <a href=\"https://n0rdy.foo\" class=\"link\" target=\"_blank\" rel=\"noopener\">n0rdy.foo</a></p></div></div></main>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"> <input type=\"password\" name=\"secret\" placeholder=\"Your secret\" class=\"input input-bordered w-full\" autocomplete=\"current-password\" required autofocus> <button type=\"submit\" class=\"btn btn-primary w-full\">Come on in</button></form><p class=\"mt-4 text-sm opacity-60 text-center\">Made by <a href=\"https://myko.n0rdy.foo\" class=\"link\" target=\"_blank\" rel=\"noopener\">Myko Nordy</a></p></div></div></main>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
