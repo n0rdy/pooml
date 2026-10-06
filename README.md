@@ -39,6 +39,13 @@ Therefore, please do not open PRs.
 
 If you find any bugs, have questions or suggestions, use the `Discussions` section for that.
 
+Transparency on what to expect:
+
+- Built for my own projects first - [reTrek](https://retrek.me) runs on it in production. The roadmap follows what I need. Ideas are welcome in Discussions, but I may say no.
+- Small and opinionated by design, and close to feature-complete for my needs. From here, expect bug fixes and dependency updates rather than a growing feature list.
+- Still 0.x: breaking changes can happen between versions.
+- Help is best effort, in my spare time.
+
 ## Quick start
 
 ### Docker
@@ -127,7 +134,7 @@ All configuration is via environment variables. Required variables fail fast at 
 | `POOML_DB_DIR`                   | *required*       | Directory for `logs.db`, `metrics.db`, and `meta.db`. Created if missing; `~` expands.                                                             |
 | `POOML_UI_SECRET`                | *required*       | UI login secret, min 32 chars.                                                                                                                     |
 | `POOML_ENCRYPTION_KEY`           | *required*       | Encrypts secrets stored in `meta.db` (S3 credentials, notification tokens), min 32 chars. Losing it means re-entering those secrets.               |
-| `POOML_ENV`                      | `pro`            | `local` / `pro`. Affects cookie Secure flag, HSTS, log verbosity.                                                                                  |
+| `POOML_ENV`                      | `pro`            | `local` / `pro`. Affects cookie Secure flag, HSTS, the CSRF origin check, log verbosity. See [Troubleshooting](#troubleshooting).                  |
 | `POOML_API_ADDR`                 | `localhost:8080` | Ingestion API bind address.                                                                                                                        |
 | `POOML_UI_ADDR`                  | `localhost:8081` | UI bind address.                                                                                                                                   |
 | `POOML_LOG_LEVEL`                | `info`           | Pooml's own log level (`trace` / `debug` / `info` / `warn` / `error`).                                                                             |
@@ -268,6 +275,23 @@ scrape the same endpoint with the secret in `X-API-Key`.
 - Scrape targets and the Campfire base URL are fetched server-side: anyone with UI admin access can point them at
   internal network addresses. That is consistent with pooml's single-admin model (the same admin already runs arbitrary
   SQL), but worth knowing if the pooml host sits inside a sensitive network.
+
+## Troubleshooting
+
+### Login fails with "Request was made with a disallowed origin specified in the Origin header"
+
+This happens when you open the UI over plain HTTP from anything other than `localhost`, for example
+`http://192.168.1.3:8081` on your LAN. The default `POOML_ENV=pro` assumes the UI is served over HTTPS: the login
+cookie is marked `Secure` and the CSRF check expects an `https://` origin, so an `http://` login is rejected.
+(`http://localhost` works because browsers treat it as a secure context.)
+
+Two ways to fix it:
+
+- **Trusted local or LAN setup:** set `POOML_ENV=local`.
+- **Anything reachable from outside:** put the UI behind a reverse proxy with TLS, open it via `https://`, and keep
+  `POOML_ENV=pro`.
+
+`POOML_PUBLIC_URL` doesn't affect this check: it only builds the War Room links in alert notifications.
 
 ## License
 
