@@ -204,8 +204,8 @@ templ warLogs(v WarRoomView, oob bool) {
 templ warStreamRow(r LogRow) {
 	<div class="stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer" data-id={ rowID(r.ID) }>
 		<span class="font-mono text-sm opacity-70 whitespace-nowrap" data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span>
-		<span class={ levelClass(r.Level) }>{ levelName(r.Level) }</span>
-		<span class="badge badge-sm badge-outline font-mono shrink-0 max-w-28 min-w-0"><span class="truncate">{ r.Service }</span></span>
+		<span class={ levelClass(r.Level) + " " + streamLevelWidth }>{ levelName(r.Level) }</span>
+		<span class="badge badge-sm badge-outline font-mono shrink-0 w-28 min-w-0 justify-center"><span class="truncate">{ r.Service }</span></span>
 		<span class="font-mono text-sm truncate min-w-0" title={ r.Message }>{ r.Message }</span>
 	</div>
 }

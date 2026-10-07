@@ -210,7 +210,7 @@ templ streamPanel(rows []LogRow) {
 			for _, r := range rows {
 				<div class="stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer" data-id={ fmt.Sprint(r.ID) }>
 					<span class="font-mono text-sm opacity-70 whitespace-nowrap" data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span>
-					<span class={ levelClass(r.Level) }>{ levelName(r.Level) }</span>
+					<span class={ levelClass(r.Level) + " " + streamLevelWidth }>{ levelName(r.Level) }</span>
 					<span class="font-mono text-sm truncate min-w-0" title={ r.Message }>{ r.Message }</span>
 				</div>
 			}

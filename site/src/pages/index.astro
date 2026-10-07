@@ -3,7 +3,7 @@ const dockerCmd = `docker run -d --name pooml --restart unless-stopped \\
   -e POOML_UI_SECRET=change-me-to-something-long-and-random \\
   -e POOML_ENCRYPTION_KEY=change-me-too-32-chars-minimum-ok \\
   -e POOML_DB_DIR=/data \\
-  -p 8080:8080 -p 8081:8081 \\
+  -p 8080:8080 -p 127.0.0.1:8081:8081 \\
   -v pooml-data:/data \\
   mykonordy/pooml:latest`;
 
@@ -175,9 +175,9 @@ const envVars = [
         <h2>Runs on peanuts</h2>
         <p>
           Hence the mascot. One Go binary, three SQLite files, no JVM, no
-          cluster, no sidecar agents. The whole thing idles in a few dozen
-          megabytes of RAM and is perfectly happy on the cheapest VPS your
-          cloud sells - the one that costs about as much as a bag of peanuts.
+          cluster, no sidecar agents. It's perfectly happy on the cheapest VPS
+          your cloud sells - the one that costs about as much as a bag of
+          peanuts.
         </p>
         <figure class="shot small">
           <img
@@ -217,7 +217,7 @@ const envVars = [
             </div>
           </li>
           <li>
-            <p>Open <code>http://localhost:8081</code>, log in with your secret, mint an API key in Settings.</p>
+            <p>Open <code>http://localhost:8081</code>, log in with your secret, mint an API key in Settings. On a remote server, tunnel in first: <code>ssh -L 8081:localhost:8081 you@your-server</code>.</p>
           </li>
           <li>
             <p>Point your log shipper at port 8080:</p>

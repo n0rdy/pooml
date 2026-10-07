@@ -13,6 +13,11 @@ type MetricsExplorerView struct {
 	Shaped  ShapedResult
 	SaveErr string
 
+	// FormView is the view the query form submits. It differs from View only on
+	// the landing catalog, which renders as a table but must not push "table"
+	// onto the first query typed there.
+	FormView string
+
 	// catalog names feeding the DSL autocomplete
 	MetricNames []string
 
@@ -61,7 +66,7 @@ templ MetricsExplorerPage(v MetricsExplorerView, csrfToken string) {
 							style={ sqlEditorReserve(v.Query) }
 							data-placeholder="SELECT name, service, value, timestamp FROM metrics ORDER BY timestamp DESC LIMIT 100"
 						></div>
-						<input type="hidden" name="view" value={ v.View }/>
+						<input type="hidden" name="view" value={ v.FormView }/>
 						if len(v.Snippets) > 0 {
 							<div class="flex items-center gap-1.5 flex-wrap">
 								<span class="text-sm opacity-60">examples:</span>

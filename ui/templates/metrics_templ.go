@@ -21,6 +21,11 @@ type MetricsExplorerView struct {
 	Shaped  ShapedResult
 	SaveErr string
 
+	// FormView is the view the query form submits. It differs from View only on
+	// the landing catalog, which renders as a table but must not push "table"
+	// onto the first query typed there.
+	FormView string
+
 	// catalog names feeding the DSL autocomplete
 	MetricNames []string
 
@@ -97,7 +102,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(v.Query)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 58, Col: 49}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 63, Col: 49}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -110,7 +115,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(sqlEditorReserve(v.Query))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 61, Col: 40}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 66, Col: 40}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -121,9 +126,9 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.View)
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.FormView)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 64, Col: 53}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 69, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
 			if templ_7745c5c3_Err != nil {
@@ -146,7 +151,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var6 string
 					templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.SQL)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 72, Col: 30}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 77, Col: 30}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var6)
 					if templ_7745c5c3_Err != nil {
@@ -159,7 +164,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var7 string
 					templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.ResolveAttributeValue(s.DSL)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 73, Col: 34}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 78, Col: 34}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var7)
 					if templ_7745c5c3_Err != nil {
@@ -172,7 +177,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var8 string
 					templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 75, Col: 19}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 80, Col: 19}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 					if templ_7745c5c3_Err != nil {
@@ -200,7 +205,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(v.SaveErr)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 87, Col: 92}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 92, Col: 92}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -219,7 +224,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Catalog)))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 92, Col: 69}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 97, Col: 69}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -242,7 +247,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 						var templ_7745c5c3_Var11 templ.SafeURL
 						templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(catalogDSLURL(c.DSL)))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 107, Col: 58}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 112, Col: 58}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 						if templ_7745c5c3_Err != nil {
@@ -255,7 +260,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 						var templ_7745c5c3_Var12 string
 						templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(c.Name)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 107, Col: 105}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 112, Col: 105}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 						if templ_7745c5c3_Err != nil {
@@ -273,7 +278,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 						var templ_7745c5c3_Var13 string
 						templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(c.Name)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 109, Col: 45}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 114, Col: 45}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 						if templ_7745c5c3_Err != nil {
@@ -291,7 +296,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var14 string
 					templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(c.Service)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 112, Col: 44}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 117, Col: 44}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 					if templ_7745c5c3_Err != nil {
@@ -304,7 +309,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var15 string
 					templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.ResolveAttributeValue(msString(c.LastSeenMs))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 113, Col: 77}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 118, Col: 77}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var15)
 					if templ_7745c5c3_Err != nil {
@@ -317,7 +322,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var16 string
 					templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(c.LastSeenMs))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 113, Col: 103}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 118, Col: 103}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 					if templ_7745c5c3_Err != nil {
@@ -342,7 +347,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var17 string
 					templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(v.Shaped.ErrMsg)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 124, Col: 74}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 129, Col: 74}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 					if templ_7745c5c3_Err != nil {
@@ -380,7 +385,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var18 string
 					templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Shaped.Rows)))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 145, Col: 93}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 150, Col: 93}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 					if templ_7745c5c3_Err != nil {
@@ -417,7 +422,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var19 templ.SafeURL
 					templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsExportURL(v.Query, "csv")))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 154, Col: 66}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 159, Col: 66}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 					if templ_7745c5c3_Err != nil {
@@ -430,7 +435,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 					var templ_7745c5c3_Var20 templ.SafeURL
 					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsExportURL(v.Query, "json")))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 155, Col: 67}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 160, Col: 67}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {
@@ -448,7 +453,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 						var templ_7745c5c3_Var21 string
 						templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Shaped.ChartID)
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 160, Col: 46}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 165, Col: 46}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var21)
 						if templ_7745c5c3_Err != nil {
@@ -469,7 +474,7 @@ func MetricsExplorerPage(v MetricsExplorerView, csrfToken string) templ.Componen
 						var templ_7745c5c3_Var22 string
 						templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(v.Shaped.Rows)))
 						if templ_7745c5c3_Err != nil {
-							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 164, Col: 100}
+							return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 169, Col: 100}
 						}
 						_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 						if templ_7745c5c3_Err != nil {
@@ -588,7 +593,7 @@ func viewSegment(v MetricsExplorerView, view string, label string) templ.Compone
 		var templ_7745c5c3_Var25 templ.SafeURL
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinURLErrs(templ.SafeURL(metricsViewURL(v.Query, v.DSL, view)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 190, Col: 60}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 195, Col: 60}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -614,7 +619,7 @@ func viewSegment(v MetricsExplorerView, view string, label string) templ.Compone
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(label)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 192, Col: 9}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 197, Col: 9}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -668,7 +673,7 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var29 string
 			templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.ResolveAttributeValue(csrfToken)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 206, Col: 61}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 211, Col: 61}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29)
 			if templ_7745c5c3_Err != nil {
@@ -681,7 +686,7 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.Query)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 207, Col: 54}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 212, Col: 54}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
 			if templ_7745c5c3_Err != nil {
@@ -694,7 +699,7 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var31 string
 			templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.DSL)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 208, Col: 50}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 213, Col: 50}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 			if templ_7745c5c3_Err != nil {
@@ -707,7 +712,7 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.ResolveAttributeValue(v.View)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 209, Col: 58}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 214, Col: 58}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32)
 			if templ_7745c5c3_Err != nil {
@@ -725,7 +730,7 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var33 string
 				templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(strconv.FormatInt(d.ID, 10))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 219, Col: 51}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 224, Col: 51}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
 				if templ_7745c5c3_Err != nil {
@@ -738,7 +743,7 @@ func saveAsPanel(v MetricsExplorerView, csrfToken string) templ.Component {
 				var templ_7745c5c3_Var34 string
 				templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(d.Name)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 219, Col: 62}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/metrics.templ`, Line: 224, Col: 62}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 				if templ_7745c5c3_Err != nil {

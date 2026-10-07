@@ -134,14 +134,16 @@ func (ur *Router) renderExplorer(w http.ResponseWriter, req *http.Request, q, sa
 	if !explorerViews[viewSel] {
 		viewSel = "auto"
 	}
+	formView := viewSel
 	if landing {
 		viewSel = "table" // the landing catalog is a listing, not a chart
 	}
 	view := templates.MetricsExplorerView{
-		Query:   q,
-		View:    viewSel,
-		SaveErr: saveErr,
-		DSL:     dsl,
+		Query:    q,
+		View:     viewSel,
+		FormView: formView,
+		SaveErr:  saveErr,
+		DSL:      dsl,
 	}
 	if names, err := ur.metricNames(req); err == nil {
 		view.MetricNames = names

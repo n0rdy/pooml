@@ -58,7 +58,7 @@ docker run -d \
   -e POOML_ENCRYPTION_KEY=your-encryption-key-min-32-chars-long \
   -e POOML_DB_DIR=/data \
   -p 8080:8080 \
-  -p 8081:8081 \
+  -p 127.0.0.1:8081:8081 \
   -v pooml-data:/data \
   mykonordy/pooml:latest
 ```
@@ -67,7 +67,9 @@ Open `http://localhost:8081`, log in with your `POOML_UI_SECRET`, create an API 
 shipper at port 8080.
 
 Port 8080 is the ingestion API, port 8081 is the UI. The two are separate servers on purpose: expose the API to your
-services, keep the UI behind your VPN or reverse proxy.
+services, keep the UI behind your VPN or reverse proxy. That's why the examples publish the UI on `127.0.0.1` only. On a
+remote server, open an SSH tunnel from your machine (`ssh -L 8081:localhost:8081 you@your-server`) and use
+`http://localhost:8081` as above. For LAN access or a reverse proxy, see [Troubleshooting](#troubleshooting).
 
 ### Docker Compose
 
@@ -83,7 +85,7 @@ services:
       POOML_DB_DIR: /data
     ports:
       - "8080:8080"
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     volumes:
       - pooml-data:/data
     healthcheck:
@@ -285,8 +287,10 @@ This happens when you open the UI over plain HTTP from anything other than `loca
 cookie is marked `Secure` and the CSRF check expects an `https://` origin, so an `http://` login is rejected.
 (`http://localhost` works because browsers treat it as a secure context.)
 
-Two ways to fix it:
+Three ways to fix it:
 
+- **Quick access to a remote server:** open an SSH tunnel (`ssh -L 8081:localhost:8081 you@your-server`) and use
+  `http://localhost:8081`. Nothing to reconfigure.
 - **Trusted local or LAN setup:** set `POOML_ENV=local`.
 - **Anything reachable from outside:** put the UI behind a reverse proxy with TLS, open it via `https://`, and keep
   `POOML_ENV=pro`.

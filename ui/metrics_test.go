@@ -126,6 +126,10 @@ func TestMetricsExplorer(t *testing.T) {
 	if strings.Contains(body, "data-chart=") {
 		t.Error("landing catalog must not render a chart")
 	}
+	// ...but the first query typed there must not inherit the catalog's table view
+	if !strings.Contains(body, `name="view" value="auto"`) {
+		t.Error("landing form must submit view=auto, not the catalog's table")
+	}
 
 	// catalog names link to type-appropriate DSL queries
 	if !strings.Contains(body, "dsl=increase%28orders_total%29") {

@@ -87,6 +87,11 @@ func levelName(l *int) string {
 	return strconv.Itoa(*l)
 }
 
+// streamLevelWidth pins the level badge in flex stream rows (War Room, dashboard
+// log panels) to the width of a five-letter level, so WARN/INFO rows line up
+// with ERROR/DEBUG ones. The Logs page gets the same alignment from its table.
+const streamLevelWidth = "w-14 justify-center shrink-0"
+
 func levelClass(l *int) string {
 	base := "badge badge-sm font-mono cursor-pointer"
 	if l == nil {
