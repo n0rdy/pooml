@@ -172,6 +172,32 @@ func TestValidateScopes(t *testing.T) {
 	}
 }
 
+func TestValidateReportsSignals(t *testing.T) {
+	tests := []struct {
+		name                  string
+		q                     string
+		wantLogs, wantMetrics bool
+	}{
+		{"logs", "SELECT * FROM logs LIMIT 5", true, false},
+		{"fts counts as logs", `SELECT "rowid" FROM logs_fts WHERE logs_fts MATCH 'x'`, true, false},
+		{"metrics", "SELECT name, value FROM metrics", false, true},
+		{"metrics in a subquery", "SELECT 1 WHERE EXISTS (SELECT 1 FROM metrics)", false, true},
+		{"both", "SELECT 1 FROM metrics m WHERE EXISTS (SELECT 1 FROM logs WHERE level >= 4)", true, true},
+		{"CTE named like a signal is not one", "WITH metrics AS (SELECT service FROM logs) SELECT * FROM metrics", true, false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			v, err := Validate(tc.q)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if v.ReadsLogs != tc.wantLogs || v.ReadsMetrics != tc.wantMetrics {
+				t.Fatalf("ReadsLogs=%v ReadsMetrics=%v, want %v %v", v.ReadsLogs, v.ReadsMetrics, tc.wantLogs, tc.wantMetrics)
+			}
+		})
+	}
+}
+
 func TestCombineFTS(t *testing.T) {
 	t.Run("default query gains join and match", func(t *testing.T) {
 		v, err := Validate("SELECT * FROM logs WHERE level >= 4 ORDER BY timestamp DESC LIMIT 100")

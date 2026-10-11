@@ -57,9 +57,11 @@ var aggregateFunctions = map[string]bool{
 // Validated is a parsed and vetted SELECT. Rewrites mutate the AST in place;
 // SQL() serializes the current state.
 type Validated struct {
-	stmt     *sqlp.SelectStatement
-	Shape    Shape
-	Compound bool // UNION/INTERSECT/EXCEPT: executable, but rewrites refuse it
+	stmt         *sqlp.SelectStatement
+	Shape        Shape
+	Compound     bool // UNION/INTERSECT/EXCEPT: executable, but rewrites refuse it
+	ReadsLogs    bool
+	ReadsMetrics bool
 }
 
 func (v *Validated) SQL() string { return prettify(v.stmt.String()) }
@@ -99,25 +101,31 @@ func ValidateIn(q string, scope Scope) (*Validated, error) {
 	if _, err := sqlp.Walk(cv, sel); err != nil {
 		return nil, err
 	}
-	if err := checkScope(scope, cv.referenced); err != nil {
+	readsLogs := cv.referenced["logs"] || cv.referenced["logs_fts"]
+	readsMetrics := cv.referenced["metrics"]
+	if err := checkScope(scope, readsLogs, readsMetrics); err != nil {
 		return nil, err
 	}
 
-	v := &Validated{stmt: sel, Shape: detectShape(sel), Compound: sel.Compound != nil}
+	v := &Validated{
+		stmt:         sel,
+		Shape:        detectShape(sel),
+		Compound:     sel.Compound != nil,
+		ReadsLogs:    readsLogs,
+		ReadsMetrics: readsMetrics,
+	}
 	clampLimit(sel)
 	return v, nil
 }
 
-func checkScope(scope Scope, referenced map[string]bool) error {
-	logsUsed := referenced["logs"] || referenced["logs_fts"]
-	metricsUsed := referenced["metrics"]
+func checkScope(scope Scope, readsLogs, readsMetrics bool) error {
 	switch scope {
 	case ScopeLogs:
-		if metricsUsed {
+		if readsMetrics {
 			return errors.New("the metrics table is not available here: query it on the Metrics page")
 		}
 	case ScopeMetrics:
-		if logsUsed {
+		if readsLogs {
 			return errors.New("the logs tables are not available here: query them on the Logs page")
 		}
 	}
