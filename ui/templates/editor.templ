@@ -177,11 +177,13 @@ templ sqlEditorModule() {
 		}, true);
 
 		document.addEventListener("click", (e) => {
-			const btn = e.target.closest(".open-in-logs, .open-in-explorer");
+			const btn = e.target.closest(".open-in-logs, .open-in-explorer, .open-by-signal");
 			if (!btn) return;
 			const q = syncedQuery(btn.closest("form"));
 			if (!q) return;
-			const page = btn.classList.contains("open-in-logs") ? "/logs" : "/metrics-explorer";
+			// alerts read either signal: the server parses the query and redirects to the right page
+			const page = btn.classList.contains("open-in-logs") ? "/logs"
+				: btn.classList.contains("open-in-explorer") ? "/metrics-explorer" : "/alerts/open";
 			window.open(page + "?q=" + encodeURIComponent(q), "_blank");
 		});
 

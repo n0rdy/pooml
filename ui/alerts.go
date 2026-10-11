@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -168,6 +169,17 @@ func (ur *Router) deleteAlert(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	ur.renderAlerts(w, req, "")
+}
+
+// GET /alerts/open?q= - an alert may read either signal, so the parser picks the page that can run it. Logs is the
+// fallback: it also renders the error for an invalid or cross-signal query.
+func (ur *Router) openAlertQuery(w http.ResponseWriter, req *http.Request) {
+	q := req.URL.Query().Get("q")
+	page := "/logs"
+	if v, err := query.Validate(q); err == nil && v.ReadsMetrics && !v.ReadsLogs {
+		page = "/metrics-explorer"
+	}
+	http.Redirect(w, req, page+"?q="+url.QueryEscape(q), http.StatusSeeOther)
 }
 
 // POST /alerts/{id}/test - pure dry run; never notifies.

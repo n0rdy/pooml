@@ -644,7 +644,7 @@ func alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, war
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\" min=\"0\" class=\"input input-bordered input-sm\" required></label></div><div class=\"flex flex-col gap-1\"><span class=\"flex items-center justify-between\"><span class=\"text-sm opacity-80\">Query (fires when it returns rows)</span> <button type=\"button\" class=\"open-in-logs link link-primary text-sm\" title=\"Run this query on the logs page (new tab)\">open in logs ↗</button></span> <textarea name=\"query\" class=\"hidden\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "\" min=\"0\" class=\"input input-bordered input-sm\" required></label></div><div class=\"flex flex-col gap-1\"><span class=\"flex items-center justify-between\"><span class=\"text-sm opacity-80\">Query (fires when it returns rows)</span> <button type=\"button\" class=\"open-by-signal link link-primary text-sm\" title=\"Run this query on the logs page or the metrics explorer, whichever table it reads (new tab)\">open in logs / explorer ↗</button></span> <textarea name=\"query\" class=\"hidden\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -892,7 +892,7 @@ func alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, war
 }
 
 // alertsScript keeps only alert-specific behavior; the editor itself (mount,
-// submit sync, open-in-logs, theming) lives in the shared sqlEditorModule.
+// submit sync, the open-in buttons, theming) lives in the shared sqlEditorModule.
 func alertsScript() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context

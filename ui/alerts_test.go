@@ -217,3 +217,48 @@ func TestAlertWarRoomToggleRoundTrip(t *testing.T) {
 		t.Errorf("edit form loses the toggle: %.300s", ebody)
 	}
 }
+
+func TestOpenAlertQueryRedirectsByTable(t *testing.T) {
+	cl := newClient(t)
+
+	open := func(q string) *http.Response {
+		t.Helper()
+		resp, err := cl.c.Get(cl.srv.URL + "/alerts/open?q=" + url.QueryEscape(q))
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp
+	}
+
+	if resp := open("SELECT 1 FROM metrics"); resp.StatusCode != http.StatusFound {
+		t.Fatalf("unauthenticated = %d, want 302 to login", resp.StatusCode)
+	}
+	cl.login(testSecret, cl.csrfToken())
+
+	tests := []struct {
+		name     string
+		q        string
+		wantPage string
+	}{
+		{"metrics query opens the explorer", "SELECT host, MAX(value) FROM metrics GROUP BY host", "/metrics-explorer"},
+		{"logs query opens logs", "SELECT * FROM logs WHERE level >= 4", "/logs"},
+		{"cross-signal query falls back to logs", "SELECT 1 FROM metrics WHERE EXISTS (SELECT 1 FROM logs)", "/logs"},
+		{"invalid SQL falls back to logs", "SELEC nope", "/logs"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := open(tc.q)
+			if resp.StatusCode != http.StatusSeeOther {
+				t.Fatalf("status = %d, want 303", resp.StatusCode)
+			}
+			loc, err := url.Parse(resp.Header.Get("Location"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if loc.Path != tc.wantPage || loc.Query().Get("q") != tc.q {
+				t.Fatalf("Location = %s, want %s?q=<the query>", loc, tc.wantPage)
+			}
+		})
+	}
+}

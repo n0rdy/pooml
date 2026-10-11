@@ -168,7 +168,7 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, wa
 	<div class="flex flex-col gap-1">
 		<span class="flex items-center justify-between">
 			<span class="text-sm opacity-80">Query (fires when it returns rows)</span>
-			<button type="button" class="open-in-logs link link-primary text-sm" title="Run this query on the logs page (new tab)">open in logs ↗</button>
+			<button type="button" class="open-by-signal link link-primary text-sm" title="Run this query on the logs page or the metrics explorer, whichever table it reads (new tab)">open in logs / explorer ↗</button>
 		</span>
 		<textarea name="query" class="hidden">{ a.Query }</textarea>
 		<div class="sql-editor-host border-2 border-base-content/20 rounded-field bg-base-100 overflow-hidden transition-colors" style={ sqlEditorReserve(a.Query) }></div>
@@ -234,7 +234,7 @@ templ alertFormFields(a services.Alert, poConfigured bool, cfConfigured bool, wa
 }
 
 // alertsScript keeps only alert-specific behavior; the editor itself (mount,
-// submit sync, open-in-logs, theming) lives in the shared sqlEditorModule.
+// submit sync, the open-in buttons, theming) lives in the shared sqlEditorModule.
 templ alertsScript() {
 	@sqlEditorModule()
 	<script nonce={ templ.GetNonce(ctx) }>

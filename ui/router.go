@@ -101,6 +101,7 @@ func (ur *Router) NewRouter() *chi.Mux {
 
 		r.Get("/", ur.alertsPage)
 		r.Post("/", ur.createAlert)
+		r.Get("/open", ur.openAlertQuery)
 		r.Get("/{id}/edit", ur.editAlertPage)
 		r.Put("/{id}", ur.updateAlert)
 		r.Delete("/{id}", ur.deleteAlert)
