@@ -5,6 +5,8 @@ on:
     branches: [main]
   push:
     branches: [main]
+  # dispatched by dependabot-regen.yml after it pushes regenerated files
+  workflow_dispatch:
 
 jobs:
   quality-checks:

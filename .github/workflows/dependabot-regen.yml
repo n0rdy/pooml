@@ -1,0 +1,121 @@
+name: Dependabot - Regenerate Assets
+
+# Bumps change generated output (templ via go.mod, compiled CSS via ui/assets)
+# that dependabot can't produce. The bumped code runs with a read-only token;
+# only the commit job, which executes nothing from the dependencies, can push.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'ui/assets/package.json'
+      - 'ui/assets/package-lock.json'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-regen-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  regen:
+    name: Regenerate
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.diff.outputs.changed }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+
+      - name: Setup Node (asset toolchain)
+        uses: actions/setup-node@v7
+        with:
+          node-version: "lts/*"
+          cache: npm
+          cache-dependency-path: ui/assets/package-lock.json
+
+      - name: Regenerate templates
+        run: go tool templ generate
+
+      - name: Rebuild stylesheet
+        working-directory: ui/assets
+        run: |
+          npm ci
+          npm run css
+
+      - name: Collect diff
+        id: diff
+        run: |
+          git diff --binary -- ui/static/styles.css '*_templ.go' > "$RUNNER_TEMP/regen.patch"
+          if [ -s "$RUNNER_TEMP/regen.patch" ]; then
+            git diff --stat -- ui/static/styles.css '*_templ.go'
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Generated files are already fresh"
+          fi
+
+      - name: Upload patch
+        if: steps.diff.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: regen-patch
+          path: ${{ runner.temp }}/regen.patch
+          retention-days: 1
+
+  commit:
+    name: Commit regenerated files
+    needs: regen
+    if: needs.regen.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # pushes made with GITHUB_TOKEN don't trigger workflows, so the quality
+      # gates on the new commit have to be dispatched explicitly
+      actions: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Download patch
+        uses: actions/download-artifact@v8
+        with:
+          name: regen-patch
+          path: ${{ runner.temp }}
+
+      - name: Commit and push
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          git apply --index "$RUNNER_TEMP/regen.patch"
+          # the patch was produced next to dependency code, so only generated files may go through
+          if git diff --cached --name-only | grep -vE '^ui/static/styles\.css$|_templ\.go$'; then
+            echo "::error::regen patch touches files outside the generated set"
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Regenerate templates and CSS after dependency bump'
+          # pushing the detached head sha fails if dependabot moved the branch meanwhile
+          git push origin "HEAD:refs/heads/$HEAD_REF"
+
+      - name: Run quality gates on the new commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: gh workflow run quality-gates.yml --ref "$HEAD_REF"
