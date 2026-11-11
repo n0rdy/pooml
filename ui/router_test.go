@@ -61,6 +61,7 @@ func newClient(t *testing.T) *client {
 		Backup:            services.NewBackupService(settings, t.TempDir(), pools.LogsRead, pools.Metrics, pools.Meta),
 		Pools:             pools,
 		Broadcaster:       broadcaster,
+		LogWriter:         &pipeline.Health,
 		StreamCtx:         context.Background(),
 		AuthSecret:        testSecret,
 		Env:               "local",

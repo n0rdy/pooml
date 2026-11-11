@@ -37,6 +37,9 @@ type Deps struct {
 	Backup        *services.BackupService
 	Pools         *db.Pools
 	Broadcaster   *ingestion.Broadcaster
+	// batch-writer health for the Home attention card; nil reads as healthy
+	LogWriter    *common.WriterHealth
+	MetricWriter *common.WriterHealth
 	// StreamCtx closes open SSE connections; main cancels it via the UI
 	// server's RegisterOnShutdown. appCtx (stage 4) would fire too late:
 	// Server.Shutdown waits on handlers first.

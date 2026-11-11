@@ -29,14 +29,15 @@ func TestIngestByteBudget(t *testing.T) {
 		}
 		accepted++
 	}
-	want := maxBufferedBytes / (2 << 20)
+	// each payload is charged for what it can grow to once parsed
+	want := maxBufferedBytes / (admissionGrowth * (2 << 20))
 	if accepted != want {
 		t.Errorf("accepted %d payloads of 2 MiB, want %d (byte budget)", accepted, want)
 	}
 
 	// draining one event frees its bytes and admission resumes
 	ev := <-p.ingestChan
-	p.bufferedBytes.Add(-int64(len(ev.payload)))
+	p.bufferedBytes.Add(-admissionGrowth * int64(len(ev.payload)))
 	if !p.TryIngest("svc", "h", payload, 1) {
 		t.Error("budget not released after drain")
 	}
@@ -228,6 +229,46 @@ func TestStoredRowsStaySearchable(t *testing.T) {
 			t.Errorf("read pool query failed on the oversized row: %v\n%s", err, q)
 		}
 	}
+}
+
+// A writer that keeps failing answers pings and returns 204 to shippers until
+// the queues fill: its own state is the only thing that can report it.
+func TestWriterReportsItsHealth(t *testing.T) {
+	dir := t.TempDir()
+	db.MigrateAll(dir)
+	pools, err := db.OpenPools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pools.Close)
+
+	p := NewPipeline(pools.LogsWrite, NewBroadcaster())
+	p.Start()
+	if !p.TryIngest("svc", "h", []byte("a line"), 1) {
+		t.Fatal("ingest rejected")
+	}
+	waitFor(t, "first write", func() bool { return p.bufferedBytes.Load() == 0 })
+	if since, msg := p.Health.Failing(); since != 0 || msg != "" {
+		t.Fatalf("healthy writer reports failing: since=%d msg=%q", since, msg)
+	}
+
+	// every flush fails from here on, and not because of the row itself
+	pools.LogsWrite.Close()
+	before := time.Now().UnixMilli()
+	if !p.TryIngest("svc", "h", []byte("another line"), 1) {
+		t.Fatal("ingest rejected")
+	}
+	waitFor(t, "writer reports the failure", func() bool { since, _ := p.Health.Failing(); return since != 0 })
+	first, msg := p.Health.Failing()
+	if first < before || msg == "" {
+		t.Fatalf("since=%d (test began %d) msg=%q", first, before, msg)
+	}
+	// the streak keeps its first failure time across retries
+	time.Sleep(3 * batchTimeout)
+	if since, _ := p.Health.Failing(); since != first {
+		t.Fatalf("failing-since moved from %d to %d while still failing", first, since)
+	}
+	p.Shutdown() // or the writer keeps retrying (and logging) for the rest of the package's tests
 }
 
 func waitFor(t *testing.T, what string, cond func() bool) {

@@ -1,6 +1,7 @@
 package ui_test
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -117,8 +118,8 @@ func TestHomeMetricsServicesFragment(t *testing.T) {
 	}
 }
 
-// Broken alerts and failing backups get a card on Home, and the card does not
-// exist otherwise.
+// The attention card lists what has quietly stopped working, under a heading
+// that says which kind, and does not exist while everything works.
 func TestHomeAttentionFragment(t *testing.T) {
 	cl := newClient(t)
 	if resp := cl.login(testSecret, cl.csrfToken()); resp.StatusCode != http.StatusSeeOther {
@@ -127,39 +128,73 @@ func TestHomeAttentionFragment(t *testing.T) {
 	if _, page := cl.get("/"); !strings.Contains(page, `hx-get="/home/attention"`) {
 		t.Error("home page missing the attention fragment")
 	}
-
-	insert := func(name string, enabled int, lastError any) {
+	fragment := func() string {
+		t.Helper()
+		status, body := cl.get("/home/attention")
+		if status != http.StatusOK {
+			t.Fatalf("status = %d", status)
+		}
+		return body
+	}
+	expect := func(body string, want, not []string) {
+		t.Helper()
+		for _, w := range want {
+			if !strings.Contains(body, w) {
+				t.Errorf("fragment missing %q", w)
+			}
+		}
+		for _, n := range not {
+			if strings.Contains(body, n) {
+				t.Errorf("fragment must not contain %q", n)
+			}
+		}
+	}
+	insert := func(name, query string, enabled, failures int, lastError any) {
 		t.Helper()
 		if _, err := cl.pools.Meta.Exec(
-			`INSERT INTO alerts (name, query, check_interval_ms, cooldown_ms, target, enabled, last_error, last_error_at, created_at)
-			 VALUES (?, 'SELECT 1 FROM logs', 30000, 0, '{"type":"pushover"}', ?, ?, 1, 1)`, name, enabled, lastError); err != nil {
+			`INSERT INTO alerts (name, query, check_interval_ms, cooldown_ms, target, enabled, failure_count, last_error, last_error_at, created_at)
+			 VALUES (?, ?, 30000, 0, '{"type":"pushover"}', ?, ?, ?, 1, 1)`, name, query, enabled, failures, lastError); err != nil {
 			t.Fatal(err)
 		}
 	}
-	insert("healthy", 1, nil)
-	insert("disabled and broken", 0, "query failed: whatever")
-	if status, body := cl.get("/home/attention"); status != http.StatusOK || strings.TrimSpace(body) != "" {
-		t.Fatalf("nothing broken: status=%d body=%q, want an empty fragment", status, body)
+	const good = "SELECT 1 FROM logs"
+
+	// healthy, disabled, and a single slow check: none of these is news
+	insert("healthy", good, 1, 0, nil)
+	insert("disabled and broken", good, 0, 5, "query failed: whatever")
+	insert("one slow check", good, 1, 1, "query failed: interrupted")
+	if body := fragment(); strings.TrimSpace(body) != "" {
+		t.Fatalf("nothing worth showing: want an empty fragment, got %q", body)
 	}
 
-	insert(`blind <b>one</b>`, 1, `table "sqlite_master" is not allowed`)
-	insert("mute one", 1, "notification failed: campfire rejected the message: HTTP 500")
-	_, body := cl.get("/home/attention")
-	for _, want := range []string{"Alerts flying blind", "blind &lt;b&gt;one&lt;/b&gt;", "sqlite_master", "mute one", "notification failed", `href="/alerts"`} {
-		if !strings.Contains(body, want) {
-			t.Errorf("fragment missing %q", want)
-		}
-	}
-	for _, not := range []string{"healthy", "disabled and broken", "<b>one</b>", "Backups failing"} {
-		if strings.Contains(body, not) {
-			t.Errorf("fragment must not contain %q", not)
-		}
+	insert(`blind <b>one</b>`, good, 1, 2, "query failed: interrupted")
+	insert("rejected query", "SELECT * FROM sqlite_master", 1, 1, `table "sqlite_master" is not allowed`)
+	insert("mute one", good, 1, 0, "notification failed: campfire rejected the message: HTTP 500")
+	body := fragment()
+	expect(body,
+		[]string{"Alerts flying blind", "blind &lt;b&gt;one&lt;/b&gt;", "rejected query", "sqlite_master", "Alerts that can&#39;t deliver", "mute one", `href="/alerts"`},
+		[]string{"healthy", "disabled and broken", "one slow check", "<b>one</b>", "Backups failing", "Not being stored"})
+	// each alert under its own heading, not both
+	blind, mute, _ := strings.Cut(body, "Alerts that can&#39;t deliver")
+	if strings.Contains(blind, "mute one") || strings.Contains(mute, "rejected query") {
+		t.Error("alerts listed under the wrong heading")
 	}
 
-	// backups: shown only while switched on AND the last run failed
+	// a writer that keeps failing; one failed flush moments ago is not shown
 	if _, err := cl.pools.Meta.Exec("DELETE FROM alerts"); err != nil {
 		t.Fatal(err)
 	}
+	now := time.Now().UnixMilli()
+	cl.pipeline.Health.Failed(errors.New("database or disk is full"), now)
+	if body := fragment(); strings.TrimSpace(body) != "" {
+		t.Fatalf("a writer failing for moments: want an empty fragment, got %q", body)
+	}
+	cl.pipeline.Health.OK()
+	cl.pipeline.Health.Failed(errors.New("database or disk is full"), now-5*60*1000)
+	expect(fragment(), []string{"Not being stored", "logs: database or disk is full", "data-reltime="}, []string{"Alerts flying blind"})
+	cl.pipeline.Health.OK()
+
+	// backups: shown only while switched on AND the last run failed
 	setting := func(key, val string) {
 		t.Helper()
 		if _, err := cl.pools.Meta.Exec(
@@ -171,21 +206,13 @@ func TestHomeAttentionFragment(t *testing.T) {
 	setting("backup.last_result", "upload 2026/logs.db: <AccessDenied>")
 	setting("backup.last_run_at", "1700000000000")
 	setting("backup.enabled", "false")
-	if _, body := cl.get("/home/attention"); strings.TrimSpace(body) != "" {
+	if body := fragment(); strings.TrimSpace(body) != "" {
 		t.Fatalf("backups switched off: want an empty fragment, got %q", body)
 	}
 	setting("backup.enabled", "true")
-	_, body = cl.get("/home/attention")
-	for _, want := range []string{"Backups failing", "&lt;AccessDenied&gt;", `href="/settings"`, `data-reltime="1700000000000"`} {
-		if !strings.Contains(body, want) {
-			t.Errorf("backup failure fragment missing %q", want)
-		}
-	}
-	if strings.Contains(body, "Alerts flying blind") {
-		t.Error("alerts heading shown with no broken alerts")
-	}
+	expect(fragment(), []string{"Backups failing", "&lt;AccessDenied&gt;", `href="/settings"`, `data-reltime="1700000000000"`}, []string{"Alerts flying blind", "Not being stored"})
 	setting("backup.last_result", "ok")
-	if _, body := cl.get("/home/attention"); strings.TrimSpace(body) != "" {
+	if body := fragment(); strings.TrimSpace(body) != "" {
 		t.Fatalf("healthy backups: want an empty fragment, got %q", body)
 	}
 }

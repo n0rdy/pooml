@@ -162,14 +162,42 @@ func (s *AlertsService) UpdateEval(ctx context.Context, id int64, firing bool, f
 	return err
 }
 
+// FailureStreak is the streak as the database holds it right after a failed
+// check. The evaluator decides from this, never from the copy it loaded before
+// the check ran: the alert may have been edited in between.
+type FailureStreak struct {
+	Count      int
+	SinceMs    int64
+	NotifiedAt sql.NullInt64
+}
+
 // RecordEvalFailure records an evaluation whose query could not run. The
-// firing state is left alone: unknown is not "cleared".
-func (s *AlertsService) RecordEvalFailure(ctx context.Context, id int64, msg string, checkedAt int64) error {
-	_, err := s.metaDB.ExecContext(ctx,
+// firing state is left alone: unknown is not "cleared". Matching on the query
+// text drops a check that was still running when the alert was edited or
+// deleted (sql.ErrNoRows): its verdict is about a query that no longer exists.
+func (s *AlertsService) RecordEvalFailure(ctx context.Context, id int64, alertQuery, msg string, checkedAt int64) (FailureStreak, error) {
+	var st FailureStreak
+	err := s.metaDB.QueryRowContext(ctx,
 		`UPDATE alerts SET last_checked_at = ?, last_error = ?, last_error_at = ?,
-		 failure_count = failure_count + 1, failing_since = COALESCE(failing_since, ?) WHERE id = ?`,
-		checkedAt, msg, checkedAt, checkedAt, id)
-	return err
+		 failure_count = failure_count + 1, failing_since = COALESCE(failing_since, ?)
+		 WHERE id = ? AND query = ?
+		 RETURNING failure_count, failing_since, failure_notified_at`,
+		checkedAt, msg, checkedAt, checkedAt, id, alertQuery).Scan(&st.Count, &st.SinceMs, &st.NotifiedAt)
+	return st, err
+}
+
+// QueryBroken reports a query failure worth showing an operator: a second
+// failed check in a row, or a query that no longer validates (deterministic,
+// so the first failure is already certain). One slow check is neither.
+func (a Alert) QueryBroken() bool {
+	if a.FailureCount == 0 {
+		return false
+	}
+	if a.FailureCount >= failureNotifyAfterCount {
+		return true
+	}
+	_, err := query.Validate(a.Query)
+	return err != nil
 }
 
 func (s *AlertsService) MarkFailureNotified(ctx context.Context, id, at int64) error {

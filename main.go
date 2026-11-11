@@ -184,6 +184,8 @@ func main() {
 		Backup:            backupService,
 		Pools:             pools,
 		Broadcaster:       broadcaster,
+		LogWriter:         &pipeline.Health,
+		MetricWriter:      &metricsPipeline.Health,
 		StreamCtx:         sseCtx,
 		AuthSecret:        uiSecret,
 		Env:               env,

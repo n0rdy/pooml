@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/n0rdy/pooml/common"
 	"github.com/n0rdy/pooml/db"
 
 	"github.com/rs/zerolog/log"
@@ -53,6 +54,9 @@ type Pipeline struct {
 	db       *sql.DB
 	batchCh  chan []Row
 	writerWG sync.WaitGroup
+
+	// for the Home attention card; see common.WriterHealth
+	Health common.WriterHealth
 
 	bufferedRows atomic.Int64 // rows admitted to batchCh but not yet consumed
 
@@ -135,9 +139,11 @@ func (p *Pipeline) writer() {
 			}
 			buf = slices.Delete(buf, 0, n)
 			if err != nil {
+				p.Health.Failed(err, time.Now().UnixMilli())
 				log.Error().Err(err).Int("rows", len(buf)).Msg("metrics batch write failed, will retry")
 				return
 			}
+			p.Health.OK()
 		}
 	}
 

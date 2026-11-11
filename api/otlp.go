@@ -58,8 +58,8 @@ func (ar *Router) otlpMetrics(w http.ResponseWriter, req *http.Request) {
 	}
 
 	rows, err := ar.decodeOTLP(req.Context(), payload, isJSON)
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-		// never got a decode slot: 429 is retryable for OTLP exporters, 400 is not
+	if errors.Is(err, errOTLPBusy) {
+		// 429 is retryable for OTLP exporters, 400 is not
 		ar.sendErrorResponse(w, http.StatusTooManyRequests, common.ErrCodeTooManyRequests)
 		return
 	}
@@ -93,11 +93,22 @@ func (ar *Router) otlpMetrics(w http.ResponseWriter, req *http.Request) {
 // parsing this runs on the request goroutine, so concurrency has to be capped
 var otlpDecodeSem = make(chan struct{}, 4)
 
+// The wait has to be bounded here: the request context carries no deadline
+// (the server's WriteTimeout does not cancel it), so without one a queued
+// request just sits until the exporter gives up.
+const otlpDecodeWait = 2 * time.Second
+
+var errOTLPBusy = errors.New("no OTLP decode slot free")
+
 func (ar *Router) decodeOTLP(ctx context.Context, payload []byte, isJSON bool) ([]metrics.Row, error) {
+	wait := time.NewTimer(otlpDecodeWait)
+	defer wait.Stop()
 	select {
 	case otlpDecodeSem <- struct{}{}:
+	case <-wait.C:
+		return nil, errOTLPBusy
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		return nil, errOTLPBusy
 	}
 	defer func() { <-otlpDecodeSem }()
 

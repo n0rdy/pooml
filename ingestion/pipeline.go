@@ -34,6 +34,11 @@ const (
 	// that matches it. Decoding can grow a line well past the 2 MiB payload
 	// cap (invalid UTF-8 triples), so the bound is enforced here, per log.
 	maxLogRowBytes = db.MaxReadCellBytes / 2
+
+	// A payload grows when parsed (raw, message and parsed are each counted),
+	// so admission charges this multiple up front and the parser settles the
+	// difference. Charging the bare payload let 128 of them in, to triple later.
+	admissionGrowth = 3
 )
 
 // one INSERT binds its whole batch inside SQLite's process-wide 1 GiB heap:
@@ -64,6 +69,9 @@ type Pipeline struct {
 	parserWG sync.WaitGroup
 	fanoutWG sync.WaitGroup
 	writerWG sync.WaitGroup
+
+	// for the Home attention card; see common.WriterHealth
+	Health common.WriterHealth
 
 	// bytes admitted but not yet written: raw payloads until parsed, then the
 	// parsed logs until their batch lands. Releasing at parse time left every
@@ -108,7 +116,7 @@ func (p *Pipeline) TryIngest(service, host string, payload []byte, receivedAt in
 	if p.closed {
 		return false
 	}
-	n := int64(len(payload))
+	n := admissionGrowth * int64(len(payload))
 	if p.bufferedBytes.Add(n) > maxBufferedBytes {
 		p.bufferedBytes.Add(-n)
 		return false
@@ -149,7 +157,7 @@ func (p *Pipeline) parserWorker() {
 			// to ingestChan and ultimately to 429s
 			p.parsedChan <- l
 		}
-		p.bufferedBytes.Add(-int64(len(ev.payload)))
+		p.bufferedBytes.Add(-admissionGrowth * int64(len(ev.payload)))
 	}
 }
 
@@ -198,8 +206,11 @@ func (p *Pipeline) batchWriter() {
 		}
 		settle(n)
 		if err != nil {
+			p.Health.Failed(err, time.Now().UnixMilli())
 			log.Error().Err(err).Int("rows", len(buf)).Msg("batch write failed, will retry")
+			return
 		}
+		p.Health.OK()
 	}
 	drain := func() {
 		tryFlush()

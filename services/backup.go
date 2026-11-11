@@ -221,8 +221,8 @@ func uploadFile(ctx context.Context, client *s3.Client, bucket, key, path string
 		return err
 	}
 	abort := func() {
-		// pooml holds no delete permission by design, so this can be refused;
-		// then only a bucket lifecycle rule clears the orphaned parts
+		// needs s3:AbortMultipartUpload, which the minimal s3:PutObject policy
+		// lacks; refused, only a bucket lifecycle rule clears the orphaned parts
 		actx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 		if _, aerr := client.AbortMultipartUpload(actx, &s3.AbortMultipartUploadInput{

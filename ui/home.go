@@ -195,32 +195,41 @@ func (ur *Router) homePageMetricsSegment(w http.ResponseWriter, req *http.Reques
 	ur.render(w, req, http.StatusOK, templates.HomeMetrics(view))
 }
 
-// homePageAttentionSegment surfaces the safety nets that stopped working:
-// broken alerts and failing backups. Empty body when all is well: the card
-// only exists while something is wrong.
+// A writer has to fail for this long before Home says so: one failed flush
+// that succeeds on the next try is not news.
+const writerFailingAfterMs = 60 * 1000
+
+// homePageAttentionSegment surfaces what has quietly stopped working: writers
+// that cannot store, alerts that cannot run or cannot deliver, failing backups.
+// Empty body when all is well: the card only exists while something is wrong.
 func (ur *Router) homePageAttentionSegment(w http.ResponseWriter, req *http.Request) {
 	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
 	defer cancel()
 
 	var view templates.HomeAttentionView
-	rows, err := ur.Pools.Meta.QueryContext(ctx,
-		"SELECT name, last_error FROM alerts WHERE enabled = 1 AND last_error IS NOT NULL ORDER BY last_error_at DESC LIMIT 10")
+	now := time.Now().UnixMilli()
+	for _, wr := range []struct {
+		name   string
+		health *common.WriterHealth
+	}{{"logs", ur.LogWriter}, {"metrics", ur.MetricWriter}} {
+		if since, msg := wr.health.Failing(); since > 0 && now-since >= writerFailingAfterMs {
+			view.Writers = append(view.Writers, templates.FailingWriter{Name: wr.name, Error: msg, SinceMs: since})
+		}
+	}
+
+	alerts, err := ur.Alerts.ListEnabled(ctx)
 	if err != nil {
 		ur.homeFragmentError(w, req, err)
 		return
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var a templates.BrokenAlert
-		if err := rows.Scan(&a.Name, &a.Error); err != nil {
-			ur.homeFragmentError(w, req, err)
-			return
+	for _, a := range alerts {
+		switch {
+		case a.QueryBroken(): // same rule the evaluator announces on
+			view.Blind = append(view.Blind, templates.BrokenAlert{Name: a.Name, Error: a.LastError.String})
+		case a.FailureCount == 0 && a.LastError.Valid:
+			// the query ran; the notification did not get out
+			view.Undelivered = append(view.Undelivered, templates.BrokenAlert{Name: a.Name, Error: a.LastError.String})
 		}
-		view.Alerts = append(view.Alerts, a)
-	}
-	if err := rows.Err(); err != nil {
-		ur.homeFragmentError(w, req, err)
-		return
 	}
 
 	// only while backups are switched on: a failed manual run on a disabled

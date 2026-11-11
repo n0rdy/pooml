@@ -119,6 +119,8 @@ func loginThrottle(throttlingService *services.ThrottlingService, trustProxyHead
 // SameSite=Lax, so it rides cross-site top-level GETs: a foreign page could
 // point a popup at an export URL and read log content one bit at a time from
 // "errored page vs download". Absent header (old browser, curl) passes.
+// Browsers send it only in secure contexts, so this rests on session cookies
+// being Secure in pro; under the local env over plain HTTP it does nothing.
 func sameOriginOnly(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		switch req.Header.Get("Sec-Fetch-Site") {

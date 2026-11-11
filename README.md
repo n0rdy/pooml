@@ -275,7 +275,8 @@ mc ilm rule add --expire-days 30 --prefix "pooml/" myminio/my-backups
 The minimum credentials policy pooml needs is `s3:PutObject` on the bucket. Database files over 64 MB are uploaded in
 parts, which the same permission covers. If an upload fails midway, pooml tries to abort it; without
 `s3:AbortMultipartUpload` that attempt is refused and the orphaned parts stay until the lifecycle rule above expires
-them (the `AbortIncompleteMultipartUpload` line). A failing backup shows on the Home page as long as backups are on.
+them (the `AbortIncompleteMultipartUpload` line). Granting `s3:AbortMultipartUpload` as well is safe and recommended:
+it only discards unfinished uploads and cannot touch a completed backup. A failing backup shows on the Home page as long as backups are on.
 
 ## Monitoring pooml itself
 
