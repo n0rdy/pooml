@@ -116,3 +116,76 @@ func TestHomeMetricsServicesFragment(t *testing.T) {
 		t.Error("home page missing the metrics-services card")
 	}
 }
+
+// Broken alerts and failing backups get a card on Home, and the card does not
+// exist otherwise.
+func TestHomeAttentionFragment(t *testing.T) {
+	cl := newClient(t)
+	if resp := cl.login(testSecret, cl.csrfToken()); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("login status = %d", resp.StatusCode)
+	}
+	if _, page := cl.get("/"); !strings.Contains(page, `hx-get="/home/attention"`) {
+		t.Error("home page missing the attention fragment")
+	}
+
+	insert := func(name string, enabled int, lastError any) {
+		t.Helper()
+		if _, err := cl.pools.Meta.Exec(
+			`INSERT INTO alerts (name, query, check_interval_ms, cooldown_ms, target, enabled, last_error, last_error_at, created_at)
+			 VALUES (?, 'SELECT 1 FROM logs', 30000, 0, '{"type":"pushover"}', ?, ?, 1, 1)`, name, enabled, lastError); err != nil {
+			t.Fatal(err)
+		}
+	}
+	insert("healthy", 1, nil)
+	insert("disabled and broken", 0, "query failed: whatever")
+	if status, body := cl.get("/home/attention"); status != http.StatusOK || strings.TrimSpace(body) != "" {
+		t.Fatalf("nothing broken: status=%d body=%q, want an empty fragment", status, body)
+	}
+
+	insert(`blind <b>one</b>`, 1, `table "sqlite_master" is not allowed`)
+	insert("mute one", 1, "notification failed: campfire rejected the message: HTTP 500")
+	_, body := cl.get("/home/attention")
+	for _, want := range []string{"Alerts flying blind", "blind &lt;b&gt;one&lt;/b&gt;", "sqlite_master", "mute one", "notification failed", `href="/alerts"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("fragment missing %q", want)
+		}
+	}
+	for _, not := range []string{"healthy", "disabled and broken", "<b>one</b>", "Backups failing"} {
+		if strings.Contains(body, not) {
+			t.Errorf("fragment must not contain %q", not)
+		}
+	}
+
+	// backups: shown only while switched on AND the last run failed
+	if _, err := cl.pools.Meta.Exec("DELETE FROM alerts"); err != nil {
+		t.Fatal(err)
+	}
+	setting := func(key, val string) {
+		t.Helper()
+		if _, err := cl.pools.Meta.Exec(
+			`INSERT INTO settings (key, value, is_encrypted, updated_at) VALUES (?, ?, 0, 1)
+			 ON CONFLICT(key) DO UPDATE SET value = excluded.value`, key, val); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setting("backup.last_result", "upload 2026/logs.db: <AccessDenied>")
+	setting("backup.last_run_at", "1700000000000")
+	setting("backup.enabled", "false")
+	if _, body := cl.get("/home/attention"); strings.TrimSpace(body) != "" {
+		t.Fatalf("backups switched off: want an empty fragment, got %q", body)
+	}
+	setting("backup.enabled", "true")
+	_, body = cl.get("/home/attention")
+	for _, want := range []string{"Backups failing", "&lt;AccessDenied&gt;", `href="/settings"`, `data-reltime="1700000000000"`} {
+		if !strings.Contains(body, want) {
+			t.Errorf("backup failure fragment missing %q", want)
+		}
+	}
+	if strings.Contains(body, "Alerts flying blind") {
+		t.Error("alerts heading shown with no broken alerts")
+	}
+	setting("backup.last_result", "ok")
+	if _, body := cl.get("/home/attention"); strings.TrimSpace(body) != "" {
+		t.Fatalf("healthy backups: want an empty fragment, got %q", body)
+	}
+}

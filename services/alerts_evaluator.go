@@ -16,7 +16,16 @@ import (
 // tests substitute a recorder.
 type AlertNotifier interface {
 	SendAlert(ctx context.Context, a Alert, res *query.Result) error
+	SendAlertFailure(ctx context.Context, a Alert, reason string, failingSinceMs int64) error
 }
+
+// A blind alert is announced once it has failed this many checks in a row AND
+// for this long: one timeout during a slow moment must not page anyone. Also
+// the floor for repeats, so a zero cooldown cannot nag on every check.
+const (
+	failureNotifyAfterCount = 3
+	failureNotifyAfterMs    = 5 * 60 * 1000
+)
 
 // Evaluator is the alert master loop from CONTEXT.md > Alerting: one ticker,
 // per-due-alert goroutines, state in the DB so edits are picked up next tick.
@@ -129,8 +138,29 @@ func (e *Evaluator) evaluate(ctx context.Context, a Alert) {
 	}
 }
 
+// recordError handles a query that could not run. Level-triggered like firing:
+// notify once past the threshold, repeat on the cooldown, and a failed send is
+// not marked so the next check retries it.
 func (e *Evaluator) recordError(ctx context.Context, a Alert, msg string, now int64) {
-	if err := e.store.UpdateEval(ctx, a.ID, a.CurrentlyFiring, nil, &msg, now); err != nil {
+	if err := e.store.RecordEvalFailure(ctx, a.ID, msg, now); err != nil {
+		log.Error().Err(err).Int64("alert", a.ID).Msg("alert state update")
+		return
+	}
+	since := now
+	if a.FailingSince.Valid {
+		since = a.FailingSince.Int64
+	}
+	if a.FailureCount+1 < failureNotifyAfterCount || now-since < failureNotifyAfterMs {
+		return
+	}
+	if a.FailureNotifiedAt.Valid && now-a.FailureNotifiedAt.Int64 < max(a.CooldownMs, failureNotifyAfterMs) {
+		return
+	}
+	if err := e.notifier.SendAlertFailure(ctx, a, msg, since); err != nil {
+		log.Warn().Err(err).Int64("alert", a.ID).Msg("could not announce a failing alert; will retry")
+		return
+	}
+	if err := e.store.MarkFailureNotified(ctx, a.ID, now); err != nil {
 		log.Error().Err(err).Int64("alert", a.ID).Msg("alert state update")
 	}
 }

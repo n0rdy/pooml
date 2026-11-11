@@ -315,4 +315,50 @@ func TestSecurityHeaders(t *testing.T) {
 	if resp.Header.Get("X-Content-Type-Options") != "nosniff" {
 		t.Error("missing nosniff")
 	}
+	if resp.Header.Get("Cross-Origin-Opener-Policy") != "same-origin" {
+		t.Error("missing COOP same-origin")
+	}
+}
+
+// Query-running endpoints that are never a link target must not answer a
+// request another site started: "error page vs download" is a readable signal.
+func TestCrossSiteRequestsRefused(t *testing.T) {
+	cl := newClient(t)
+	if resp := cl.login(testSecret, cl.csrfToken()); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("login status = %d", resp.StatusCode)
+	}
+	fetch := func(path, site string) int {
+		req, err := http.NewRequest(http.MethodGet, cl.srv.URL+path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if site != "" {
+			req.Header.Set("Sec-Fetch-Site", site)
+		}
+		resp, err := cl.c.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		resp.Body.Close()
+		return resp.StatusCode
+	}
+
+	q := "?q=" + url.QueryEscape("SELECT 1 AS x FROM logs")
+	for _, path := range []string{"/logs/export" + q, "/metrics-explorer/export", "/metrics-explorer/compile?dsl=avg(m)", "/metrics-explorer/filter-options?metric=m", "/logs/stream" + q} {
+		for _, site := range []string{"cross-site", "same-site"} {
+			if got := fetch(path, site); got != http.StatusForbidden {
+				t.Errorf("%s with Sec-Fetch-Site %s: status = %d, want 403", path, site, got)
+			}
+		}
+	}
+	// in-app use, bookmarks/typed URLs, and header-less clients keep working
+	for _, site := range []string{"same-origin", "none", ""} {
+		if got := fetch("/logs/export"+q, site); got != http.StatusOK {
+			t.Errorf("export with Sec-Fetch-Site %q: status = %d, want 200", site, got)
+		}
+	}
+	// pages stay linkable from outside (War Room links in notifications)
+	if got := fetch("/logs"+q, "cross-site"); got != http.StatusOK {
+		t.Errorf("logs page from a cross-site link: status = %d, want 200", got)
+	}
 }

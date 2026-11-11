@@ -5,8 +5,7 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 # CGO builds (mattn/go-sqlite3 with the vendored amalgamation), so each arch
 # builds on a native runner instead of cross-compiling. The sqlite_fts5 tag is
@@ -18,20 +17,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         fetch-depth: 0
 
     - name: Set up Go
-      uses: actions/setup-go@v7
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version-file: 'go.mod'
         cache: true
 
     - name: Build AMD64 binary
+      env:
+        VERSION: ${{ github.ref_name }}
       run: |
         CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags sqlite_fts5 \
-          -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          -ldflags="-s -w -X main.version=$VERSION" \
           -o pooml-linux-amd64 .
 
     - name: Create AMD64 archive
@@ -41,7 +42,7 @@ jobs:
         sha256sum dist/pooml_Linux_x86_64.tar.gz > dist/pooml_Linux_x86_64.tar.gz.sha256
 
     - name: Upload AMD64 artifacts
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: amd64-release
         path: |
@@ -52,20 +53,22 @@ jobs:
     runs-on: ubuntu-24.04-arm
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         fetch-depth: 0
 
     - name: Set up Go
-      uses: actions/setup-go@v7
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
       with:
         go-version-file: 'go.mod'
         cache: true
 
     - name: Build ARM64 binary
+      env:
+        VERSION: ${{ github.ref_name }}
       run: |
         CGO_ENABLED=1 GOOS=linux GOARCH=arm64 go build -tags sqlite_fts5 \
-          -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          -ldflags="-s -w -X main.version=$VERSION" \
           -o pooml-linux-arm64 .
 
     - name: Create ARM64 archive
@@ -75,7 +78,7 @@ jobs:
         sha256sum dist/pooml_Linux_arm64.tar.gz > dist/pooml_Linux_arm64.tar.gz.sha256
 
     - name: Upload ARM64 artifacts
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
       with:
         name: arm64-release
         path: |
@@ -87,28 +90,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
     - name: Download AMD64 artifacts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
       with:
         name: amd64-release
         path: ./
 
     - name: Download ARM64 artifacts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
       with:
         name: arm64-release
         path: ./
 
     - name: Set up QEMU
-      uses: docker/setup-qemu-action@v4
+      uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v4
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
     - name: Log in to Docker Hub
-      uses: docker/login-action@v4
+      uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_TOKEN }}
@@ -119,6 +122,9 @@ jobs:
         echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
     - name: Build and push multi-arch image
+      env:
+        VERSION: ${{ steps.version.outputs.VERSION }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
         # binaries are glibc (built on ubuntu runners), so the runtime base
         # must be glibc too - alpine/musl would not run them
@@ -146,28 +152,30 @@ jobs:
         docker buildx build \
           --platform linux/amd64,linux/arm64 \
           --file Dockerfile.multiarch \
-          --tag ${{ secrets.DOCKER_USERNAME }}/pooml:${{ steps.version.outputs.VERSION }} \
-          --tag ${{ secrets.DOCKER_USERNAME }}/pooml:latest \
+          --tag "$DOCKER_USERNAME/pooml:$VERSION" \
+          --tag "$DOCKER_USERNAME/pooml:latest" \
           --push \
           .
 
   release:
     needs: [build-amd64, build-arm64, docker]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       with:
         fetch-depth: 0
 
     - name: Download AMD64 artifacts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
       with:
         name: amd64-release
         path: ./amd64/
 
     - name: Download ARM64 artifacts
-      uses: actions/download-artifact@v8
+      uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
       with:
         name: arm64-release
         path: ./arm64/
@@ -210,7 +218,7 @@ jobs:
         } > notes.md
 
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v3
+      uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3
       with:
         tag_name: ${{ steps.version.outputs.FULL_VERSION }}
         name: ${{ steps.version.outputs.FULL_VERSION }}

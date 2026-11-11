@@ -4,13 +4,17 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/n0rdy/pooml/query"
 	"github.com/n0rdy/pooml/ui/templates"
@@ -69,10 +73,9 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		view.Error = humanizeSQLError(err)
 		if line, col, msg, ok := sqlErrorPosition(err); ok {
-			payload, _ := json.Marshal(map[string]any{
+			setTriggerHeader(w, map[string]any{
 				"sqlError": map[string]any{"line": line, "col": col, "message": msg},
 			})
-			w.Header().Set("HX-Trigger", string(payload))
 		}
 		ur.renderLogs(w, req, view, false)
 		return
@@ -125,11 +128,33 @@ func (ur *Router) logsPage(w http.ResponseWriter, req *http.Request) {
 	if filterApplied {
 		// canonical state after a quick filter is ?q={merged}; the editor
 		// follows via the setQuery event
-		payload, _ := json.Marshal(map[string]map[string]string{"setQuery": {"q": view.Q}})
-		w.Header().Set("HX-Trigger", string(payload))
+		setTriggerHeader(w, map[string]map[string]string{"setQuery": {"q": view.Q}})
 		w.Header().Set("HX-Push-Url", "/logs?q="+url.QueryEscape(view.Q))
 	}
 	ur.renderLogs(w, req, view, isPageFetch)
+}
+
+// setTriggerHeader sends an HX-Trigger payload as pure-ASCII JSON. Browsers
+// decode response header bytes as Latin-1, so raw UTF-8 (a service name, a
+// quoted token in a parse error) reached the editor as mojibake.
+func setTriggerHeader(w http.ResponseWriter, payload any) {
+	raw, err := json.Marshal(payload)
+	if err != nil {
+		return
+	}
+	var b strings.Builder
+	for _, r := range string(raw) {
+		switch {
+		case r < utf8.RuneSelf:
+			b.WriteRune(r)
+		case r > 0xFFFF:
+			hi, lo := utf16.EncodeRune(r)
+			fmt.Fprintf(&b, `\u%04x\u%04x`, hi, lo)
+		default:
+			fmt.Fprintf(&b, `\u%04x`, r)
+		}
+	}
+	w.Header().Set("HX-Trigger", b.String())
 }
 
 func (ur *Router) renderLogs(w http.ResponseWriter, req *http.Request, view templates.LogsView, isPageFetch bool) {
@@ -329,8 +354,20 @@ func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="logs.csv"`)
+	if err := writeCSV(w, res); err != nil {
+		log.Error().Err(err).Msg("csv export")
+	}
+}
+
+// writeCSV guards the header row too: column names are aliases from the query
+// text, which a crafted link controls just like log content controls cells.
+func writeCSV(w io.Writer, res *query.Result) error {
 	cw := csv.NewWriter(w)
-	_ = cw.Write(res.Columns)
+	header := make([]string, len(res.Columns))
+	for i, c := range res.Columns {
+		header[i] = csvSafe(c)
+	}
+	_ = cw.Write(header)
 	for _, row := range res.Rows {
 		cells := make([]string, len(row))
 		for j, cell := range row {
@@ -339,9 +376,7 @@ func (ur *Router) exportLogs(w http.ResponseWriter, req *http.Request) {
 		_ = cw.Write(cells)
 	}
 	cw.Flush()
-	if err := cw.Error(); err != nil {
-		log.Error().Err(err).Msg("csv export")
-	}
+	return cw.Error()
 }
 
 // rqlite parse errors look like `invalid SQL: 3:27: expected semicolon or
@@ -418,6 +453,14 @@ func cellString(v any) string {
 	}
 }
 
+// Each nesting level re-decodes a copy of what remains below it, so depth
+// multiplies memory: uncapped, one deeply nested 1 MB line held gigabytes.
+// Past the caps a subtree stays verbatim and extra fields are cut.
+const (
+	maxFlattenDepth  = 8
+	maxFlattenFields = 500
+)
+
 // flattenJSONObject renders a JSON object as dotted-key fields in document
 // order (a map would lose it), nesting objects and keeping arrays verbatim.
 func flattenJSONObject(s string) ([]templates.DetailField, bool) {
@@ -427,14 +470,24 @@ func flattenJSONObject(s string) ([]templates.DetailField, bool) {
 		return nil, false
 	}
 	var out []templates.DetailField
-	if err := flattenObjectBody(dec, "", &out); err != nil || len(out) == 0 {
+	err := flattenObjectBody(dec, "", 1, &out)
+	if errors.Is(err, errFlattenFull) {
+		out = append(out, templates.DetailField{Key: "…", Value: "more fields than fit here; the raw line has them all"})
+		return out, true
+	}
+	if err != nil || len(out) == 0 {
 		return nil, false
 	}
 	return out, true
 }
 
-func flattenObjectBody(dec *json.Decoder, prefix string, out *[]templates.DetailField) error {
+var errFlattenFull = errors.New("field cap reached")
+
+func flattenObjectBody(dec *json.Decoder, prefix string, depth int, out *[]templates.DetailField) error {
 	for dec.More() {
+		if len(*out) >= maxFlattenFields {
+			return errFlattenFull
+		}
 		tok, err := dec.Token()
 		if err != nil {
 			return err
@@ -452,13 +505,13 @@ func flattenObjectBody(dec *json.Decoder, prefix string, out *[]templates.Detail
 		}
 		raw = bytes.TrimSpace(raw)
 		switch {
-		case len(raw) > 0 && raw[0] == '{':
+		case len(raw) > 0 && raw[0] == '{' && depth < maxFlattenDepth:
 			sub := json.NewDecoder(bytes.NewReader(raw))
 			sub.UseNumber()
 			if _, err := sub.Token(); err != nil {
 				return err
 			}
-			if err := flattenObjectBody(sub, key, out); err != nil {
+			if err := flattenObjectBody(sub, key, depth+1, out); err != nil {
 				return err
 			}
 		case len(raw) > 0 && raw[0] == '"':

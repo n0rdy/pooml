@@ -195,6 +195,42 @@ func (ur *Router) homePageMetricsSegment(w http.ResponseWriter, req *http.Reques
 	ur.render(w, req, http.StatusOK, templates.HomeMetrics(view))
 }
 
+// homePageAttentionSegment surfaces the safety nets that stopped working:
+// broken alerts and failing backups. Empty body when all is well: the card
+// only exists while something is wrong.
+func (ur *Router) homePageAttentionSegment(w http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
+	defer cancel()
+
+	var view templates.HomeAttentionView
+	rows, err := ur.Pools.Meta.QueryContext(ctx,
+		"SELECT name, last_error FROM alerts WHERE enabled = 1 AND last_error IS NOT NULL ORDER BY last_error_at DESC LIMIT 10")
+	if err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var a templates.BrokenAlert
+		if err := rows.Scan(&a.Name, &a.Error); err != nil {
+			ur.homeFragmentError(w, req, err)
+			return
+		}
+		view.Alerts = append(view.Alerts, a)
+	}
+	if err := rows.Err(); err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+
+	// only while backups are switched on: a failed manual run on a disabled
+	// schedule is not something to keep reminding about
+	if b := ur.backupView(ctx); b.Enabled && b.LastResult != "" && b.LastResult != "ok" {
+		view.BackupError, view.BackupAtMs = b.LastResult, b.LastRunAt
+	}
+	ur.render(w, req, http.StatusOK, templates.HomeAttention(view))
+}
+
 func (ur *Router) homeFragmentError(w http.ResponseWriter, req *http.Request, err error) {
 	log.Error().Err(err).Str("path", req.URL.Path).Msg("home fragment query")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

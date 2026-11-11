@@ -32,18 +32,27 @@ func init() {
 // apiKeyVerifier is implemented by services.ApiKeysService.
 type apiKeyVerifier interface {
 	Verify(ctx context.Context, key string) bool
+	IsCached(key string) bool
 }
 
 func apiKeyTokenAuth(keys apiKeyVerifier, throttlingService *services.ThrottlingService, trustProxyHeaders bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			key := req.Header.Get("X-API-Key")
+			// Known-good keys skip the lockout: behind a proxy every client
+			// shares one IP, so anyone sending bad keys could otherwise 429 the
+			// real shippers. A guesser gains nothing: keys are 256-bit random.
+			if keys.IsCached(key) {
+				next.ServeHTTP(w, req)
+				return
+			}
+
 			ip := utils.ClientIP(req, trustProxyHeaders)
 			if throttlingService.IsLocked(ip) {
 				sendTooManyRequestsResponse(w)
 				return
 			}
 
-			key := req.Header.Get("X-API-Key")
 			if key == "" || !keys.Verify(req.Context(), key) {
 				throttlingService.RecordFailure(ip)
 				log.Warn().Str("ip", ip).Msg("invalid API key")

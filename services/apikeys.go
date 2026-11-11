@@ -118,17 +118,24 @@ func (s *ApiKeysService) Revoke(ctx context.Context, id int64) error {
 	return nil
 }
 
+// IsCached reports whether key already passed Verify in this process (and was
+// not revoked since). No DB or KDF work, so it is safe ahead of throttling.
+func (s *ApiKeysService) IsCached(key string) bool {
+	digest := sha256.Sum256([]byte(key))
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, ok := s.verified[digest]
+	return ok
+}
+
 // Verify reports whether key is a valid, non-revoked API key. Malformed keys
 // are rejected before any DB or KDF work; wrong secrets pay full argon2 cost
 // every time, which is fine - the auth-failure throttling locks abusers out.
 func (s *ApiKeysService) Verify(ctx context.Context, key string) bool {
-	digest := sha256.Sum256([]byte(key))
-	s.mu.RLock()
-	_, ok := s.verified[digest]
-	s.mu.RUnlock()
-	if ok {
+	if s.IsCached(key) {
 		return true
 	}
+	digest := sha256.Sum256([]byte(key))
 
 	// SplitN, not Split: the base64url alphabet includes '_', so the secret
 	// itself may contain underscores

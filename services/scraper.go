@@ -30,6 +30,8 @@ const (
 	// even inside the body cap, a target of minimal `m{} 1` lines can yield
 	// ~1.6 M rows from 10 MB; cap the expansion the way OTLP caps its request
 	maxScrapeRows = 500_000
+
+	maxScrapeErrorBytes = 500
 )
 
 // MetricsPusher is what the scraper needs from the metrics pipeline; tests
@@ -110,16 +112,28 @@ func (s *Scraper) tick(ctx context.Context) {
 
 func (s *Scraper) scrape(ctx context.Context, t ScrapeTarget) {
 	now := time.Now().UnixMilli()
-	rows, err := s.fetch(ctx, t, now)
+	var rows []metrics.Row
+	var err error
+	if t.AuthUnreadable {
+		// never fall back to an unauthenticated request
+		err = errors.New("the stored auth header can no longer be decrypted (did POOML_ENCRYPTION_KEY change?): delete this target and add it again")
+	} else {
+		rows, err = s.fetch(ctx, t, now)
+	}
 	if err == nil && !s.pipeline.TryPush(rows) {
 		err = fmt.Errorf("metrics pipeline saturated, scrape dropped")
 	}
 
 	var errMsg *string
 	if err != nil {
+		// a parse error quotes the offending token, which a target controls:
+		// megabytes per interval into the log and meta.db if left whole
 		msg := err.Error()
+		if len(msg) > maxScrapeErrorBytes {
+			msg = strings.ToValidUTF8(msg[:maxScrapeErrorBytes], "") + "... (truncated)"
+		}
 		errMsg = &msg
-		log.Warn().Err(err).Int64("target", t.ID).Str("url", redactURL(t.URL)).Msg("scrape failed")
+		log.Warn().Str("error", msg).Int64("target", t.ID).Str("url", redactURL(t.URL)).Msg("scrape failed")
 	}
 	if recErr := s.store.RecordScrape(ctx, t.ID, now, errMsg); recErr != nil {
 		log.Error().Err(recErr).Int64("target", t.ID).Msg("scrape state update")
@@ -172,7 +186,7 @@ func (s *Scraper) familiesToRows(families map[string]*dto.MetricFamily, t Scrape
 	var rows []metrics.Row
 	base := metrics.Row{Service: t.Service, Host: t.Host}
 
-	capped := false
+	capped, skipped := false, false
 	appendRow := func(m *dto.Metric, name string, typ int, value float64) {
 		if len(rows) >= maxScrapeRows {
 			if !capped {
@@ -196,6 +210,14 @@ func (s *Scraper) familiesToRows(families map[string]*dto.MetricFamily, t Scrape
 	}
 
 	for name, fam := range families {
+		if !common.ValidMetricName(name) {
+			if !skipped {
+				skipped = true
+				log.Warn().Int64("target", t.ID).Int("name_bytes", len(name)).
+					Msg("scraped metric skipped: name too long or has control characters")
+			}
+			continue
+		}
 		for _, m := range fam.GetMetric() {
 			switch fam.GetType() {
 			case dto.MetricType_COUNTER:

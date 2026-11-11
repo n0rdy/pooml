@@ -78,7 +78,7 @@ done
 # import map can't resolve without dragging that whole graph in - bundle it
 # into one self-contained ESM file instead
 mkdir -p "$WORK/sf" && (cd "$WORK/sf" && npm init -y >/dev/null 2>&1 && npm install sql-formatter@15.8.2 --ignore-scripts --silent >/dev/null)
-npx -y esbuild "$WORK/sf/node_modules/sql-formatter/dist/esm/index.js" --bundle --format=esm --minify --outfile="$VENDOR/sql-formatter.js" --log-level=error
+npx -y esbuild@0.28.2 "$WORK/sf/node_modules/sql-formatter/dist/esm/index.js" --bundle --format=esm --minify --outfile="$VENDOR/sql-formatter.js" --log-level=error
 echo "vendored sql-formatter -> sql-formatter.js (bundled)"
 
 # non-module scripts

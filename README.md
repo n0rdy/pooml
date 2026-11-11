@@ -21,7 +21,8 @@ unit - anything works).
 - **Dashboards**: typed logs/metrics dashboards with stream, chart, and number panels
 - **War Room**: metrics and logs on one timeline for incidents - one time window rules the page, drag across any chart
   to zoom, every view is a shareable URL. Alerts can carry a War Room link centered on the firing moment
-- **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire
+- **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire. An alert whose
+  query stops working tells you so, instead of going quiet
 - **Ops**: hourly retention cleanup, scheduled S3 backups, Prometheus `/metrics` self-observability - pooml can monitor
   itself
 - **AI-ready (MCP)**: [`@pooml/mcp`](https://www.npmjs.com/package/@pooml/mcp) gives Claude (or any MCP client)
@@ -145,7 +146,7 @@ All configuration is via environment variables. Required variables fail fast at 
 | `POOML_METRICS_AUTH_SECRET`      | -                | Required when metrics are enabled, min 32 chars. Sent as `X-API-Key` by scrapers.                                                                  |
 | `POOML_QUERY_API_ENABLED`        | `false`          | Expose the read-only SQL query API at `/api/v1/query/*`.                                                                                           |
 | `POOML_QUERY_API_AUTH_SECRET`    | -                | Required when the query API is enabled, min 32 chars. Sent as `X-API-Key`. Deliberately separate from ingest keys.                                 |
-| `POOML_PUBLIC_URL`               | -                | Where this pooml lives from the outside (e.g. `https://logs.example.com`). Optional; enables War Room links in alert notifications.                |
+| `POOML_PUBLIC_URL`               | -                | Where this pooml lives from the outside (e.g. `https://logs.example.com`). Optional; enables War Room links (and a link to the Alerts page) in alert notifications. |
 | `POOML_SHUTDOWN_TIMEOUT_SECONDS` | `30`             | Hard deadline for graceful shutdown.                                                                                                               |
 
 ## Shipping logs
@@ -246,7 +247,8 @@ backup history. Expire old backups with your provider's lifecycle rules instead:
 ```bash
 aws s3api put-bucket-lifecycle-configuration --bucket my-backups \
   --lifecycle-configuration '{"Rules":[{"ID":"expire-pooml-backups","Status":"Enabled",
-    "Filter":{"Prefix":"pooml/"},"Expiration":{"Days":30}}]}'
+    "Filter":{"Prefix":"pooml/"},"Expiration":{"Days":30},
+    "AbortIncompleteMultipartUpload":{"DaysAfterInitiation":2}}]}'
 ```
 
 (For R2, add `--endpoint-url https://<account_id>.r2.cloudflarestorage.com`.)
@@ -257,7 +259,10 @@ aws s3api put-bucket-lifecycle-configuration --bucket my-backups \
 mc ilm rule add --expire-days 30 --prefix "pooml/" myminio/my-backups
 ```
 
-The minimum credentials policy pooml needs is `s3:PutObject` on the bucket.
+The minimum credentials policy pooml needs is `s3:PutObject` on the bucket. Database files over 64 MB are uploaded in
+parts, which the same permission covers. If an upload fails midway, pooml tries to abort it; without
+`s3:AbortMultipartUpload` that attempt is refused and the orphaned parts stay until the lifecycle rule above expires
+them (the `AbortIncompleteMultipartUpload` line). A failing backup shows on the Home page as long as backups are on.
 
 ## Monitoring pooml itself
 

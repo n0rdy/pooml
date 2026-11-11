@@ -24,8 +24,10 @@ func (ms *MonitoringService) IsHealthy(ctx context.Context) bool {
 		name string
 		db   *sql.DB
 	}{
+		// logs-write is deliberately absent: it is ONE connection, so a ping
+		// waits behind any long flush or retention chunk and reports "busy"
+		// as "down" - and a proxy that honours health then drops the UI too
 		{"logs-read", ms.pools.LogsRead},
-		{"logs-write", ms.pools.LogsWrite},
 		{"metrics", ms.pools.Metrics},
 		{"meta", ms.pools.Meta},
 	}

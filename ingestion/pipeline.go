@@ -7,8 +7,10 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"unicode/utf8"
 
 	"github.com/n0rdy/pooml/common"
+	"github.com/n0rdy/pooml/db"
 
 	"github.com/rs/zerolog/log"
 )
@@ -26,7 +28,18 @@ const (
 	// payloads - an OOM on the small boxes pooml targets. Bytes are capped
 	// too; crossing the budget 429s exactly like a full channel.
 	maxBufferedBytes = 256 << 20
+
+	// The read pool refuses any row over db.MaxReadCellBytes once a query has
+	// to sort or materialize it, so one oversized log would fail every search
+	// that matches it. Decoding can grow a line well past the 2 MiB payload
+	// cap (invalid UTF-8 triples), so the bound is enforced here, per log.
+	maxLogRowBytes = db.MaxReadCellBytes / 2
 )
+
+// one INSERT binds its whole batch inside SQLite's process-wide 1 GiB heap:
+// 1000 rows of 2 MiB lines can never fit, so batches close on bytes too.
+// A var only so tests can shrink it.
+var maxBatchBytes int64 = 32 << 20
 
 const insertPrefix = "INSERT INTO logs(timestamp,ingested_at,level,service,host,message,parsed,raw) VALUES "
 
@@ -52,7 +65,10 @@ type Pipeline struct {
 	fanoutWG sync.WaitGroup
 	writerWG sync.WaitGroup
 
-	bufferedBytes atomic.Int64 // payload bytes admitted but not yet parsed
+	// bytes admitted but not yet written: raw payloads until parsed, then the
+	// parsed logs until their batch lands. Releasing at parse time left every
+	// later stage unbounded.
+	bufferedBytes atomic.Int64
 
 	// closed guards TryIngest against send-on-closed-channel if a shutdown
 	// deadline expires while an ingest handler is still running: RLock is
@@ -127,6 +143,8 @@ func (p *Pipeline) parserWorker() {
 	for ev := range p.ingestChan {
 		for _, l := range parsePayload(ev.service, ev.host, ev.payload, ev.receivedAt) {
 			l.Timestamp = common.ClampTimestamp(l.Timestamp, ev.receivedAt)
+			clampLog(&l)
+			p.bufferedBytes.Add(logBytes(&l))
 			// blocking send on purpose: full parsedChan cascades backpressure
 			// to ingestChan and ultimately to 429s
 			p.parsedChan <- l
@@ -148,6 +166,19 @@ func (p *Pipeline) batchWriter() {
 	defer p.writerWG.Done()
 
 	buf := make([]common.StandardLog, 0, batchSize)
+	var bufBytes int64
+	full := func() bool { return len(buf) >= batchSize || bufBytes >= maxBatchBytes }
+	// settle drops the first n rows from buf, written or abandoned
+	settle := func(n int) {
+		for i := range n {
+			sz := logBytes(&buf[i])
+			bufBytes -= sz
+			p.bufferedBytes.Add(-sz)
+		}
+		m := copy(buf, buf[n:])
+		clear(buf[m:]) // let go of the written strings now, not at the next overwrite
+		buf = buf[:m]
+	}
 	timer := time.NewTimer(batchTimeout)
 	if !timer.Stop() {
 		<-timer.C
@@ -158,11 +189,17 @@ func (p *Pipeline) batchWriter() {
 		if len(buf) == 0 {
 			return
 		}
-		if err := p.flushBatch(buf); err != nil {
-			log.Error().Err(err).Int("rows", len(buf)).Msg("batch write failed, will retry")
-			return
+		n, err := len(buf), p.flushBatch(buf)
+		switch {
+		case db.IsPermanent(err):
+			n, err = p.salvage(buf)
+		case err != nil:
+			n = 0
 		}
-		buf = buf[:0]
+		settle(n)
+		if err != nil {
+			log.Error().Err(err).Int("rows", len(buf)).Msg("batch write failed, will retry")
+		}
 	}
 	drain := func() {
 		tryFlush()
@@ -172,9 +209,9 @@ func (p *Pipeline) batchWriter() {
 	}
 
 	for {
-		if len(buf) >= batchSize {
+		if full() {
 			tryFlush()
-			if len(buf) >= batchSize {
+			if full() {
 				// still failing: back off without pulling more, so the
 				// channels fill and backpressure reaches the HTTP layer
 				time.Sleep(batchTimeout)
@@ -189,6 +226,7 @@ func (p *Pipeline) batchWriter() {
 				return
 			}
 			buf = append(buf, l)
+			bufBytes += logBytes(&l)
 			timer.Reset(batchTimeout)
 			armed = true
 			continue
@@ -201,6 +239,7 @@ func (p *Pipeline) batchWriter() {
 				return
 			}
 			buf = append(buf, l)
+			bufBytes += logBytes(&l)
 		case <-timer.C:
 			tryFlush()
 			if len(buf) > 0 {
@@ -210,6 +249,57 @@ func (p *Pipeline) batchWriter() {
 			}
 		}
 	}
+}
+
+// logBytes is what one log binds into its INSERT (raw, message and parsed are
+// separate copies there even when they share a string here).
+func logBytes(l *common.StandardLog) int64 {
+	n := len(l.Raw)
+	if l.Message != nil {
+		n += len(*l.Message)
+	}
+	if l.Parsed != nil {
+		n += len(*l.Parsed)
+	}
+	return int64(n)
+}
+
+// clampLog keeps one log under maxLogRowBytes, giving up the derived columns
+// first: raw already contains what parsed and message were extracted from.
+func clampLog(l *common.StandardLog) {
+	if logBytes(l) <= maxLogRowBytes {
+		return
+	}
+	l.Parsed = nil
+	if logBytes(l) <= maxLogRowBytes {
+		return
+	}
+	l.Message = nil
+	if len(l.Raw) > maxLogRowBytes {
+		cut := maxLogRowBytes
+		for cut > 0 && !utf8.RuneStart(l.Raw[cut]) {
+			cut--
+		}
+		l.Raw = l.Raw[:cut]
+	}
+}
+
+// salvage re-writes a batch row by row after a permanent error, dropping only
+// the rows SQLite will never accept: retrying the whole batch would block every
+// later log behind it forever. Returns how many leading rows are settled.
+func (p *Pipeline) salvage(buf []common.StandardLog) (int, error) {
+	for i := range buf {
+		err := p.flushBatch(buf[i : i+1])
+		switch {
+		case err == nil:
+		case db.IsPermanent(err):
+			log.Error().Err(err).Str("service", buf[i].Service).Int("bytes", len(buf[i].Raw)).
+				Msg("dropping log row the database rejects")
+		default:
+			return i, err
+		}
+	}
+	return len(buf), nil
 }
 
 func (p *Pipeline) flushBatch(buf []common.StandardLog) error {

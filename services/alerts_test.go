@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/n0rdy/pooml/db"
 	"github.com/n0rdy/pooml/query"
@@ -203,10 +205,133 @@ func TestCampfireSend(t *testing.T) {
 	}
 }
 
+// The "flying blind" message goes to the alert's own target, escaped for
+// Campfire like any other content: the reason can quote query text.
+func TestSendAlertFailure(t *testing.T) {
+	n, settings := newNotifyFixture(t)
+	n.PublicURL = "https://logs.example.com/"
+	ctx := context.Background()
+	since := time.Date(2026, 11, 10, 22, 15, 0, 0, time.UTC).UnixMilli()
+	reason := `table "<b>x</b>" is not allowed ` + strings.Repeat("y", 1000)
+
+	var campfireBody string
+	campfire := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		campfireBody = string(b)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer campfire.Close()
+	_ = settings.Set(ctx, SettingCampfireBaseURL, campfire.URL, false)
+	_ = settings.Set(ctx, SettingCampfireBotKey, "bot-key-secret", true)
+
+	a := Alert{Name: "5xx <spike>", Target: `{"type":"campfire","room_id":7}`}
+	if err := n.SendAlertFailure(ctx, a, reason, since); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"5xx &lt;spike&gt; is flying blind", "2026-11-10 22:15 UTC", "&lt;b&gt;x&lt;/b&gt;", `href="https://logs.example.com/alerts"`} {
+		if !strings.Contains(campfireBody, want) {
+			t.Errorf("campfire body missing %q: %.300q", want, campfireBody)
+		}
+	}
+	if strings.Contains(campfireBody, "<b>x</b>") {
+		t.Errorf("reason not escaped: %.300q", campfireBody)
+	}
+	if len(campfireBody) > 1000 {
+		t.Errorf("reason not truncated: body is %d bytes", len(campfireBody))
+	}
+
+	var form map[string][]string
+	pushover := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		form = r.PostForm
+		w.Write([]byte(`{"status":1}`))
+	}))
+	defer pushover.Close()
+	n.PushoverBaseURL = pushover.URL
+	_ = settings.Set(ctx, SettingPushoverAppToken, "tok", true)
+	_ = settings.Set(ctx, SettingPushoverUserKey, "usr", true)
+
+	a.Target = `{"type":"pushover","priority":1}`
+	if err := n.SendAlertFailure(ctx, a, "query failed: interrupted", since); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(form["title"][0], "5xx <spike> is flying blind") || !strings.Contains(form["message"][0], "query failed: interrupted") {
+		t.Errorf("pushover content: title=%q message=%q", form["title"], form["message"])
+	}
+	if form["priority"][0] != "1" || form["url"][0] != "https://logs.example.com/alerts" || form["url_title"][0] != "Open alerts" {
+		t.Errorf("pushover routing/link: %v", form)
+	}
+}
+
+// Pushover documents hard limits but not what it does past them, so pooml
+// must never send more: a rejected notification is a lost alert.
+func TestPushoverStaysWithinLimits(t *testing.T) {
+	n, settings := newNotifyFixture(t)
+	n.PublicURL = "https://logs.example.com"
+	ctx := context.Background()
+
+	var form map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		form = r.PostForm
+		w.Write([]byte(`{"status":1}`))
+	}))
+	defer srv.Close()
+	n.PushoverBaseURL = srv.URL
+	_ = settings.Set(ctx, SettingPushoverAppToken, "tok", true)
+	_ = settings.Set(ctx, SettingPushoverUserKey, "usr", true)
+
+	// six wide rows of multi-byte text, and a query long enough to overflow the URL
+	wide := strings.Repeat("é", 400)
+	res := &query.Result{Columns: []string{"message"}}
+	for range 6 {
+		res.Rows = append(res.Rows, []any{wide})
+	}
+	longQuery := "SELECT * FROM logs WHERE level >= 4 AND (" + strings.Repeat("message LIKE '%timeout%' OR ", 30) + "1 = 0)"
+	a := Alert{Name: strings.Repeat("n", 100), Query: longQuery, Target: `{"type":"pushover","war_room":true}`}
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	if got := utf8.RuneCountInString(form["message"][0]); got > 1024 {
+		t.Errorf("message is %d characters, limit 1024", got)
+	}
+	if got := utf8.RuneCountInString(form["title"][0]); got > 250 {
+		t.Errorf("title is %d characters, limit 250", got)
+	}
+	link := form["url"][0]
+	if len(link) > 512 {
+		t.Errorf("url is %d characters, limit 512", len(link))
+	}
+	if !strings.Contains(link, "/war-room?from=") || strings.Contains(link, "q=") {
+		t.Errorf("an over-long link must keep the time window and drop the query: %q", link)
+	}
+
+	// a short query still travels in the link
+	a.Query = "SELECT * FROM logs WHERE level >= 4"
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(form["url"][0], "q=SELECT") {
+		t.Errorf("short query missing from the link: %q", form["url"][0])
+	}
+}
+
 // recorder implements AlertNotifier for evaluator tests.
 type recorder struct {
-	calls atomic.Int64
-	fail  atomic.Bool
+	calls        atomic.Int64
+	fail         atomic.Bool
+	failureCalls atomic.Int64
+	failureFail  atomic.Bool
+	lastReason   atomic.Value
+}
+
+func (r *recorder) SendAlertFailure(ctx context.Context, a Alert, reason string, failingSinceMs int64) error {
+	if r.failureFail.Load() {
+		return context.DeadlineExceeded
+	}
+	r.failureCalls.Add(1)
+	r.lastReason.Store(reason)
+	return nil
 }
 
 func (r *recorder) SendAlert(ctx context.Context, a Alert, res *query.Result) error {
@@ -284,6 +409,247 @@ func TestEvaluatorLifecycle(t *testing.T) {
 	_ = pools.Meta.QueryRow("SELECT COUNT(*) FROM alert_firings").Scan(&firings)
 	if firings != 1 {
 		t.Errorf("alert_firings rows = %d, want 1", firings)
+	}
+}
+
+// An alert whose query cannot run is blind. It must say so, but only after
+// the failure has lasted: one timeout during a slow moment is not news.
+func TestEvaluatorAnnouncesBlindAlert(t *testing.T) {
+	pools := newTestPools(t)
+	store := NewAlertsService(pools.Meta)
+	rec := &recorder{}
+	ev := NewEvaluator(store, pools.LogsRead, rec)
+	ctx := context.Background()
+
+	if err := store.Create(ctx, Alert{
+		Name: "payments down", Query: "SELECT * FROM logs WHERE level >= 4",
+		CheckIntervalMs: MinCheckIntervalMs, CooldownMs: 60 * 60 * 1000,
+		Target: `{"type":"campfire","room_id":1}`, Enabled: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// what an upgrade that tightens the validator does to a stored alert
+	if _, err := pools.Meta.Exec("UPDATE alerts SET query = 'SELECT * FROM sqlite_master'"); err != nil {
+		t.Fatal(err)
+	}
+	check := func() Alert {
+		t.Helper()
+		if _, err := pools.Meta.Exec("UPDATE alerts SET last_checked_at = last_checked_at - ?", MinCheckIntervalMs+1000); err != nil {
+			t.Fatal(err)
+		}
+		ev.tick(ctx)
+		ev.wg.Wait()
+		alerts, err := store.List(ctx)
+		if err != nil || len(alerts) != 1 {
+			t.Fatalf("list: %v (%d alerts)", err, len(alerts))
+		}
+		return alerts[0]
+	}
+	age := func(ms int64) {
+		t.Helper()
+		if _, err := pools.Meta.Exec(
+			"UPDATE alerts SET failing_since = failing_since - ?, failure_notified_at = failure_notified_at - ?", ms, ms); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// three failures in quick succession: counted, visible, not yet announced
+	var a Alert
+	for range failureNotifyAfterCount {
+		a = check()
+	}
+	if a.FailureCount != failureNotifyAfterCount || !a.FailingSince.Valid || !a.LastError.Valid {
+		t.Fatalf("streak not tracked: count=%d since=%v err=%v", a.FailureCount, a.FailingSince, a.LastError)
+	}
+	if got := rec.failureCalls.Load(); got != 0 {
+		t.Fatalf("announced after %d quick failures, before the time threshold (calls=%d)", failureNotifyAfterCount, got)
+	}
+
+	// old enough now: announced once, with the reason
+	age(failureNotifyAfterMs + 1000)
+	a = check()
+	if got := rec.failureCalls.Load(); got != 1 {
+		t.Fatalf("failure notifications = %d, want 1", got)
+	}
+	if reason, _ := rec.lastReason.Load().(string); !strings.Contains(reason, "sqlite_master") {
+		t.Errorf("reason = %q, want the validation error", reason)
+	}
+	if !a.FailureNotifiedAt.Valid {
+		t.Fatal("failure_notified_at not set")
+	}
+
+	// still failing: quiet inside the cooldown, repeated after it
+	check()
+	if got := rec.failureCalls.Load(); got != 1 {
+		t.Fatalf("repeated inside the cooldown: calls = %d", got)
+	}
+	age(60*60*1000 + 1000)
+	check()
+	if got := rec.failureCalls.Load(); got != 2 {
+		t.Fatalf("not repeated after the cooldown: calls = %d", got)
+	}
+
+	// query works again: the streak ends without ceremony
+	if _, err := pools.Meta.Exec("UPDATE alerts SET query = 'SELECT * FROM logs WHERE level >= 4'"); err != nil {
+		t.Fatal(err)
+	}
+	a = check()
+	if a.FailureCount != 0 || a.FailingSince.Valid || a.LastError.Valid {
+		t.Fatalf("streak not cleared: count=%d since=%v err=%v", a.FailureCount, a.FailingSince, a.LastError)
+	}
+	if got := rec.calls.Load(); got != 0 {
+		t.Errorf("firing notifications = %d, want 0 (no matching rows)", got)
+	}
+}
+
+// The cooldown has to span streaks: an alert that flaps (fails for a while,
+// one good check, fails again) must not announce every time it re-breaks.
+func TestEvaluatorBlindAlertFlapping(t *testing.T) {
+	pools := newTestPools(t)
+	store := NewAlertsService(pools.Meta)
+	rec := &recorder{}
+	ev := NewEvaluator(store, pools.LogsRead, rec)
+	ctx := context.Background()
+
+	if err := store.Create(ctx, Alert{
+		Name: "flapper", Query: "SELECT * FROM logs WHERE level >= 4",
+		CheckIntervalMs: MinCheckIntervalMs, CooldownMs: 24 * 60 * 60 * 1000,
+		Target: `{"type":"pushover"}`, Enabled: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	const good, bad = "SELECT * FROM logs WHERE level >= 4", "SELECT * FROM sqlite_master"
+	check := func(q string) {
+		t.Helper()
+		if _, err := pools.Meta.Exec("UPDATE alerts SET query = ?, last_checked_at = last_checked_at - ?", q, MinCheckIntervalMs+1000); err != nil {
+			t.Fatal(err)
+		}
+		ev.tick(ctx)
+		ev.wg.Wait()
+	}
+	for cycle := range 3 {
+		for range failureNotifyAfterCount {
+			check(bad)
+		}
+		if _, err := pools.Meta.Exec("UPDATE alerts SET failing_since = failing_since - ?", int64(failureNotifyAfterMs+1000)); err != nil {
+			t.Fatal(err)
+		}
+		check(bad)
+		if got := rec.failureCalls.Load(); got != 1 {
+			t.Fatalf("cycle %d: %d announcements inside a 24h cooldown, want 1", cycle, got)
+		}
+		check(good)
+	}
+}
+
+// Editing an alert (which is also how it is disabled and re-enabled) starts it
+// over: a streak from before must not page on the first check afterwards.
+func TestAlertUpdateResetsFailureStreak(t *testing.T) {
+	pools := newTestPools(t)
+	store := NewAlertsService(pools.Meta)
+	rec := &recorder{}
+	ev := NewEvaluator(store, pools.LogsRead, rec)
+	ctx := context.Background()
+
+	if err := store.Create(ctx, Alert{
+		Name: "paused", Query: "SELECT * FROM logs WHERE level >= 4",
+		CheckIntervalMs: MinCheckIntervalMs, CooldownMs: 0,
+		Target: `{"type":"pushover"}`, Enabled: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	weekMs := int64(7 * 24 * 60 * 60 * 1000)
+	// a long, already-announced streak, as left behind by a broken query
+	if _, err := pools.Meta.Exec(
+		`UPDATE alerts SET failure_count = 9, failing_since = ?, failure_notified_at = ?, last_error = 'old', last_error_at = 1`,
+		time.Now().UnixMilli()-weekMs, time.Now().UnixMilli()-weekMs); err != nil {
+		t.Fatal(err)
+	}
+	alerts, _ := store.List(ctx)
+	a := alerts[0]
+	a.Enabled = false
+	if err := store.Update(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	a.Enabled = true
+	if err := store.Update(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	alerts, _ = store.List(ctx)
+	if got := alerts[0]; got.FailureCount != 0 || got.FailingSince.Valid || got.FailureNotifiedAt.Valid || got.LastError.Valid {
+		t.Fatalf("Update kept stale state: %+v", got)
+	}
+
+	// re-enabled with a query that fails once: one failure is not a streak
+	if _, err := pools.Meta.Exec("UPDATE alerts SET query = 'SELECT * FROM sqlite_master'"); err != nil {
+		t.Fatal(err)
+	}
+	ev.tick(ctx)
+	ev.wg.Wait()
+	if got := rec.failureCalls.Load(); got != 0 {
+		t.Fatalf("announced on the first failed check after re-enabling (calls=%d)", got)
+	}
+}
+
+// A single failed check between good ones must never be announced, and a
+// failed announcement must be retried on the next check.
+func TestEvaluatorBlindAlertEdges(t *testing.T) {
+	pools := newTestPools(t)
+	store := NewAlertsService(pools.Meta)
+	rec := &recorder{}
+	ev := NewEvaluator(store, pools.LogsRead, rec)
+	ctx := context.Background()
+
+	if err := store.Create(ctx, Alert{
+		Name: "edges", Query: "SELECT * FROM logs WHERE level >= 4",
+		CheckIntervalMs: MinCheckIntervalMs, CooldownMs: 0,
+		Target: `{"type":"pushover"}`, Enabled: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	setQuery := func(q string) {
+		t.Helper()
+		if _, err := pools.Meta.Exec("UPDATE alerts SET query = ?, last_checked_at = last_checked_at - ?", q, MinCheckIntervalMs+1000); err != nil {
+			t.Fatal(err)
+		}
+		ev.tick(ctx)
+		ev.wg.Wait()
+	}
+	const good, bad = "SELECT * FROM logs WHERE level >= 4", "SELECT * FROM sqlite_master"
+
+	// fail, recover, fail: the streak restarts, so an old failure can't count
+	setQuery(bad)
+	if _, err := pools.Meta.Exec("UPDATE alerts SET failing_since = failing_since - ?", int64(failureNotifyAfterMs*10)); err != nil {
+		t.Fatal(err)
+	}
+	setQuery(good)
+	setQuery(bad)
+	setQuery(bad)
+	alerts, _ := store.List(ctx)
+	if alerts[0].FailureCount != 2 || rec.failureCalls.Load() != 0 {
+		t.Fatalf("after fail/recover/fail/fail: count=%d announced=%d, want 2 and 0", alerts[0].FailureCount, rec.failureCalls.Load())
+	}
+
+	// past both thresholds, but the channel is down: not marked, retried next check
+	rec.failureFail.Store(true)
+	if _, err := pools.Meta.Exec("UPDATE alerts SET failing_since = failing_since - ?", int64(failureNotifyAfterMs+1000)); err != nil {
+		t.Fatal(err)
+	}
+	setQuery(bad)
+	alerts, _ = store.List(ctx)
+	if alerts[0].FailureNotifiedAt.Valid {
+		t.Fatal("marked as announced although the send failed")
+	}
+	rec.failureFail.Store(false)
+	setQuery(bad)
+	if got := rec.failureCalls.Load(); got != 1 {
+		t.Fatalf("announcement not retried after a failed send: calls = %d", got)
+	}
+
+	// zero cooldown must not mean "every check": the threshold is the floor
+	setQuery(bad)
+	if got := rec.failureCalls.Load(); got != 1 {
+		t.Fatalf("zero cooldown repeated on the very next check: calls = %d", got)
 	}
 }
 

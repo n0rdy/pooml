@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/n0rdy/pooml/common"
 )
 
 // Scrape interval bounds: see CONTEXT.md > Metrics. Sub-30s intervals are
@@ -19,11 +21,15 @@ const (
 )
 
 type ScrapeTarget struct {
-	ID               int64
-	Service          string
-	Host             string
-	URL              string
-	AuthHeader       string // decrypted; empty when unset
+	ID         int64
+	Service    string
+	Host       string
+	URL        string
+	AuthHeader string // decrypted; empty when unset
+	// the stored header no longer decrypts (POOML_ENCRYPTION_KEY changed).
+	// Carried as a flag, not a listing error: one such row used to stop
+	// every scrape and turn the Settings page into a 500.
+	AuthUnreadable   bool
 	ScrapeIntervalMs int64
 	Enabled          bool
 
@@ -48,11 +54,11 @@ func validateScrapeTarget(t *ScrapeTarget) error {
 	t.URL = strings.TrimSpace(t.URL)
 	t.AuthHeader = strings.TrimSpace(t.AuthHeader)
 
-	if t.Service == "" || len(t.Service) > 200 {
-		return errors.New("service must be 1-200 characters")
+	if !common.ValidName(t.Service) {
+		return errors.New("service must be 1-200 characters, no control characters")
 	}
-	if t.Host == "" || len(t.Host) > 200 {
-		return errors.New("host must be 1-200 characters")
+	if !common.ValidName(t.Host) {
+		return errors.New("host must be 1-200 characters, no control characters")
 	}
 	u, err := url.Parse(t.URL)
 	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
@@ -124,7 +130,7 @@ func (s *ScrapeTargetsService) scanTarget(row interface{ Scan(...any) error }) (
 	if auth.Valid && auth.String != "" {
 		if encrypted {
 			if t.AuthHeader, err = s.enc.Decrypt(auth.String); err != nil {
-				return t, fmt.Errorf("decrypt auth header for target %d: %w", t.ID, err)
+				t.AuthHeader, t.AuthUnreadable = "", true
 			}
 		} else {
 			t.AuthHeader = auth.String

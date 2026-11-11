@@ -2,6 +2,7 @@ package metrics_test
 
 import (
 	"database/sql"
+	"math"
 	"testing"
 	"time"
 
@@ -128,4 +129,45 @@ func TestTryPushSaturation(t *testing.T) {
 	if !p.TryPush(nil) {
 		t.Fatal("empty batch must always succeed")
 	}
+}
+
+// One NaN used to fail the NOT NULL constraint and wedge the writer forever.
+func TestPipelineDropsNonFiniteValues(t *testing.T) {
+	pools := setup(t)
+	p := metrics.NewPipeline(pools.Metrics)
+	p.Start()
+
+	batch := []metrics.Row{row("ok_before", 1), row("nan", math.NaN()), row("pos_inf", math.Inf(1)), row("neg_inf", math.Inf(-1)), row("ok_after", 2)}
+	if !p.TryPush(batch) {
+		t.Fatal("push rejected")
+	}
+	if !p.TryPush([]metrics.Row{row("later", 3)}) {
+		t.Fatal("follow-up push rejected")
+	}
+	p.Shutdown()
+	if got := countRows(t, pools.Metrics); got != 3 {
+		t.Fatalf("expected the 3 finite rows, got %d", got)
+	}
+}
+
+// A row the database rejects must cost only itself, not everything queued
+// behind it.
+func TestPipelineSurvivesPoisonRow(t *testing.T) {
+	pools := setup(t)
+	if _, err := pools.Metrics.Exec(`CREATE TRIGGER poison BEFORE INSERT ON metrics
+		WHEN new.name = 'poison' BEGIN SELECT RAISE(ABORT, 'poison row'); END`); err != nil {
+		t.Fatal(err)
+	}
+	p := metrics.NewPipeline(pools.Metrics)
+	p.Start()
+
+	if !p.TryPush([]metrics.Row{row("a", 1), row("poison", 2), row("b", 3)}) {
+		t.Fatal("push rejected")
+	}
+	waitForRows(t, pools.Metrics, 2)
+	if !p.TryPush([]metrics.Row{row("c", 4)}) {
+		t.Fatal("follow-up push rejected")
+	}
+	waitForRows(t, pools.Metrics, 3)
+	p.Shutdown()
 }

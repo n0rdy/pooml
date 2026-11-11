@@ -157,6 +157,31 @@ func TestIngestAuthAndValidation(t *testing.T) {
 	if resp := post(t, srv, "/api/v1/ingest/"+strings.Repeat("s", 201)+"/host", "line", testAPIKey); resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("oversized service param: status = %d, want 400", resp.StatusCode)
 	}
+	for _, path := range []string{"/api/v1/ingest/a%00b/host", "/api/v1/ingest/svc/h%0Aforged", "/api/v1/ingest/svc/h%1B%5B31m"} {
+		if resp := post(t, srv, path, "line", testAPIKey); resp.StatusCode != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400 (control character in a name)", path, resp.StatusCode)
+		}
+	}
+}
+
+// Behind a proxy all clients share one IP: bad keys from anyone used to lock
+// out the real shippers too. A key that already verified must keep working.
+func TestLockoutSparesVerifiedKeys(t *testing.T) {
+	_, pipeline, _, srv := setup(t)
+	defer pipeline.Shutdown()
+
+	if resp := post(t, srv, "/api/v1/ingest/svc/host", "first line", testAPIKey); resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("valid key: status = %d, want 204", resp.StatusCode)
+	}
+	for range 5 {
+		post(t, srv, "/api/v1/ingest/svc/host", "x", "wrong-key")
+	}
+	if resp := post(t, srv, "/api/v1/ingest/svc/host", "x", "wrong-key"); resp.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("bad key after 5 failures: status = %d, want 429 (lockout)", resp.StatusCode)
+	}
+	if resp := post(t, srv, "/api/v1/ingest/svc/host", "second line", testAPIKey); resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("verified key during lockout: status = %d, want 204", resp.StatusCode)
+	}
 }
 
 // Shutdown must flush a partial batch that the 100ms timer hasn't fired for.

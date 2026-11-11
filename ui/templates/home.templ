@@ -27,6 +27,9 @@ templ HomePage(csrfToken string) {
 					</div>
 				</div>
 			</div>
+			// renders nothing while alerts and backups are healthy, so it must
+			// take no space then (an empty flex child would still claim a gap)
+			<div class="empty:hidden" hx-get="/home/attention" hx-trigger="load, every 30s" hx-swap="innerHTML"></div>
 			<div class="grid md:grid-cols-2 gap-6">
 				<div class="card bg-base-100 md:col-span-2 min-w-0">
 					<div class="card-body py-4">
@@ -141,6 +144,54 @@ templ HomeMetricsServices(rows []HomeServiceRow) {
 				</li>
 			}
 		</ul>
+	}
+}
+
+type BrokenAlert struct {
+	Name  string
+	Error string
+}
+
+// HomeAttentionView is the safety nets that have stopped working. Both fail
+// quietly by nature: a blind alert and a failing backup look exactly like a
+// calm day until the moment they are needed.
+type HomeAttentionView struct {
+	// enabled alerts whose last check errored: a query that cannot run, or a
+	// notification that could not be delivered (which has no other voice)
+	Alerts []BrokenAlert
+	// last scheduled-backup error; empty when backups are off or healthy
+	BackupError string
+	BackupAtMs  int64
+}
+
+templ HomeAttention(v HomeAttentionView) {
+	if len(v.Alerts) > 0 || v.BackupError != "" {
+		<div class="card bg-base-100">
+			<div class="card-body py-4">
+				if len(v.Alerts) > 0 {
+					<h3 class="card-title">
+						Alerts flying blind
+						<span class="badge badge-sm badge-soft badge-error">{ strconv.Itoa(len(v.Alerts)) }</span>
+					</h3>
+					for _, r := range v.Alerts {
+						<div class="text-sm text-error truncate" title={ r.Error }>
+							<a href="/alerts" class="link">{ r.Name }</a>: { r.Error }
+						</div>
+					}
+				}
+				if v.BackupError != "" {
+					<h3 class="card-title">
+						Backups failing
+						if v.BackupAtMs > 0 {
+							<span class="text-sm font-normal opacity-60">last try <span data-reltime={ msString(v.BackupAtMs) }>{ utcTime(v.BackupAtMs) }</span></span>
+						}
+					</h3>
+					<div class="text-sm text-error truncate" title={ v.BackupError }>
+						<a href="/settings" class="link">backup</a>: { v.BackupError }
+					</div>
+				}
+			</div>
+		</div>
 	}
 }
 

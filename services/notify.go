@@ -87,11 +87,49 @@ func (n *NotificationService) SendAlert(ctx context.Context, a Alert, res *query
 	}
 	switch t.Type {
 	case "pushover":
-		return n.sendPushover(ctx, t, "🔥 "+a.Name, plainRows(res), link)
+		// the link carries the alert's SQL; when that overflows Pushover's URL
+		// limit, keep the time window (the part that matters mid-incident)
+		if len(link) > pushoverMaxURL {
+			link = n.warRoomLink("", time.Now().UnixMilli())
+		}
+		return n.sendPushover(ctx, t, "🔥 "+a.Name, plainRows(res), link, "Open the War Room")
 	case "campfire":
 		msg := campfireHTML(a.Name, res)
 		if link != "" {
 			msg += fmt.Sprintf(`<br><a href="%s">Open the War Room</a>`, html.EscapeString(link))
+		}
+		return n.sendCampfire(ctx, t.RoomID, msg)
+	}
+	return fmt.Errorf("unknown target type %q", t.Type)
+}
+
+const failureReasonMaxLen = 300
+
+// SendAlertFailure says an alert has gone blind: its query cannot run, so it
+// cannot fire. Same channel as the alert itself; the reason is escaped for
+// Campfire like everything else (SQLite errors can quote query text).
+func (n *NotificationService) SendAlertFailure(ctx context.Context, a Alert, reason string, failingSinceMs int64) error {
+	t, err := ParseTarget(a.Target)
+	if err != nil {
+		return err
+	}
+	if len(reason) > failureReasonMaxLen {
+		reason = truncateAtRune(reason, failureReasonMaxLen) + "…"
+	}
+	since := time.UnixMilli(failingSinceMs).UTC().Format("2006-01-02 15:04 UTC")
+	link := ""
+	if n.PublicURL != "" {
+		link = strings.TrimSuffix(n.PublicURL, "/") + "/alerts"
+	}
+	switch t.Type {
+	case "pushover":
+		body := fmt.Sprintf("Its query has been failing since %s, so it cannot fire.\n%s", since, reason)
+		return n.sendPushover(ctx, t, "⚠️ "+a.Name+" is flying blind", body, link, "Open alerts")
+	case "campfire":
+		msg := fmt.Sprintf("<b>⚠️ %s is flying blind</b><br>Its query has been failing since %s, so it cannot fire.<br><code>%s</code>",
+			html.EscapeString(a.Name), since, html.EscapeString(reason))
+		if link != "" {
+			msg += fmt.Sprintf(`<br><a href="%s">Open alerts</a>`, html.EscapeString(link))
 		}
 		return n.sendCampfire(ctx, t.RoomID, msg)
 	}
@@ -105,20 +143,22 @@ func (n *NotificationService) warRoomLink(alertQuery string, firedAtMs int64) st
 	vals := url.Values{
 		"from": {fmt.Sprint(firedAtMs - halfWindowMs)},
 		"to":   {fmt.Sprint(firedAtMs + halfWindowMs)},
-		"q":    {alertQuery},
+	}
+	if alertQuery != "" {
+		vals.Set("q", alertQuery)
 	}
 	return strings.TrimSuffix(n.PublicURL, "/") + "/war-room?" + vals.Encode()
 }
 
 func (n *NotificationService) TestPushover(ctx context.Context) error {
-	return n.sendPushover(ctx, Target{}, "pooml test", "Don't panic - this is only a test.", "")
+	return n.sendPushover(ctx, Target{}, "pooml test", "Don't panic - this is only a test.", "", "")
 }
 
 func (n *NotificationService) TestCampfire(ctx context.Context, roomID int64) error {
 	return n.sendCampfire(ctx, roomID, "<b>pooml test</b> - don't panic, this is only a test.")
 }
 
-func (n *NotificationService) sendPushover(ctx context.Context, t Target, title, message, link string) error {
+func (n *NotificationService) sendPushover(ctx context.Context, t Target, title, message, link, linkTitle string) error {
 	token, err := n.settings.Get(ctx, SettingPushoverAppToken)
 	if err != nil {
 		return err
@@ -134,8 +174,8 @@ func (n *NotificationService) sendPushover(ctx context.Context, t Target, title,
 	form := url.Values{
 		"token":   {token},
 		"user":    {user},
-		"title":   {title},
-		"message": {message},
+		"title":   {truncateRunes(title, pushoverMaxTitle)},
+		"message": {truncateRunes(message, pushoverMaxMessage)},
 	}
 	if t.Device != "" {
 		form.Set("device", t.Device)
@@ -147,9 +187,9 @@ func (n *NotificationService) sendPushover(ctx context.Context, t Target, title,
 		form.Set("sound", t.Sound)
 	}
 	// the supplementary-URL slot renders as a tappable link under the message
-	if link != "" {
+	if link != "" && len(link) <= pushoverMaxURL {
 		form.Set("url", link)
-		form.Set("url_title", "Open the War Room")
+		form.Set("url_title", linkTitle)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
@@ -220,6 +260,23 @@ func (n *NotificationService) sendCampfire(ctx context.Context, roomID int64, me
 		return fmt.Errorf("campfire rejected the message: HTTP %d", resp.StatusCode)
 	}
 	return nil
+}
+
+// Pushover's documented limits (pushover.net/api); it does not say whether an
+// overflow is truncated or rejected, and a rejected alert is a lost alert.
+// Five matched rows of 200 bytes alone come to just over the message limit.
+const (
+	pushoverMaxMessage = 1024 // characters
+	pushoverMaxTitle   = 250
+	pushoverMaxURL     = 512
+)
+
+func truncateRunes(s string, max int) string {
+	if utf8.RuneCountInString(s) <= max {
+		return s
+	}
+	r := []rune(s)
+	return string(r[:max-1]) + "…"
 }
 
 const notifyMaxRows = 5

@@ -28,6 +28,12 @@ type Alert struct {
 	LastError       sql.NullString
 	LastErrorAt     sql.NullInt64
 	CreatedAt       int64
+
+	// the current streak of evaluations whose QUERY failed (delivery failures
+	// are not part of it); count and since reset on the first query that runs
+	FailureCount      int
+	FailingSince      sql.NullInt64
+	FailureNotifiedAt sql.NullInt64
 }
 
 type AlertsService struct {
@@ -74,7 +80,10 @@ func (s *AlertsService) Update(ctx context.Context, a Alert) error {
 		return err
 	}
 	res, err := s.metaDB.ExecContext(ctx,
-		`UPDATE alerts SET name = ?, query = ?, check_interval_ms = ?, cooldown_ms = ?, target = ?, enabled = ?
+		// an edit starts the alert over: a streak earned by the old query, or
+		// before a pause, must not page on the first check after re-enabling
+		`UPDATE alerts SET name = ?, query = ?, check_interval_ms = ?, cooldown_ms = ?, target = ?, enabled = ?,
+		 failure_count = 0, failing_since = NULL, failure_notified_at = NULL, last_error = NULL, last_error_at = NULL
 		 WHERE id = ?`,
 		a.Name, a.Query, a.CheckIntervalMs, a.CooldownMs, a.Target, a.Enabled, a.ID)
 	if err != nil {
@@ -92,12 +101,14 @@ func (s *AlertsService) Delete(ctx context.Context, id int64) error {
 }
 
 const alertColumns = `id, name, query, check_interval_ms, cooldown_ms, target, enabled,
-	last_checked_at, last_fired_at, currently_firing, last_error, last_error_at, created_at`
+	last_checked_at, last_fired_at, currently_firing, last_error, last_error_at, created_at,
+	failure_count, failing_since, failure_notified_at`
 
 func scanAlert(row interface{ Scan(...any) error }) (Alert, error) {
 	var a Alert
 	err := row.Scan(&a.ID, &a.Name, &a.Query, &a.CheckIntervalMs, &a.CooldownMs, &a.Target, &a.Enabled,
-		&a.LastCheckedAt, &a.LastFiredAt, &a.CurrentlyFiring, &a.LastError, &a.LastErrorAt, &a.CreatedAt)
+		&a.LastCheckedAt, &a.LastFiredAt, &a.CurrentlyFiring, &a.LastError, &a.LastErrorAt, &a.CreatedAt,
+		&a.FailureCount, &a.FailingSince, &a.FailureNotifiedAt)
 	return a, err
 }
 
@@ -133,9 +144,10 @@ func (s *AlertsService) ListEnabled(ctx context.Context) ([]Alert, error) {
 	return s.list(ctx, "WHERE enabled = 1")
 }
 
-// UpdateEval records one evaluation outcome. firedAt nil leaves last_fired_at
-// untouched (cooldown suppressed or delivery failed - see CONTEXT.md >
-// Notification Delivery); evalErr nil clears last_error.
+// UpdateEval records an evaluation whose query RAN (so it ends any failure
+// streak). firedAt nil leaves last_fired_at untouched (cooldown suppressed or
+// delivery failed); evalErr nil clears last_error. failure_notified_at is kept
+// on purpose: a flapping alert would otherwise re-announce on every streak.
 func (s *AlertsService) UpdateEval(ctx context.Context, id int64, firing bool, firedAt *int64, evalErr *string, checkedAt int64) error {
 	var errAt *int64
 	if evalErr != nil {
@@ -144,8 +156,24 @@ func (s *AlertsService) UpdateEval(ctx context.Context, id int64, firing bool, f
 	}
 	_, err := s.metaDB.ExecContext(ctx,
 		`UPDATE alerts SET currently_firing = ?, last_checked_at = ?,
-		 last_fired_at = COALESCE(?, last_fired_at), last_error = ?, last_error_at = ? WHERE id = ?`,
+		 last_fired_at = COALESCE(?, last_fired_at), last_error = ?, last_error_at = ?,
+		 failure_count = 0, failing_since = NULL WHERE id = ?`,
 		firing, checkedAt, firedAt, evalErr, errAt, id)
+	return err
+}
+
+// RecordEvalFailure records an evaluation whose query could not run. The
+// firing state is left alone: unknown is not "cleared".
+func (s *AlertsService) RecordEvalFailure(ctx context.Context, id int64, msg string, checkedAt int64) error {
+	_, err := s.metaDB.ExecContext(ctx,
+		`UPDATE alerts SET last_checked_at = ?, last_error = ?, last_error_at = ?,
+		 failure_count = failure_count + 1, failing_since = COALESCE(failing_since, ?) WHERE id = ?`,
+		checkedAt, msg, checkedAt, checkedAt, id)
+	return err
+}
+
+func (s *AlertsService) MarkFailureNotified(ctx context.Context, id, at int64) error {
+	_, err := s.metaDB.ExecContext(ctx, "UPDATE alerts SET failure_notified_at = ? WHERE id = ?", at, id)
 	return err
 }
 

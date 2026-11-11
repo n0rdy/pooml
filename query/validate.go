@@ -5,6 +5,7 @@ package query
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -92,12 +93,7 @@ func ValidateIn(q string, scope Scope) (*Validated, error) {
 		return nil, ErrNotSelect
 	}
 
-	// CTE names first: they are legal FROM targets in the second pass
-	cteNames, err := collectCTEs(sel)
-	if err != nil {
-		return nil, err
-	}
-	cv := &checkVisitor{cteNames: cteNames, referenced: map[string]bool{}}
+	cv := &checkVisitor{referenced: map[string]bool{}}
 	if _, err := sqlp.Walk(cv, sel); err != nil {
 		return nil, err
 	}
@@ -132,84 +128,136 @@ func checkScope(scope Scope, readsLogs, readsMetrics bool) error {
 	return nil
 }
 
-// The library's Walk does NOT descend into CTE bodies (WithClause) or
-// subqueries in expressions (SelectExpr, e.g. `IN (SELECT ...)`) - neither has
-// a case in its walk switch. Both validation passes recurse manually; without
-// this, `WITH x AS (SELECT * FROM sqlite_master) ...` and
-// `WHERE id IN (SELECT ... FROM api_keys)` would pass validation.
-func collectCTEs(sel *sqlp.SelectStatement) (map[string]bool, error) {
-	c := &cteCollector{names: make(map[string]bool)}
-	_, err := sqlp.Walk(c, sel)
-	return c.names, err
-}
-
-type cteCollector struct {
-	names map[string]bool
-}
-
-func (c *cteCollector) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
-	switch t := n.(type) {
-	case *sqlp.WithClause:
-		if t.Recursive.IsValid() {
-			return nil, nil, errors.New("WITH RECURSIVE is not allowed")
-		}
-		for _, cte := range t.CTEs {
-			c.names[strings.ToLower(cte.TableName.Name)] = true
-			if _, err := sqlp.Walk(c, cte.Select); err != nil {
-				return nil, nil, err
-			}
-		}
-	case sqlp.SelectExpr:
-		if _, err := sqlp.Walk(c, t.SelectStatement); err != nil {
-			return nil, nil, err
-		}
-	}
-	return c, n, nil
-}
-
-func (c *cteCollector) VisitEnd(n sqlp.Node) (sqlp.Node, error) { return n, nil }
-
+// The library's Walk does NOT descend into CTE bodies (WithClause), subqueries
+// in expressions (SelectExpr), or the operand of IS NULL / NOTNULL (Null), so
+// all three recurse manually here. More traps: CONTEXT.md > Parser traps.
 type checkVisitor struct {
-	cteNames   map[string]bool
+	// CTE names visible at the current node, one frame per enclosing SELECT.
+	// A global set would let a CTE declared in a subquery whitelist the same
+	// name everywhere else in the statement.
+	scopes     []map[string]bool
+	defining   []cteRef        // CTEs whose bodies are being walked
 	referenced map[string]bool // real tables seen; feeds the Scope check
+}
+
+// cteRef names a CTE by the frame that declares it, so an inner CTE reusing an
+// outer name reads as shadowing, not as recursion.
+type cteRef struct {
+	name  string
+	frame int
+}
+
+// asciiLower folds like SQLite does. strings.ToLower also maps U+0130 to "i"
+// and the Kelvin sign to "k", so a CTE named with one of them would shadow a
+// real table for the validator but not for SQLite.
+func asciiLower(s string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'A' && r <= 'Z' {
+			return r + ('a' - 'A')
+		}
+		return r
+	}, s)
 }
 
 func (c *checkVisitor) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
 	switch t := n.(type) {
+	case *sqlp.SelectStatement:
+		frame := map[string]bool{}
+		if t.WithClause != nil {
+			for _, cte := range t.WithClause.CTEs {
+				frame[asciiLower(cte.TableName.Name)] = true
+			}
+		}
+		c.scopes = append(c.scopes, frame)
 	case *sqlp.WithClause:
+		if t.Recursive.IsValid() {
+			return nil, nil, errRecursiveCTE
+		}
 		for _, cte := range t.CTEs {
-			if _, err := sqlp.Walk(c, cte.Select); err != nil {
+			// the frame on top is the SELECT this WITH belongs to
+			c.defining = append(c.defining, cteRef{asciiLower(cte.TableName.Name), len(c.scopes) - 1})
+			_, err := sqlp.Walk(c, cte.Select)
+			c.defining = c.defining[:len(c.defining)-1]
+			if err != nil {
 				return nil, nil, err
 			}
 		}
 	case sqlp.SelectExpr:
 		if _, err := sqlp.Walk(c, t.SelectStatement); err != nil {
 			return nil, nil, err
+		}
+	case *sqlp.Null:
+		if t.X != nil {
+			if _, err := sqlp.Walk(c, t.X); err != nil {
+				return nil, nil, err
+			}
 		}
 	case *sqlp.QualifiedTableName:
 		if t.Schema != nil {
 			return nil, nil, fmt.Errorf("schema-qualified table %q is not allowed", t.Schema.Name+"."+t.Name.Name)
 		}
-		name := strings.ToLower(t.Name.Name)
-		if !allowedTables[name] && !c.cteNames[name] {
-			return nil, nil, fmt.Errorf("table %q is not allowed: only logs, logs_fts and metrics can be queried", t.Name.Name)
-		}
-		if allowedTables[name] && !c.cteNames[name] {
-			c.referenced[name] = true
+		if err := c.tableRef(t.Name.Name); err != nil {
+			return nil, nil, err
 		}
 	case *sqlp.QualifiedTableFunctionName:
 		// table-valued functions (pragma_table_info, json_each, ...) would
 		// bypass the FROM allow-list and the scope check entirely
 		return nil, nil, fmt.Errorf("table-valued function %q is not allowed", t.Name.Name)
+	case *sqlp.BinaryExpr:
+		// `x IN name` reads a table without a FROM: the parser hands the
+		// right side back as a bare Ident / Call / QualifiedRef
+		if t.Op == sqlp.IN || t.Op == sqlp.NOTIN {
+			switch y := t.Y.(type) {
+			case *sqlp.Ident:
+				if err := c.tableRef(y.Name); err != nil {
+					return nil, nil, err
+				}
+			case *sqlp.Call:
+				return nil, nil, fmt.Errorf("table-valued function %q is not allowed", y.Name.Name)
+			case *sqlp.QualifiedRef:
+				return nil, nil, errors.New("schema-qualified tables are not allowed")
+			}
+		}
 	case *sqlp.Call:
 		if bannedFunctions[strings.ToLower(t.Name.Name)] {
 			return nil, nil, fmt.Errorf("function %q is not allowed", t.Name.Name)
 		}
+	case *sqlp.BindExpr:
+		// nothing can supply its value, and it would capture the arguments the
+		// rewrites bind afterwards (the search text, the live-tail cursor)
+		return nil, nil, fmt.Errorf("placeholder %q is not supported: write the value into the query", t.Name)
 	}
 	return c, n, nil
 }
 
-func (c *checkVisitor) VisitEnd(n sqlp.Node) (sqlp.Node, error) { return n, nil }
+func (c *checkVisitor) VisitEnd(n sqlp.Node) (sqlp.Node, error) {
+	if _, ok := n.(*sqlp.SelectStatement); ok {
+		c.scopes = c.scopes[:len(c.scopes)-1]
+	}
+	return n, nil
+}
+
+// SQLite runs a self-referencing CTE recursively even without the RECURSIVE
+// keyword, so the ban has to catch the self-reference itself.
+var errRecursiveCTE = errors.New("WITH RECURSIVE is not allowed: recursive CTEs can run unbounded")
+
+func (c *checkVisitor) tableRef(name string) error {
+	lower := asciiLower(name)
+	// innermost declaration wins, as in SQL
+	for i := len(c.scopes) - 1; i >= 0; i-- {
+		if c.scopes[i][lower] {
+			if slices.Contains(c.defining, cteRef{lower, i}) {
+				return errRecursiveCTE
+			}
+			return nil
+		}
+	}
+	if !allowedTables[lower] {
+		return fmt.Errorf("table %q is not allowed: only logs, logs_fts and metrics can be queried", name)
+	}
+	c.referenced[lower] = true
+	return nil
+}
 
 // visitFunc adapts a plain callback to the Visitor interface.
 type visitFunc func(sqlp.Node) error
@@ -217,6 +265,12 @@ type visitFunc func(sqlp.Node) error
 func (f visitFunc) Visit(n sqlp.Node) (sqlp.Visitor, sqlp.Node, error) {
 	if err := f(n); err != nil {
 		return nil, nil, err
+	}
+	// the library's Walk skips the operand of IS NULL / NOTNULL
+	if nl, ok := n.(*sqlp.Null); ok && nl.X != nil {
+		if _, err := sqlp.Walk(f, nl.X); err != nil {
+			return nil, nil, err
+		}
 	}
 	return f, n, nil
 }

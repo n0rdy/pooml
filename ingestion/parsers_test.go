@@ -278,3 +278,48 @@ func drainClosed(ch <-chan common.StandardLog) <-chan common.StandardLog {
 	}
 	return ch
 }
+
+// SQLite's JSON functions fail the whole query on a row nested past 1,000,
+// which silently muted alerts using json_extract(parsed, ...). Such lines
+// must be stored as plain text.
+func TestDeepJSONIsNotStoredAsParsed(t *testing.T) {
+	nest := func(depth int) string {
+		return strings.Repeat(`{"a":`, depth) + `1` + strings.Repeat("}", depth)
+	}
+	for _, tc := range []struct {
+		name       string
+		line       string
+		wantParsed bool
+	}{
+		{"shallow object", `{"level":"error","msg":"boom","ctx":{"user":{"id":7}}}`, true},
+		{"at the cap", nest(maxParsedJSONDepth), true},
+		{"over the cap", nest(maxParsedJSONDepth + 1), false},
+		{"deep array", `{"a":` + strings.Repeat("[", 1500) + strings.Repeat("]", 1500) + `}`, false},
+		{"brackets inside a string don't count", `{"msg":"` + strings.Repeat("[{", 500) + `","q":"say \"[[[\""}`, true},
+	} {
+		logs := parsePayload("svc", "h", []byte(tc.line), receivedAt)
+		if len(logs) != 1 {
+			t.Fatalf("%s: got %d logs", tc.name, len(logs))
+		}
+		if got := logs[0].Parsed != nil; got != tc.wantParsed {
+			t.Errorf("%s: parsed stored = %v, want %v", tc.name, got, tc.wantParsed)
+		}
+		if logs[0].Raw != tc.line {
+			t.Errorf("%s: raw must always be kept verbatim", tc.name)
+		}
+	}
+
+	// FluentBit records without a "log" field are stored whole: same rule
+	deep := `[{"date":1755000000,"payload":` + nest(maxParsedJSONDepth+5) + `}]`
+	logs := parsePayload("svc", "h", []byte(deep), receivedAt)
+	if len(logs) != 1 || logs[0].Parsed != nil {
+		t.Fatalf("deep FluentBit record: logs=%d parsedStored=%v, want 1 / false", len(logs), len(logs) == 1 && logs[0].Parsed != nil)
+	}
+
+	// a container_name with control characters must not become the service
+	env := `[{"log":"line","container_name":"/api\u0000evil"},{"log":"line","container_name":"/web"}]`
+	logs = parsePayload("svc", "h", []byte(env), receivedAt)
+	if len(logs) != 2 || logs[0].Service != "svc" || logs[1].Service != "web" {
+		t.Fatalf("container_name override: %+v", logs)
+	}
+}
