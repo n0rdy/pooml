@@ -118,6 +118,19 @@ POOML_ENCRYPTION_KEY=your-encryption-key-min-32-chars-long \
 pooml
 ```
 
+### Verifying a download
+
+Release archives and the Docker image carry a signed build attestation: proof that the file was built by this
+repository's release workflow from the tagged commit, not uploaded by hand. Check one with the
+[GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify pooml_Linux_x86_64.tar.gz --repo n0rdy/pooml
+gh attestation verify oci://docker.io/mykonordy/pooml:latest --repo n0rdy/pooml
+```
+
+Releases before attestations were introduced only have the `.sha256` checksums.
+
 ### From source
 
 Requires Go 1.27+ and a C compiler (CGO). The `sqlite_fts5` build tag is mandatory - without it the binary builds but
