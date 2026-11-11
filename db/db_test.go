@@ -1,6 +1,9 @@
 package db
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 )
@@ -129,6 +132,15 @@ func TestReadPoolAuthorizer(t *testing.T) {
 		"PRAGMA cache_size",
 		"ATTACH DATABASE 'x.db' AS x",
 		"SELECT load_extension('evil')",
+		// the table allow-list holds even for SQL the validator never saw
+		"SELECT name FROM sqlite_master",
+		"SELECT count(*) FROM sqlite_master",
+		"SELECT 1 FROM logs WHERE (SELECT count(*) FROM sqlite_schema) IS NOT NULL",
+		"SELECT 1 FROM logs WHERE (1, 1, 1, 1, 1) IN sqlite_master",
+		"SELECT version FROM schema_migrations",
+		"SELECT value FROM json_each('[1,2,3]')",
+		"SELECT * FROM pragma_database_list",
+		"SELECT version FROM metricsdb.schema_migrations",
 	}
 	for _, q := range denied {
 		if _, err := pools.LogsRead.Exec(q); err == nil {
@@ -144,7 +156,84 @@ func TestReadPoolAuthorizer(t *testing.T) {
 
 	// plain reads on the read pool are unaffected
 	var cnt int
-	if err := pools.LogsRead.QueryRow("SELECT count(*) FROM logs").Scan(&cnt); err != nil {
-		t.Errorf("plain SELECT on read pool: %v", err)
+	for _, q := range []string{
+		"SELECT count(*) FROM logs",
+		"SELECT count(*) FROM metrics",
+		"SELECT count(*) FROM logs l JOIN metrics m ON l.service = m.service",
+		`SELECT count(*) FROM logs JOIN logs_fts ON logs.id = logs_fts."rowid" WHERE logs_fts.raw MATCH 'x'`,
+		`SELECT count(*) FROM logs WHERE id IN (SELECT "rowid" FROM logs_fts WHERE logs_fts MATCH 'x')`,
+		"WITH recent AS (SELECT * FROM logs WHERE level >= 4) SELECT count(*) FROM recent r JOIN (SELECT service FROM metrics) m ON m.service = r.service",
+		"SELECT count(*) FROM (SELECT json_extract(parsed, '$.a') AS a, unixepoch() AS now FROM logs)",
+	} {
+		if err := pools.LogsRead.QueryRow(q).Scan(&cnt); err != nil {
+			t.Errorf("%q on the read pool: %v", q, err)
+		}
+	}
+}
+
+// One giant computed cell must fail in SQLite, before it is copied into Go.
+func TestReadPoolCellLimit(t *testing.T) {
+	dir := t.TempDir()
+	MigrateAll(dir)
+	pools, err := OpenPools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pools.Close)
+
+	var n int
+	if err := pools.LogsRead.QueryRow("SELECT length(zeroblob(999000000))").Scan(&n); err == nil {
+		t.Fatalf("999 MB cell allowed on the read pool (length %d)", n)
+	}
+	// a full-size ingested line and a healthy aggregate still fit
+	if err := pools.LogsRead.QueryRow("SELECT length(zeroblob(8 << 20))").Scan(&n); err != nil || n != 8<<20 {
+		t.Fatalf("8 MiB cell: n=%d err=%v", n, err)
+	}
+	// the write pool keeps the default: ingestion is bounded by its own caps
+	if err := pools.LogsWrite.QueryRow("SELECT length(zeroblob(32 << 20))").Scan(&n); err != nil {
+		t.Fatalf("write pool unexpectedly limited: %v", err)
+	}
+}
+
+// logs.db holds whatever secrets the apps logged: owner-only, including the
+// WAL/SHM files SQLite creates later, and including pre-existing 0644 installs.
+func TestDatabaseFilesAreOwnerOnly(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX file modes")
+	}
+	dir := t.TempDir()
+	MigrateAll(dir)
+	for _, name := range []string{logsDBFile, metricsDBFile, metaDBFile} {
+		if err := os.Chmod(filepath.Join(dir, name), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pools, err := OpenPools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pools.Close)
+	if _, err := pools.LogsWrite.Exec(
+		"INSERT INTO logs(timestamp, ingested_at, level, service, host, raw) VALUES (1,1,2,'s','h','x')"); err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, e := range entries {
+		info, err := e.Info()
+		if err != nil {
+			t.Fatal(err)
+		}
+		seen++
+		if perm := info.Mode().Perm(); perm&0o077 != 0 {
+			t.Errorf("%s is %o, want no group/other access", e.Name(), perm)
+		}
+	}
+	if seen < 3 {
+		t.Fatalf("only %d files in the db dir", seen)
 	}
 }

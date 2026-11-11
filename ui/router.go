@@ -37,6 +37,9 @@ type Deps struct {
 	Backup        *services.BackupService
 	Pools         *db.Pools
 	Broadcaster   *ingestion.Broadcaster
+	// batch-writer health for the Home attention card; nil reads as healthy
+	LogWriter    *common.WriterHealth
+	MetricWriter *common.WriterHealth
 	// StreamCtx closes open SSE connections; main cancels it via the UI
 	// server's RegisterOnShutdown. appCtx (stage 4) would fire too late:
 	// Server.Shutdown waits on handlers first.
@@ -85,14 +88,15 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Get("/services", ur.homePageServicesSegment)
 		r.Get("/metrics", ur.homePageMetricsSegment)
 		r.Get("/metrics-services", ur.homePageMetricsServicesSegment)
+		r.Get("/attention", ur.homePageAttentionSegment)
 	})
 
 	router.Route("/logs", func(r chi.Router) {
 		r.Use(sessionAuth(ur.Sessions)) // session auth for all logs routes
 
 		r.Get("/", ur.logsPage)
-		r.Get("/stream", ur.streamLogs)
-		r.Get("/export", ur.exportLogs)
+		r.With(sameOriginOnly).Get("/stream", ur.streamLogs)
+		r.With(sameOriginOnly).Get("/export", ur.exportLogs)
 		r.Get("/{id:[0-9]+}", ur.logDetailsPage)
 	})
 
@@ -130,9 +134,9 @@ func (ur *Router) NewRouter() *chi.Mux {
 		r.Use(sessionAuth(ur.Sessions))
 
 		r.Get("/", ur.metricsExplorerPage)
-		r.Get("/export", ur.exportMetrics)
-		r.Get("/compile", ur.compileDSL)
-		r.Get("/filter-options", ur.filterOptions)
+		r.With(sameOriginOnly).Get("/export", ur.exportMetrics)
+		r.With(sameOriginOnly).Get("/compile", ur.compileDSL)
+		r.With(sameOriginOnly).Get("/filter-options", ur.filterOptions)
 		r.Post("/save-panel", ur.saveExplorerPanel)
 	})
 

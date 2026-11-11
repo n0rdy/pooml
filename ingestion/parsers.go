@@ -110,7 +110,7 @@ func parseLine(line []byte) common.StandardLog {
 }
 
 func parseJSONLine(line []byte) (common.StandardLog, bool) {
-	if line[0] != '{' {
+	if line[0] != '{' || jsonDeeperThan(line, maxParsedJSONDepth) {
 		return common.StandardLog{}, false
 	}
 	var m map[string]any
@@ -144,6 +144,38 @@ func parseJSONLine(line []byte) (common.StandardLog, bool) {
 		}
 	}
 	return l, true
+}
+
+// Go decodes JSON nested to 10,000; SQLite's JSON functions stop at 1,000 and
+// fail the WHOLE query on one such row, which silently mutes any alert using
+// json_extract(parsed, ...). Deeper lines are stored as plain text instead.
+const maxParsedJSONDepth = 64
+
+// jsonDeeperThan is exact for valid JSON; invalid input is rejected by the
+// decoder right after, so a wrong answer there costs nothing.
+func jsonDeeperThan(b []byte, max int) bool {
+	depth, inStr, esc := 0, false, false
+	for _, c := range b {
+		switch {
+		case esc:
+			esc = false
+		case inStr:
+			if c == '\\' {
+				esc = true
+			} else if c == '"' {
+				inStr = false
+			}
+		case c == '"':
+			inStr = true
+		case c == '{' || c == '[':
+			if depth++; depth > max {
+				return true
+			}
+		case c == '}' || c == ']':
+			depth--
+		}
+	}
+	return false
 }
 
 func parseCLFLine(line []byte) (common.StandardLog, bool) {

@@ -58,6 +58,7 @@ func securityHeaders(env string) func(http.Handler) http.Handler {
 			h.Set("X-Frame-Options", "DENY")
 			h.Set("X-Content-Type-Options", "nosniff")
 			h.Set("Referrer-Policy", "same-origin")
+			h.Set("Cross-Origin-Opener-Policy", "same-origin")
 			// authenticated pages carry API-key labels, log content, channel
 			// config; keep them out of the disk cache so Back after logout on a
 			// shared machine can't re-render them. Static assets reset this to a
@@ -112,6 +113,23 @@ func loginThrottle(throttlingService *services.ThrottlingService, trustProxyHead
 			next.ServeHTTP(w, req)
 		})
 	}
+}
+
+// sameOriginOnly refuses requests another site initiated. The session cookie is
+// SameSite=Lax, so it rides cross-site top-level GETs: a foreign page could
+// point a popup at an export URL and read log content one bit at a time from
+// "errored page vs download". Absent header (old browser, curl) passes.
+// Browsers send it only in secure contexts, so this rests on session cookies
+// being Secure in pro; under the local env over plain HTTP it does nothing.
+func sameOriginOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		switch req.Header.Get("Sec-Fetch-Site") {
+		case "", "same-origin", "none":
+			next.ServeHTTP(w, req)
+		default:
+			http.Error(w, "open this from inside pooml", http.StatusForbidden)
+		}
+	})
 }
 
 // sessionAuth middleware for UI routes

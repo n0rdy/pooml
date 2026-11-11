@@ -282,3 +282,42 @@ func readBody(t *testing.T, resp *http.Response) string {
 	}
 	return string(b)
 }
+
+// Browsers decode response header bytes as Latin-1: HX-Trigger payloads must
+// be pure ASCII or a non-ASCII service name reaches the editor as mojibake.
+func TestTriggerHeaderIsASCII(t *testing.T) {
+	cl := newClient(t)
+	if resp := cl.login(testSecret, cl.csrfToken()); resp.StatusCode != http.StatusSeeOther {
+		t.Fatalf("login status = %d", resp.StatusCode)
+	}
+	const service = "сервис-é-🔥"
+	hx := map[string]string{"HX-Request": "true"}
+
+	resp := cl.getWith("/logs?q="+url.QueryEscape("SELECT * FROM logs")+"&service="+url.QueryEscape(service), hx)
+	trigger := resp.Header.Get("HX-Trigger")
+	for i := 0; i < len(trigger); i++ {
+		if trigger[i] >= 0x80 {
+			t.Fatalf("HX-Trigger carries a non-ASCII byte at %d: %q", i, trigger)
+		}
+	}
+	var payload struct {
+		SetQuery struct {
+			Q string `json:"q"`
+		} `json:"setQuery"`
+	}
+	if err := json.Unmarshal([]byte(trigger), &payload); err != nil {
+		t.Fatalf("HX-Trigger is not JSON: %v (%q)", err, trigger)
+	}
+	if !strings.Contains(payload.SetQuery.Q, "service = '"+service+"'") {
+		t.Fatalf("decoded query lost the service name: %q", payload.SetQuery.Q)
+	}
+
+	// the parse-error variant quotes user text too
+	resp = cl.getWith("/logs?q="+url.QueryEscape("SELECT * FROM logs WHERE é é"), hx)
+	trigger = resp.Header.Get("HX-Trigger")
+	for i := 0; i < len(trigger); i++ {
+		if trigger[i] >= 0x80 {
+			t.Fatalf("sqlError HX-Trigger carries a non-ASCII byte: %q", trigger)
+		}
+	}
+}

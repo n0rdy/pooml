@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -260,5 +261,65 @@ func TestOTLPRejections(t *testing.T) {
 	}
 	if resp := postOTLP(t, srv, "application/json", key, []byte("not json")); resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("bad body: status = %d", resp.StatusCode)
+	}
+
+	// names are copied onto every row, so an oversized one is refused outright
+	long := strings.Repeat("x", 201)
+	point := `"gauge":{"dataPoints":[{"asDouble":1}]}`
+	for name, body := range map[string]string{
+		"service.name":        `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"` + long + `"}}]},"scopeMetrics":[{"metrics":[{"name":"m",` + point + `}]}]}]}`,
+		"host.name":           `{"resourceMetrics":[{"resource":{"attributes":[{"key":"host.name","value":{"stringValue":"` + long + `"}}]},"scopeMetrics":[{"metrics":[{"name":"m",` + point + `}]}]}]}`,
+		"NUL in service.name": `{"resourceMetrics":[{"resource":{"attributes":[{"key":"service.name","value":{"stringValue":"api\u0000evil"}}]},"scopeMetrics":[{"metrics":[{"name":"m",` + point + `}]}]}]}`,
+	} {
+		if resp := postOTLP(t, srv, "application/json", key, []byte(body)); resp.StatusCode != http.StatusBadRequest {
+			t.Fatalf("bad %s: status = %d, want 400", name, resp.StatusCode)
+		}
+	}
+}
+
+// The write pool is ONE connection: a long flush or retention chunk holding it
+// is a busy server, not a dead one, and must not fail the health probe.
+func TestHealthcheckIgnoresBusyWriter(t *testing.T) {
+	pools, srv, _ := setup(t)
+
+	conn, err := pools.LogsWrite.Conn(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	resp, err := http.Get(srv.URL + "/healthcheck")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Fatalf("healthcheck with the write connection held: status = %d, want 204", resp.StatusCode)
+	}
+}
+
+// A bad metric name costs only that metric: exporters do not retry a 400, so
+// rejecting the export would silently drop every other metric in it too.
+func TestOTLPSkipsBadMetricNames(t *testing.T) {
+	pools, srv, key := setup(t)
+
+	point := `"gauge":{"dataPoints":[{"asDouble":1}]}`
+	metric := func(name string) string { return `{"name":"` + name + `",` + point + `}` }
+	body := `{"resourceMetrics":[{"scopeMetrics":[{"metrics":[` + strings.Join([]string{
+		metric("ok_before"),
+		metric(strings.Repeat("x", 256)), // over the OTel 255 limit
+		metric(`m\nforged`),
+		metric(strings.Repeat("y", 255)), // exactly at it
+		metric("ok_after"),
+	}, ",") + `]}]}]}`
+
+	if resp := postOTLP(t, srv, "application/json", key, []byte(body)); resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	waitForMetricRows(t, pools.Metrics, 3)
+	var bad int
+	if err := pools.Metrics.QueryRow(
+		"SELECT COUNT(*) FROM metrics WHERE length(name) > 255 OR name LIKE '%forged%'").Scan(&bad); err != nil || bad != 0 {
+		t.Fatalf("bad names stored: %d (err %v)", bad, err)
 	}
 }

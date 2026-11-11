@@ -184,6 +184,8 @@ func main() {
 		Backup:            backupService,
 		Pools:             pools,
 		Broadcaster:       broadcaster,
+		LogWriter:         &pipeline.Health,
+		MetricWriter:      &metricsPipeline.Health,
 		StreamCtx:         sseCtx,
 		AuthSecret:        uiSecret,
 		Env:               env,
@@ -437,7 +439,8 @@ func getRequiredDBDir() string {
 	if err != nil {
 		log.Fatal().Err(err).Str("path", v).Msg("failed to resolve absolute path for POOML_DB_DIR")
 	}
-	if err := os.MkdirAll(abs, 0o755); err != nil {
+	// 0700 only when pooml creates it; an existing directory is the operator's
+	if err := os.MkdirAll(abs, 0o700); err != nil {
 		log.Fatal().Err(err).Str("path", abs).Msg("failed to create POOML_DB_DIR")
 	}
 	return abs

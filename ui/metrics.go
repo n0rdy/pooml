@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -458,17 +457,7 @@ func (ur *Router) exportMetrics(w http.ResponseWriter, req *http.Request) {
 
 	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
 	w.Header().Set("Content-Disposition", `attachment; filename="metrics.csv"`)
-	cw := csv.NewWriter(w)
-	_ = cw.Write(res.Columns)
-	for _, row := range res.Rows {
-		cells := make([]string, len(row))
-		for j, cell := range row {
-			cells[j] = csvSafe(cellString(cell))
-		}
-		_ = cw.Write(cells)
-	}
-	cw.Flush()
-	if err := cw.Error(); err != nil {
+	if err := writeCSV(w, res); err != nil {
 		log.Error().Err(err).Msg("metrics csv export")
 	}
 }

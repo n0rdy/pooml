@@ -115,6 +115,29 @@ func TestValidateRejects(t *testing.T) {
 		{name: "TVF inside subquery", q: "SELECT * FROM logs WHERE id IN (SELECT cid FROM pragma_table_info('logs'))", wantMsg: "table-valued function"},
 		{name: "load_extension", q: "SELECT load_extension('evil.so')", wantMsg: "load_extension"},
 		{name: "with recursive", q: "WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT * FROM c", wantMsg: "RECURSIVE"},
+		{name: "recursive without the keyword", q: "WITH c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT * FROM c", wantMsg: "RECURSIVE"},
+		{name: "recursive CTE named like an allowed table", q: "WITH logs(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM logs) SELECT * FROM logs", wantMsg: "RECURSIVE"},
+		{name: "nested CTE does not whitelist the outer name", q: "SELECT * FROM sqlite_master WHERE EXISTS (WITH sqlite_master AS (SELECT 1) SELECT 1)", wantMsg: "not allowed"},
+		{name: "CTE name is gone after its statement", q: "SELECT 1 FROM logs WHERE EXISTS (WITH t AS (SELECT 1) SELECT * FROM t) AND id IN (SELECT 1 FROM t)", wantMsg: "not allowed"},
+		{name: "IN table-name", q: "SELECT id FROM logs WHERE (id, id, id, id, id) IN sqlite_master", wantMsg: "not allowed"},
+		{name: "NOT IN table-name", q: "SELECT id FROM logs WHERE id NOT IN logs_fts_config", wantMsg: "not allowed"},
+		{name: "IN table-valued function", q: "SELECT id FROM logs WHERE id IN pragma_table_info('logs')", wantMsg: "table-valued function"},
+		{name: "IN schema-qualified table", q: "SELECT id FROM logs WHERE id IN main.sqlite_master", wantMsg: "schema-qualified"},
+		{name: "bind placeholder", q: "SELECT * FROM logs WHERE service = ?", wantMsg: "placeholder"},
+		{name: "numbered placeholder", q: "SELECT * FROM logs WHERE id > ?1", wantMsg: "placeholder"},
+		{name: "placeholder in a subquery", q: "SELECT * FROM logs WHERE id IN (SELECT id FROM logs WHERE level = ?)", wantMsg: "placeholder"},
+		// the library's Walk has no case for the postfix NULL tests either
+		{name: "subquery under IS NOT NULL", q: "SELECT 1 FROM logs WHERE (SELECT count(*) FROM sqlite_master) IS NOT NULL", wantMsg: "not allowed"},
+		{name: "subquery under IS NULL", q: "SELECT (SELECT name FROM sqlite_master LIMIT 1) IS NULL FROM logs", wantMsg: "not allowed"},
+		{name: "subquery under NOTNULL", q: "SELECT 1 FROM logs WHERE (SELECT 1 FROM sqlite_master) NOTNULL", wantMsg: "not allowed"},
+		{name: "subquery under ISNULL", q: "SELECT 1 FROM logs WHERE (SELECT 1 FROM sqlite_master) ISNULL", wantMsg: "not allowed"},
+		{name: "TVF under IS NOT NULL", q: "SELECT (SELECT count(*) FROM json_each('[1,2,3]')) IS NOT NULL", wantMsg: "table-valued function"},
+		{name: "recursion under IS NULL", q: "SELECT EXISTS (WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x+1 FROM c) SELECT 1 FROM c WHERE x < 0) IS NULL", wantMsg: "RECURSIVE"},
+		{name: "IN table-name under IS NULL", q: "SELECT 1 FROM logs WHERE ((id, id, id, id, id) IN sqlite_master) IS NULL", wantMsg: "not allowed"},
+		// Go's ToLower folds these to ASCII i/k; SQLite folds ASCII only, so the
+		// CTE does NOT shadow the real table there
+		{name: "CTE name with dotted capital I", q: "WITH \"sql\u0130te_master\" AS (SELECT 1) SELECT type, name FROM sqlite_master", wantMsg: "not allowed"},
+		{name: "CTE name with Kelvin sign", q: "WITH \"api_\u212Aeys\" AS (SELECT 1) SELECT * FROM api_keys", wantMsg: "not allowed"},
 		{name: "garbage", q: "not sql at all"},
 		{name: "empty", q: ""},
 	}
@@ -155,6 +178,17 @@ func TestValidateScopes(t *testing.T) {
 		{"metrics panel scope: join blocked", "SELECT * FROM logs l JOIN metrics m ON l.service = m.service", ScopeMetrics, "Logs page"},
 		{"alerts: mixing allowed", "SELECT 1 FROM metrics m WHERE m.value > 10 AND EXISTS (SELECT 1 FROM logs WHERE level >= 4)", ScopeAll, ""},
 		{"CTE named like a signal doesn't count as one", "WITH metrics AS (SELECT service FROM logs) SELECT * FROM metrics", ScopeLogs, ""},
+		{"nested CTE can't hide the real metrics table", "SELECT * FROM metrics WHERE EXISTS (WITH metrics AS (SELECT 1) SELECT 1)", ScopeLogs, "Metrics page"},
+		{"nested CTE can't hide the real logs table", "SELECT * FROM logs WHERE EXISTS (WITH logs AS (SELECT 1) SELECT 1)", ScopeMetrics, "Logs page"},
+		{"IN table-name counts as a read", "SELECT 1 FROM logs WHERE (1, 1, 'm', 1, 1, 's', 'h', '{}') IN metrics", ScopeLogs, "Metrics page"},
+		{"outer CTE is visible in a subquery", "WITH x AS (SELECT id FROM logs) SELECT * FROM logs WHERE id IN (SELECT id FROM x)", ScopeLogs, ""},
+		{"sibling CTEs can chain", "WITH a AS (SELECT id FROM logs), b AS (SELECT id FROM a) SELECT * FROM b", ScopeLogs, ""},
+		{"IN a CTE by bare name", "WITH x AS (SELECT id FROM logs) SELECT * FROM logs WHERE id IN x", ScopeLogs, ""},
+		{"subquery under IS NOT NULL counts as a read", "SELECT (SELECT 1 FROM metrics WHERE value > 40) IS NOT NULL", ScopeLogs, "Metrics page"},
+		{"non-ASCII CTE name can't hide metrics", "WITH \"metr\u0130cs\" AS (SELECT 1) SELECT name, value FROM metrics", ScopeLogs, "Metrics page"},
+		{"plain IS NULL still works", "SELECT * FROM logs WHERE message IS NULL OR parsed IS NOT NULL", ScopeLogs, ""},
+		// an inner CTE reusing the outer name is shadowing, not recursion
+		{"inner CTE shadows the one being defined", "WITH a AS (SELECT 1 AS x FROM logs WHERE EXISTS (WITH a AS (SELECT 1) SELECT * FROM a)) SELECT * FROM a", ScopeLogs, ""},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

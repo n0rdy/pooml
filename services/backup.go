@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -14,6 +15,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	sqlite3 "github.com/mattn/go-sqlite3"
 	"github.com/robfig/cron/v3"
 	"github.com/rs/zerolog/log"
@@ -176,23 +178,80 @@ func (bs *BackupService) runBackup(ctx context.Context) error {
 	})
 
 	for name := range bs.dbs {
-		f, err := os.Open(filepath.Join(tmpDir, name))
-		if err != nil {
-			return err
-		}
 		key := stamp + "/" + name
 		if cfg.prefix != "" {
 			key = cfg.prefix + "/" + key
 		}
-		_, err = client.PutObject(ctx, &s3.PutObjectInput{
-			Bucket: aws.String(cfg.bucket),
-			Key:    aws.String(key),
-			Body:   f,
-		})
-		f.Close()
-		if err != nil {
+		if err := uploadFile(ctx, client, cfg.bucket, key, filepath.Join(tmpDir, name)); err != nil {
 			return fmt.Errorf("upload %s: %w", key, err)
 		}
+	}
+	return nil
+}
+
+// S3-compatible stores refuse a single PUT over 5 GB, which a logs.db with a
+// month of retention can exceed, so anything above one part goes multipart.
+// Hand-rolled on the client already in use: sequential parts streamed from the
+// file, no upload-manager dependency. A var only so tests can shrink it.
+var backupPartSize int64 = 64 << 20
+
+const backupMaxParts = 10000 // S3's limit per upload
+
+func uploadFile(ctx context.Context, client *s3.Client, bucket, key, path string) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	size := info.Size()
+	if size <= backupPartSize {
+		_, err = client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(bucket), Key: aws.String(key), Body: f})
+		return err
+	}
+
+	partSize := max(backupPartSize, (size+backupMaxParts-1)/backupMaxParts)
+	created, err := client.CreateMultipartUpload(ctx, &s3.CreateMultipartUploadInput{
+		Bucket: aws.String(bucket), Key: aws.String(key),
+	})
+	if err != nil {
+		return err
+	}
+	abort := func() {
+		// needs s3:AbortMultipartUpload, which the minimal s3:PutObject policy
+		// lacks; refused, only a bucket lifecycle rule clears the orphaned parts
+		actx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
+		defer cancel()
+		if _, aerr := client.AbortMultipartUpload(actx, &s3.AbortMultipartUploadInput{
+			Bucket: aws.String(bucket), Key: aws.String(key), UploadId: created.UploadId,
+		}); aerr != nil {
+			log.Warn().Err(aerr).Str("key", key).
+				Msg("could not abort the multipart upload; its parts stay until a lifecycle rule expires incomplete uploads")
+		}
+	}
+
+	var parts []types.CompletedPart
+	for num, off := int32(1), int64(0); off < size; num, off = num+1, off+partSize {
+		n := min(partSize, size-off)
+		out, err := client.UploadPart(ctx, &s3.UploadPartInput{
+			Bucket: aws.String(bucket), Key: aws.String(key), UploadId: created.UploadId,
+			PartNumber: aws.Int32(num), Body: io.NewSectionReader(f, off, n), ContentLength: aws.Int64(n),
+		})
+		if err != nil {
+			abort()
+			return fmt.Errorf("part %d: %w", num, err)
+		}
+		parts = append(parts, types.CompletedPart{ETag: out.ETag, PartNumber: aws.Int32(num)})
+	}
+	if _, err := client.CompleteMultipartUpload(ctx, &s3.CompleteMultipartUploadInput{
+		Bucket: aws.String(bucket), Key: aws.String(key), UploadId: created.UploadId,
+		MultipartUpload: &types.CompletedMultipartUpload{Parts: parts},
+	}); err != nil {
+		abort()
+		return err
 	}
 	return nil
 }
@@ -226,9 +285,15 @@ func (bs *BackupService) s3Config(ctx context.Context) (s3Settings, error) {
 	return cfg, nil
 }
 
-// backupDB copies src into destPath with SQLite's online Backup API:
-// incremental page copy, lock released between steps, so writes to the
-// source continue with minimal interruption (touched pages are re-copied).
+const (
+	backupBusyRetries = 50
+	backupBusyWait    = 100 * time.Millisecond
+)
+
+// backupDB copies src into destPath with SQLite's online Backup API in ONE
+// step. Stepping in chunks restarts the copy whenever another connection
+// writes to the source, so under steady ingest it never finished. A single
+// step reads one WAL snapshot; writers are not blocked.
 func backupDB(ctx context.Context, src *sql.DB, destPath string) error {
 	destDB, err := sql.Open("sqlite3", destPath)
 	if err != nil {
@@ -259,17 +324,23 @@ func backupDB(ctx context.Context, src *sql.DB, destPath string) error {
 				return err
 			}
 			defer bk.Finish()
-			for {
-				done, err := bk.Step(256) // pages per step; lock yields between steps
+			// the driver reports BUSY/LOCKED as (false, nil); the next step
+			// resumes the copy, so a brief lock must not fail the whole run
+			for attempt := 0; ; attempt++ {
+				if ctx.Err() != nil {
+					return ctx.Err()
+				}
+				done, err := bk.Step(-1)
 				if err != nil {
 					return err
 				}
 				if done {
 					return nil
 				}
-				if ctx.Err() != nil {
-					return ctx.Err()
+				if attempt >= backupBusyRetries {
+					return errors.New("source database stayed locked; backup not completed")
 				}
+				time.Sleep(backupBusyWait)
 			}
 		})
 	})

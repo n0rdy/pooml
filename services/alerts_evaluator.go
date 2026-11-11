@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"sync"
 	"time"
 
@@ -16,7 +17,18 @@ import (
 // tests substitute a recorder.
 type AlertNotifier interface {
 	SendAlert(ctx context.Context, a Alert, res *query.Result) error
+	SendAlertFailure(ctx context.Context, a Alert, reason string, failingSinceMs int64) error
 }
+
+// A query that fails at EXECUTION (timeout, busy) is announced once it has
+// failed this many checks in a row AND for this long: one slow moment must not
+// page anyone. A query that fails VALIDATION is announced at once: that failure
+// is deterministic, and waiting would keep an hourly alert silent for hours.
+// The duration is also the floor for repeats, so a zero cooldown cannot nag.
+const (
+	failureNotifyAfterCount = 2
+	failureNotifyAfterMs    = 5 * 60 * 1000
+)
 
 // Evaluator is the alert master loop from CONTEXT.md > Alerting: one ticker,
 // per-due-alert goroutines, state in the DB so edits are picked up next tick.
@@ -83,12 +95,12 @@ func (e *Evaluator) evaluate(ctx context.Context, a Alert) {
 
 	v, err := query.Validate(a.Query)
 	if err != nil {
-		e.recordError(ctx, a, err.Error(), now)
+		e.recordError(ctx, a, err.Error(), now, true)
 		return
 	}
 	res, err := query.Execute(ctx, e.logsRead, v.SQL())
 	if err != nil {
-		e.recordError(ctx, a, "query failed: "+err.Error(), now)
+		e.recordError(ctx, a, "query failed: "+err.Error(), now, false)
 		return
 	}
 
@@ -129,8 +141,30 @@ func (e *Evaluator) evaluate(ctx context.Context, a Alert) {
 	}
 }
 
-func (e *Evaluator) recordError(ctx context.Context, a Alert, msg string, now int64) {
-	if err := e.store.UpdateEval(ctx, a.ID, a.CurrentlyFiring, nil, &msg, now); err != nil {
+// recordError handles a query that could not run. Level-triggered like firing:
+// notify once past the threshold, repeat on the cooldown, and a failed send is
+// not marked so the next check retries it. certain = the failure cannot be
+// transient (validation), so there is nothing to wait for.
+func (e *Evaluator) recordError(ctx context.Context, a Alert, msg string, now int64, certain bool) {
+	st, err := e.store.RecordEvalFailure(ctx, a.ID, a.Query, msg, now)
+	if errors.Is(err, sql.ErrNoRows) {
+		return // edited or deleted while this check was running
+	}
+	if err != nil {
+		log.Error().Err(err).Int64("alert", a.ID).Msg("alert state update")
+		return
+	}
+	if !certain && (st.Count < failureNotifyAfterCount || now-st.SinceMs < failureNotifyAfterMs) {
+		return
+	}
+	if st.NotifiedAt.Valid && now-st.NotifiedAt.Int64 < max(a.CooldownMs, failureNotifyAfterMs) {
+		return
+	}
+	if err := e.notifier.SendAlertFailure(ctx, a, msg, st.SinceMs); err != nil {
+		log.Warn().Err(err).Int64("alert", a.ID).Msg("could not announce a failing alert; will retry")
+		return
+	}
+	if err := e.store.MarkFailureNotified(ctx, a.ID, now); err != nil {
 		log.Error().Err(err).Int64("alert", a.ID).Msg("alert state update")
 	}
 }

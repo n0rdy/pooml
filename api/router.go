@@ -135,7 +135,7 @@ func (ar *Router) healthcheck(w http.ResponseWriter, req *http.Request) {
 func (ar *Router) ingestLogs(w http.ResponseWriter, req *http.Request) {
 	service := chi.URLParam(req, "service")
 	host := chi.URLParam(req, "host")
-	if len(service) > 200 || len(host) > 200 {
+	if !common.ValidName(service) || !common.ValidName(host) {
 		ar.sendErrorResponse(w, http.StatusBadRequest, common.ErrCodeBadRequest)
 		return
 	}

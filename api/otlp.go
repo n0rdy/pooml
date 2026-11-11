@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -56,18 +57,16 @@ func (ar *Router) otlpMetrics(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var exportReq metricspb.MetricsData
-	if isJSON {
-		err = protojson.Unmarshal(payload, &exportReq)
-	} else {
-		err = proto.Unmarshal(payload, &exportReq)
+	rows, err := ar.decodeOTLP(req.Context(), payload, isJSON)
+	if errors.Is(err, errOTLPBusy) {
+		// 429 is retryable for OTLP exporters, 400 is not
+		ar.sendErrorResponse(w, http.StatusTooManyRequests, common.ErrCodeTooManyRequests)
+		return
 	}
 	if err != nil {
 		ar.sendErrorResponse(w, http.StatusBadRequest, common.ErrCodeBadRequest)
 		return
 	}
-
-	rows := ar.otlpToRows(&exportReq, time.Now().UnixMilli())
 	// a 2 MiB payload of minimal datapoints can explode into hundreds of
 	// thousands of rows, and the batch channel holds up to 100 such slices
 	if len(rows) > maxOTLPRowsPerRequest {
@@ -90,22 +89,74 @@ func (ar *Router) otlpMetrics(w http.ResponseWriter, req *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func (ar *Router) otlpToRows(req *metricspb.MetricsData, receivedAt int64) []metrics.Row {
+// a 2 MiB body of empty datapoints decodes to ~160 MiB of structs; unlike log
+// parsing this runs on the request goroutine, so concurrency has to be capped
+var otlpDecodeSem = make(chan struct{}, 4)
+
+// The wait has to be bounded here: the request context carries no deadline
+// (the server's WriteTimeout does not cancel it), so without one a queued
+// request just sits until the exporter gives up.
+const otlpDecodeWait = 2 * time.Second
+
+var errOTLPBusy = errors.New("no OTLP decode slot free")
+
+func (ar *Router) decodeOTLP(ctx context.Context, payload []byte, isJSON bool) ([]metrics.Row, error) {
+	wait := time.NewTimer(otlpDecodeWait)
+	defer wait.Stop()
+	select {
+	case otlpDecodeSem <- struct{}{}:
+	case <-wait.C:
+		return nil, errOTLPBusy
+	case <-ctx.Done():
+		return nil, errOTLPBusy
+	}
+	defer func() { <-otlpDecodeSem }()
+
+	var exportReq metricspb.MetricsData
+	var err error
+	if isJSON {
+		err = protojson.Unmarshal(payload, &exportReq)
+	} else {
+		err = proto.Unmarshal(payload, &exportReq)
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ar.otlpToRows(&exportReq, time.Now().UnixMilli())
+}
+
+var errBadName = errors.New("service or host name is over the length cap or has control characters")
+
+func (ar *Router) otlpToRows(req *metricspb.MetricsData, receivedAt int64) ([]metrics.Row, error) {
 	var rows []metrics.Row
+	skipped := false
 	for _, rm := range req.GetResourceMetrics() {
 		service, host := resourceIdentity(rm.GetResource().GetAttributes())
+		if !common.ValidName(service) || !common.ValidName(host) {
+			return nil, errBadName
+		}
 		for _, sm := range rm.GetScopeMetrics() {
 			for _, m := range sm.GetMetrics() {
+				// one bad metric name must not cost the whole export: exporters
+				// do not retry a 400, so every other metric in it would be lost
+				if !common.ValidMetricName(m.GetName()) {
+					if m.GetName() != "" && !skipped {
+						skipped = true
+						log.Warn().Str("service", service).Int("name_bytes", len(m.GetName())).
+							Msg("OTLP metric skipped: name too long or has control characters")
+					}
+					continue
+				}
 				rows = ar.appendMetric(rows, m, service, host, receivedAt)
 				// stop materializing once over the cap: the caller rejects
 				// the request anyway, no need to build the rest of the slice
 				if len(rows) > maxOTLPRowsPerRequest {
-					return rows
+					return rows, nil
 				}
 			}
 		}
 	}
-	return rows
+	return rows, nil
 }
 
 func (ar *Router) appendMetric(rows []metrics.Row, m *metricspb.Metric, service, host string, receivedAt int64) []metrics.Row {

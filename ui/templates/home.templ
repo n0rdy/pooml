@@ -27,6 +27,9 @@ templ HomePage(csrfToken string) {
 					</div>
 				</div>
 			</div>
+			// renders nothing while alerts and backups are healthy, so it must
+			// take no space then (an empty flex child would still claim a gap)
+			<div class="empty:hidden" hx-get="/home/attention" hx-trigger="load, every 30s" hx-swap="innerHTML"></div>
 			<div class="grid md:grid-cols-2 gap-6">
 				<div class="card bg-base-100 md:col-span-2 min-w-0">
 					<div class="card-body py-4">
@@ -141,6 +144,77 @@ templ HomeMetricsServices(rows []HomeServiceRow) {
 				</li>
 			}
 		</ul>
+	}
+}
+
+type BrokenAlert struct {
+	Name  string
+	Error string
+}
+
+type FailingWriter struct {
+	Name    string
+	Error   string
+	SinceMs int64
+}
+
+// HomeAttentionView is what has quietly stopped working. Each of these fails
+// silently by nature: a stuck writer, a blind alert and a failing backup all
+// look exactly like a calm day until the moment they are needed.
+type HomeAttentionView struct {
+	Writers []FailingWriter
+	// the query cannot run, so the alert cannot fire
+	Blind []BrokenAlert
+	// the alert can see, but its notification did not get out (and it cannot
+	// say so over the channel that failed)
+	Undelivered []BrokenAlert
+	// last scheduled-backup error; empty when backups are off or healthy
+	BackupError string
+	BackupAtMs  int64
+}
+
+templ HomeAttention(v HomeAttentionView) {
+	if len(v.Writers) > 0 || len(v.Blind) > 0 || len(v.Undelivered) > 0 || v.BackupError != "" {
+		<div class="card bg-base-100">
+			<div class="card-body py-4">
+				if len(v.Writers) > 0 {
+					<h3 class="card-title">Not being stored</h3>
+					for _, w := range v.Writers {
+						<div class="text-sm text-error truncate" title={ w.Error }>
+							{ w.Name }: { w.Error }
+							<span class="opacity-60">since <span data-reltime={ msString(w.SinceMs) }>{ utcTime(w.SinceMs) }</span></span>
+						</div>
+					}
+				}
+				@brokenAlerts("Alerts flying blind", v.Blind)
+				@brokenAlerts("Alerts that can't deliver", v.Undelivered)
+				if v.BackupError != "" {
+					<h3 class="card-title">
+						Backups failing
+						if v.BackupAtMs > 0 {
+							<span class="text-sm font-normal opacity-60">last try <span data-reltime={ msString(v.BackupAtMs) }>{ utcTime(v.BackupAtMs) }</span></span>
+						}
+					</h3>
+					<div class="text-sm text-error truncate" title={ v.BackupError }>
+						<a href="/settings" class="link">backup</a>: { v.BackupError }
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
+templ brokenAlerts(title string, rows []BrokenAlert) {
+	if len(rows) > 0 {
+		<h3 class="card-title">
+			{ title }
+			<span class="badge badge-sm badge-soft badge-error">{ strconv.Itoa(len(rows)) }</span>
+		</h3>
+		for _, r := range rows {
+			<div class="text-sm text-error truncate" title={ r.Error }>
+				<a href="/alerts" class="link">{ r.Name }</a>: { r.Error }
+			</div>
+		}
 	}
 }
 

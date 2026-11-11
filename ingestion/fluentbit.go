@@ -46,12 +46,20 @@ func parseFluentBit(service, host string, payload []byte, receivedAt int64) ([]c
 			l = parseLine([]byte(line))
 		} else {
 			// no log line: keep the whole record as a JSON log
-			raw, err := json.Marshal(r)
-			if err != nil {
+			// not json.Marshal: it escapes < > & to six bytes each, which
+			// both misquotes the log and inflates a 2 MiB body sixfold
+			var buf bytes.Buffer
+			enc := json.NewEncoder(&buf)
+			enc.SetEscapeHTML(false)
+			if err := enc.Encode(r); err != nil {
 				continue
 			}
+			raw := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
 			s := string(raw)
-			l = common.StandardLog{Raw: s, Parsed: &s}
+			l = common.StandardLog{Raw: s}
+			if !jsonDeeperThan(raw, maxParsedJSONDepth) {
+				l.Parsed = &s
+			}
 		}
 
 		// inner-parser timestamp wins: FluentBit's "date" is capture time,
@@ -66,7 +74,7 @@ func parseFluentBit(service, host string, payload []byte, receivedAt int64) ([]c
 		}
 
 		l.Service = service
-		if cn, ok := r["container_name"].(string); ok && cn != "" {
+		if cn, ok := r["container_name"].(string); ok && common.ValidName(strings.TrimPrefix(cn, "/")) {
 			l.Service = strings.TrimPrefix(cn, "/")
 		}
 		l.Host = host

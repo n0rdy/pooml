@@ -2,7 +2,10 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -93,10 +96,18 @@ func makeLogsReadHook(metricsPath string) func(*sqlite3.SQLiteConn) error {
 		if _, err := conn.Exec(attach, nil); err != nil {
 			return fmt.Errorf("attach metrics.db: %w", err)
 		}
+		conn.SetLimit(sqlite3.SQLITE_LIMIT_LENGTH, MaxReadCellBytes)
 		conn.RegisterAuthorizer(readAuthorizer)
 		return nil
 	}
 }
+
+// MaxReadCellBytes caps one string/blob on the user-query pool. SQLite's
+// default is 1 GB, and each cell is copied twice on the Go side before any
+// result cap can see it: `SELECT zeroblob(999000000)` cost one request ~3.7 GB.
+// It bounds whole ROWS too (sorters, materialized CTEs), so ingestion keeps
+// every stored log under half of it: see ingestion.maxLogRowBytes.
+const MaxReadCellBytes = 16 << 20
 
 func readAuthorizer(op int, arg1, arg2, arg3 string) int {
 	switch op {
@@ -109,12 +120,26 @@ func readAuthorizer(op int, arg1, arg2, arg3 string) int {
 		return sqlite3.SQLITE_DENY
 	case sqlite3.SQLITE_ATTACH, sqlite3.SQLITE_DETACH:
 		return sqlite3.SQLITE_DENY
+	case sqlite3.SQLITE_READ:
+		// The table allow-list, enforced by the engine. The AST validator has
+		// had blind spots more than once (node types the parser's Walk skips);
+		// whatever it misses still cannot read another table here.
+		if !readableTable(arg1) {
+			return sqlite3.SQLITE_DENY
+		}
 	case sqlite3.SQLITE_FUNCTION:
 		if strings.EqualFold(arg2, "load_extension") {
 			return sqlite3.SQLITE_DENY
 		}
 	}
 	return sqlite3.SQLITE_OK
+}
+
+// logs_fts_* are the FTS5 shadow tables: MATCH reads them through this same
+// connection, so they have to stay readable.
+func readableTable(name string) bool {
+	name = strings.ToLower(name)
+	return name == "logs" || name == "metrics" || name == "logs_fts" || strings.HasPrefix(name, "logs_fts_")
 }
 
 func makeConnectHook(pragmas []string) func(*sqlite3.SQLiteConn) error {
@@ -147,6 +172,7 @@ type Pools struct {
 // database files exist (the read-only pool requires the file to be present).
 func OpenPools(dbDir string) (*Pools, error) {
 	registerDrivers()
+	restrictFileModes(dbDir)
 
 	logsPath := filepath.Join(dbDir, logsDBFile)
 	metricsPath := filepath.Join(dbDir, metricsDBFile)
@@ -197,6 +223,21 @@ func OpenPools(dbDir string) (*Pools, error) {
 		Metrics:   metrics,
 		Meta:      meta,
 	}, nil
+}
+
+// restrictFileModes makes the database files owner-only. SQLite creates them
+// 0644, and logs.db holds whatever secrets the apps logged; WAL and SHM files
+// created later inherit the main file's mode. Runs every boot so installs that
+// predate it are tightened too.
+func restrictFileModes(dbDir string) {
+	for _, name := range []string{logsDBFile, metricsDBFile, metaDBFile} {
+		for _, suffix := range []string{"", "-wal", "-shm"} {
+			path := filepath.Join(dbDir, name+suffix)
+			if err := os.Chmod(path, 0o600); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				log.Warn().Err(err).Str("file", path).Msg("could not restrict database file permissions")
+			}
+		}
+	}
 }
 
 func openPool(driverName, dataSource string, maxOpen, maxIdle int) (*sql.DB, error) {

@@ -21,7 +21,8 @@ unit - anything works).
 - **Dashboards**: typed logs/metrics dashboards with stream, chart, and number panels
 - **War Room**: metrics and logs on one timeline for incidents - one time window rules the page, drag across any chart
   to zoom, every view is a shareable URL. Alerts can carry a War Room link centered on the firing moment
-- **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire
+- **Alerts**: SQL-based alert rules on either signal, delivered via Pushover or Once Campfire. An alert whose
+  query stops working tells you so, instead of going quiet
 - **Ops**: hourly retention cleanup, scheduled S3 backups, Prometheus `/metrics` self-observability - pooml can monitor
   itself
 - **AI-ready (MCP)**: [`@pooml/mcp`](https://www.npmjs.com/package/@pooml/mcp) gives Claude (or any MCP client)
@@ -117,6 +118,19 @@ POOML_ENCRYPTION_KEY=your-encryption-key-min-32-chars-long \
 pooml
 ```
 
+### Verifying a download
+
+Release archives and the Docker image carry a signed build attestation: proof that the file was built by this
+repository's release workflow from the tagged commit, not uploaded by hand. Check one with the
+[GitHub CLI](https://cli.github.com/):
+
+```bash
+gh attestation verify pooml_Linux_x86_64.tar.gz --repo n0rdy/pooml
+gh attestation verify oci://docker.io/mykonordy/pooml:latest --repo n0rdy/pooml
+```
+
+Releases before attestations were introduced only have the `.sha256` checksums.
+
 ### From source
 
 Requires Go 1.27+ and a C compiler (CGO). The `sqlite_fts5` build tag is mandatory - without it the binary builds but
@@ -145,7 +159,7 @@ All configuration is via environment variables. Required variables fail fast at 
 | `POOML_METRICS_AUTH_SECRET`      | -                | Required when metrics are enabled, min 32 chars. Sent as `X-API-Key` by scrapers.                                                                  |
 | `POOML_QUERY_API_ENABLED`        | `false`          | Expose the read-only SQL query API at `/api/v1/query/*`.                                                                                           |
 | `POOML_QUERY_API_AUTH_SECRET`    | -                | Required when the query API is enabled, min 32 chars. Sent as `X-API-Key`. Deliberately separate from ingest keys.                                 |
-| `POOML_PUBLIC_URL`               | -                | Where this pooml lives from the outside (e.g. `https://logs.example.com`). Optional; enables War Room links in alert notifications.                |
+| `POOML_PUBLIC_URL`               | -                | Where this pooml lives from the outside (e.g. `https://logs.example.com`). Optional; enables War Room links (and a link to the Alerts page) in alert notifications. |
 | `POOML_SHUTDOWN_TIMEOUT_SECONDS` | `30`             | Hard deadline for graceful shutdown.                                                                                                               |
 
 ## Shipping logs
@@ -246,7 +260,8 @@ backup history. Expire old backups with your provider's lifecycle rules instead:
 ```bash
 aws s3api put-bucket-lifecycle-configuration --bucket my-backups \
   --lifecycle-configuration '{"Rules":[{"ID":"expire-pooml-backups","Status":"Enabled",
-    "Filter":{"Prefix":"pooml/"},"Expiration":{"Days":30}}]}'
+    "Filter":{"Prefix":"pooml/"},"Expiration":{"Days":30},
+    "AbortIncompleteMultipartUpload":{"DaysAfterInitiation":2}}]}'
 ```
 
 (For R2, add `--endpoint-url https://<account_id>.r2.cloudflarestorage.com`.)
@@ -257,7 +272,11 @@ aws s3api put-bucket-lifecycle-configuration --bucket my-backups \
 mc ilm rule add --expire-days 30 --prefix "pooml/" myminio/my-backups
 ```
 
-The minimum credentials policy pooml needs is `s3:PutObject` on the bucket.
+The minimum credentials policy pooml needs is `s3:PutObject` on the bucket. Database files over 64 MB are uploaded in
+parts, which the same permission covers. If an upload fails midway, pooml tries to abort it; without
+`s3:AbortMultipartUpload` that attempt is refused and the orphaned parts stay until the lifecycle rule above expires
+them (the `AbortIncompleteMultipartUpload` line). Granting `s3:AbortMultipartUpload` as well is safe and recommended:
+it only discards unfinished uploads and cannot touch a completed backup. A failing backup shows on the Home page as long as backups are on.
 
 ## Monitoring pooml itself
 

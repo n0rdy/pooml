@@ -8,6 +8,10 @@ on:
   # dispatched by dependabot-regen.yml after it pushes regenerated files
   workflow_dispatch:
 
+# this job runs dependency code (npm ci, go test): give it nothing to push with
+permissions:
+  contents: read
+
 jobs:
   quality-checks:
     name: Quality Checks
@@ -15,10 +19,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
 
       - name: Setup Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: 'go.mod'
           cache: true
@@ -54,7 +60,7 @@ jobs:
           fi
 
       - name: Setup Node (asset toolchain)
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: "lts/*"
           cache: npm
@@ -66,7 +72,7 @@ jobs:
           HEAD_REF: ${{ github.head_ref || github.ref_name }}
           BASE_REF: ${{ github.base_ref || 'main' }}
         run: |
-          npm ci
+          npm ci --ignore-scripts
           npx tailwindcss -i input.css -o ../static/styles.css --minify
           if [ -n "$(git status --porcelain ../static/styles.css)" ]; then
             # the file is minified onto one line, so a plain git diff is useless;

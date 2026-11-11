@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -95,6 +96,105 @@ func createAndGet(t *testing.T, store *services.ScrapeTargetsService, st service
 	}
 	t.Fatalf("created target %q not found", st.URL)
 	return services.ScrapeTarget{}
+}
+
+// After POOML_ENCRYPTION_KEY changes, a stored auth header no longer decrypts.
+// That used to fail the whole listing: every target stopped being scraped and
+// Settings returned 500, so the broken target could not even be deleted.
+func TestUndecryptableAuthHeaderIsContained(t *testing.T) {
+	dir := t.TempDir()
+	db.MigrateAll(dir)
+	pools, err := db.OpenPools(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pools.Close)
+	ctx := context.Background()
+
+	var withAuthHits, plainHits atomic.Int64
+	withAuth := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		withAuthHits.Add(1)
+		w.Write([]byte("m 1\n"))
+	}))
+	t.Cleanup(withAuth.Close)
+	plain := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		plainHits.Add(1)
+		w.Write([]byte("m 1\n"))
+	}))
+	t.Cleanup(plain.Close)
+
+	oldEnc, err := services.NewEncryptionService(strings.Repeat("a", 32), pools.Meta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStore := services.NewScrapeTargetsService(pools.Meta, oldEnc)
+	secured := target(withAuth.URL)
+	secured.AuthHeader = "Authorization: Bearer s3cret"
+	if err := oldStore.Create(ctx, secured); err != nil {
+		t.Fatal(err)
+	}
+	if err := oldStore.Create(ctx, target(plain.URL)); err != nil {
+		t.Fatal(err)
+	}
+
+	// the same database, opened with a different key
+	newEnc, err := services.NewEncryptionService(strings.Repeat("b", 32), pools.Meta)
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := services.NewScrapeTargetsService(pools.Meta, newEnc)
+	targets, err := store.List(ctx)
+	if err != nil {
+		t.Fatalf("List must survive an undecryptable header (Settings depends on it): %v", err)
+	}
+	var broken, healthy services.ScrapeTarget
+	for _, tg := range targets {
+		if tg.URL == withAuth.URL {
+			broken = tg
+		} else {
+			healthy = tg
+		}
+	}
+	if !broken.AuthUnreadable || broken.AuthHeader != "" || healthy.AuthUnreadable {
+		t.Fatalf("flags: broken=%+v healthy.AuthUnreadable=%v", broken, healthy.AuthUnreadable)
+	}
+
+	rec := &rowRecorder{}
+	runScraper(t, services.NewScraper(store, rec))
+	afterBroken := waitScraped(t, store, broken.ID)
+	afterHealthy := waitScraped(t, store, healthy.ID)
+	if afterHealthy.LastError.Valid || plainHits.Load() == 0 {
+		t.Errorf("the healthy target must keep scraping: err=%v hits=%d", afterHealthy.LastError, plainHits.Load())
+	}
+	if !afterBroken.LastError.Valid || !strings.Contains(afterBroken.LastError.String, "POOML_ENCRYPTION_KEY") {
+		t.Errorf("broken target error = %+v, want one naming the cause", afterBroken.LastError)
+	}
+	if got := withAuthHits.Load(); got != 0 {
+		t.Errorf("target was requested %d times without its credentials", got)
+	}
+	if err := store.Delete(ctx, broken.ID); err != nil {
+		t.Errorf("deleting the broken target: %v", err)
+	}
+}
+
+// A parse error quotes the offending token, which the target controls.
+func TestScraperTruncatesHugeErrors(t *testing.T) {
+	store, _, scraper := scrapeSetup(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte("metric_ok 1\n" + strings.Repeat("x", 1<<20) + " not-a-number\n"))
+	}))
+	t.Cleanup(srv.Close)
+
+	created := createAndGet(t, store, target(srv.URL))
+	runScraper(t, scraper)
+	after := waitScraped(t, store, created.ID)
+	if !after.LastError.Valid || !strings.Contains(after.LastError.String, "parse") {
+		t.Fatalf("expected a parse error recorded, got %+v", after.LastError)
+	}
+	if n := len(after.LastError.String); n > 600 {
+		t.Fatalf("last_error is %d bytes, want it truncated", n)
+	}
 }
 
 func waitScraped(t *testing.T, store *services.ScrapeTargetsService, id int64) services.ScrapeTarget {

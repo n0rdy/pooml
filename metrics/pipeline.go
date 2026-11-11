@@ -6,11 +6,15 @@ package metrics
 
 import (
 	"database/sql"
+	"math"
 	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/n0rdy/pooml/common"
+	"github.com/n0rdy/pooml/db"
 
 	"github.com/rs/zerolog/log"
 )
@@ -51,6 +55,9 @@ type Pipeline struct {
 	batchCh  chan []Row
 	writerWG sync.WaitGroup
 
+	// for the Home attention card; see common.WriterHealth
+	Health common.WriterHealth
+
 	bufferedRows atomic.Int64 // rows admitted to batchCh but not yet consumed
 
 	// guards TryPush against send-on-closed-channel when a shutdown deadline
@@ -75,6 +82,11 @@ func (p *Pipeline) Start() {
 // handler returns 429 (the exporter retries with backoff), the scrape loop
 // drops the scrape and lets the next interval retry.
 func (p *Pipeline) TryPush(rows []Row) bool {
+	// SQLite binds NaN as NULL (a NOT NULL violation) and JSON cannot carry
+	// Inf; NaN is legal Prometheus output, so honest exporters send it too
+	rows = slices.DeleteFunc(rows, func(r Row) bool {
+		return math.IsNaN(r.Value) || math.IsInf(r.Value, 0)
+	})
 	if len(rows) == 0 {
 		return true
 	}
@@ -118,11 +130,20 @@ func (p *Pipeline) writer() {
 	tryFlush := func() {
 		for len(buf) > 0 {
 			n := min(len(buf), batchSize)
-			if err := p.flush(buf[:n]); err != nil {
+			err := p.flush(buf[:n])
+			switch {
+			case db.IsPermanent(err):
+				n, err = p.salvage(buf[:n])
+			case err != nil:
+				n = 0
+			}
+			buf = slices.Delete(buf, 0, n)
+			if err != nil {
+				p.Health.Failed(err, time.Now().UnixMilli())
 				log.Error().Err(err).Int("rows", len(buf)).Msg("metrics batch write failed, will retry")
 				return
 			}
-			buf = slices.Delete(buf, 0, n)
+			p.Health.OK()
 		}
 	}
 
@@ -152,6 +173,24 @@ func (p *Pipeline) writer() {
 			tryFlush()
 		}
 	}
+}
+
+// salvage re-writes a batch row by row after a permanent error, dropping only
+// the rows SQLite will never accept: retrying the whole batch would block every
+// later row behind it forever. Returns how many leading rows are settled.
+func (p *Pipeline) salvage(rows []Row) (int, error) {
+	for i := range rows {
+		err := p.flush(rows[i : i+1])
+		switch {
+		case err == nil:
+		case db.IsPermanent(err):
+			log.Error().Err(err).Str("metric", rows[i].Name).Str("service", rows[i].Service).
+				Msg("dropping metric row the database rejects")
+		default:
+			return i, err
+		}
+	}
+	return len(rows), nil
 }
 
 func (p *Pipeline) flush(rows []Row) error {

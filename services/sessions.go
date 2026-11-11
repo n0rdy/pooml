@@ -52,7 +52,7 @@ func (ss *SessionsService) sweep(nowMs int64) {
 }
 
 func (ss *SessionsService) CreateSession() (string, int64) {
-	sessionId := uuid.New().String()
+	sessionId := uuid.NewV4().String() // pinned: New may become time-ordered V7
 	expiresAt := time.Now().UnixMilli() + sessionExpiryDurationMs
 
 	ss.mu.Lock()

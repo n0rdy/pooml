@@ -195,6 +195,51 @@ func (ur *Router) homePageMetricsSegment(w http.ResponseWriter, req *http.Reques
 	ur.render(w, req, http.StatusOK, templates.HomeMetrics(view))
 }
 
+// A writer has to fail for this long before Home says so: one failed flush
+// that succeeds on the next try is not news.
+const writerFailingAfterMs = 60 * 1000
+
+// homePageAttentionSegment surfaces what has quietly stopped working: writers
+// that cannot store, alerts that cannot run or cannot deliver, failing backups.
+// Empty body when all is well: the card only exists while something is wrong.
+func (ur *Router) homePageAttentionSegment(w http.ResponseWriter, req *http.Request) {
+	ctx, cancel := context.WithTimeout(req.Context(), homeQueryTimeout)
+	defer cancel()
+
+	var view templates.HomeAttentionView
+	now := time.Now().UnixMilli()
+	for _, wr := range []struct {
+		name   string
+		health *common.WriterHealth
+	}{{"logs", ur.LogWriter}, {"metrics", ur.MetricWriter}} {
+		if since, msg := wr.health.Failing(); since > 0 && now-since >= writerFailingAfterMs {
+			view.Writers = append(view.Writers, templates.FailingWriter{Name: wr.name, Error: msg, SinceMs: since})
+		}
+	}
+
+	alerts, err := ur.Alerts.ListEnabled(ctx)
+	if err != nil {
+		ur.homeFragmentError(w, req, err)
+		return
+	}
+	for _, a := range alerts {
+		switch {
+		case a.QueryBroken(): // same rule the evaluator announces on
+			view.Blind = append(view.Blind, templates.BrokenAlert{Name: a.Name, Error: a.LastError.String})
+		case a.FailureCount == 0 && a.LastError.Valid:
+			// the query ran; the notification did not get out
+			view.Undelivered = append(view.Undelivered, templates.BrokenAlert{Name: a.Name, Error: a.LastError.String})
+		}
+	}
+
+	// only while backups are switched on: a failed manual run on a disabled
+	// schedule is not something to keep reminding about
+	if b := ur.backupView(ctx); b.Enabled && b.LastResult != "" && b.LastResult != "ok" {
+		view.BackupError, view.BackupAtMs = b.LastResult, b.LastRunAt
+	}
+	ur.render(w, req, http.StatusOK, templates.HomeAttention(view))
+}
+
 func (ur *Router) homeFragmentError(w http.ResponseWriter, req *http.Request, err error) {
 	log.Error().Err(err).Str("path", req.URL.Path).Msg("home fragment query")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"database/sql"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -10,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/n0rdy/pooml/db"
 	"github.com/n0rdy/pooml/query"
@@ -203,10 +206,133 @@ func TestCampfireSend(t *testing.T) {
 	}
 }
 
+// The "flying blind" message goes to the alert's own target, escaped for
+// Campfire like any other content: the reason can quote query text.
+func TestSendAlertFailure(t *testing.T) {
+	n, settings := newNotifyFixture(t)
+	n.PublicURL = "https://logs.example.com/"
+	ctx := context.Background()
+	since := time.Date(2026, 11, 10, 22, 15, 0, 0, time.UTC).UnixMilli()
+	reason := `table "<b>x</b>" is not allowed ` + strings.Repeat("y", 1000)
+
+	var campfireBody string
+	campfire := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		campfireBody = string(b)
+		w.WriteHeader(http.StatusCreated)
+	}))
+	defer campfire.Close()
+	_ = settings.Set(ctx, SettingCampfireBaseURL, campfire.URL, false)
+	_ = settings.Set(ctx, SettingCampfireBotKey, "bot-key-secret", true)
+
+	a := Alert{Name: "5xx <spike>", Target: `{"type":"campfire","room_id":7}`}
+	if err := n.SendAlertFailure(ctx, a, reason, since); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"5xx &lt;spike&gt; is flying blind", "2026-11-10 22:15 UTC", "&lt;b&gt;x&lt;/b&gt;", `href="https://logs.example.com/alerts"`} {
+		if !strings.Contains(campfireBody, want) {
+			t.Errorf("campfire body missing %q: %.300q", want, campfireBody)
+		}
+	}
+	if strings.Contains(campfireBody, "<b>x</b>") {
+		t.Errorf("reason not escaped: %.300q", campfireBody)
+	}
+	if len(campfireBody) > 1000 {
+		t.Errorf("reason not truncated: body is %d bytes", len(campfireBody))
+	}
+
+	var form map[string][]string
+	pushover := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		form = r.PostForm
+		w.Write([]byte(`{"status":1}`))
+	}))
+	defer pushover.Close()
+	n.PushoverBaseURL = pushover.URL
+	_ = settings.Set(ctx, SettingPushoverAppToken, "tok", true)
+	_ = settings.Set(ctx, SettingPushoverUserKey, "usr", true)
+
+	a.Target = `{"type":"pushover","priority":1}`
+	if err := n.SendAlertFailure(ctx, a, "query failed: interrupted", since); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(form["title"][0], "5xx <spike> is flying blind") || !strings.Contains(form["message"][0], "query failed: interrupted") {
+		t.Errorf("pushover content: title=%q message=%q", form["title"], form["message"])
+	}
+	if form["priority"][0] != "1" || form["url"][0] != "https://logs.example.com/alerts" || form["url_title"][0] != "Open alerts" {
+		t.Errorf("pushover routing/link: %v", form)
+	}
+}
+
+// Pushover documents hard limits but not what it does past them, so pooml
+// must never send more: a rejected notification is a lost alert.
+func TestPushoverStaysWithinLimits(t *testing.T) {
+	n, settings := newNotifyFixture(t)
+	n.PublicURL = "https://logs.example.com"
+	ctx := context.Background()
+
+	var form map[string][]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		form = r.PostForm
+		w.Write([]byte(`{"status":1}`))
+	}))
+	defer srv.Close()
+	n.PushoverBaseURL = srv.URL
+	_ = settings.Set(ctx, SettingPushoverAppToken, "tok", true)
+	_ = settings.Set(ctx, SettingPushoverUserKey, "usr", true)
+
+	// six wide rows of multi-byte text, and a query long enough to overflow the URL
+	wide := strings.Repeat("é", 400)
+	res := &query.Result{Columns: []string{"message"}}
+	for range 6 {
+		res.Rows = append(res.Rows, []any{wide})
+	}
+	longQuery := "SELECT * FROM logs WHERE level >= 4 AND (" + strings.Repeat("message LIKE '%timeout%' OR ", 30) + "1 = 0)"
+	a := Alert{Name: strings.Repeat("n", 100), Query: longQuery, Target: `{"type":"pushover","war_room":true}`}
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	if got := utf8.RuneCountInString(form["message"][0]); got > 1024 {
+		t.Errorf("message is %d characters, limit 1024", got)
+	}
+	if got := utf8.RuneCountInString(form["title"][0]); got > 250 {
+		t.Errorf("title is %d characters, limit 250", got)
+	}
+	link := form["url"][0]
+	if len(link) > 512 {
+		t.Errorf("url is %d characters, limit 512", len(link))
+	}
+	if !strings.Contains(link, "/war-room?from=") || strings.Contains(link, "q=") {
+		t.Errorf("an over-long link must keep the time window and drop the query: %q", link)
+	}
+
+	// a short query still travels in the link
+	a.Query = "SELECT * FROM logs WHERE level >= 4"
+	if err := n.SendAlert(ctx, a, res); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(form["url"][0], "q=SELECT") {
+		t.Errorf("short query missing from the link: %q", form["url"][0])
+	}
+}
+
 // recorder implements AlertNotifier for evaluator tests.
 type recorder struct {
-	calls atomic.Int64
-	fail  atomic.Bool
+	calls        atomic.Int64
+	fail         atomic.Bool
+	failureCalls atomic.Int64
+	failureFail  atomic.Bool
+	lastReason   atomic.Value
+}
+
+func (r *recorder) SendAlertFailure(ctx context.Context, a Alert, reason string, failingSinceMs int64) error {
+	if r.failureFail.Load() {
+		return context.DeadlineExceeded
+	}
+	r.failureCalls.Add(1)
+	r.lastReason.Store(reason)
+	return nil
 }
 
 func (r *recorder) SendAlert(ctx context.Context, a Alert, res *query.Result) error {
@@ -284,6 +410,225 @@ func TestEvaluatorLifecycle(t *testing.T) {
 	_ = pools.Meta.QueryRow("SELECT COUNT(*) FROM alert_firings").Scan(&firings)
 	if firings != 1 {
 		t.Errorf("alert_firings rows = %d, want 1", firings)
+	}
+}
+
+// Two ways a stored query stops working. One no longer validates (what an
+// upgrade that tightens the validator does): deterministic. The other validates
+// but errors when run (a timeout, in real life): possibly a blip.
+const (
+	goodQuery      = "SELECT * FROM logs WHERE level >= 4"
+	invalidQuery   = "SELECT * FROM sqlite_master"
+	execFailsQuery = "SELECT abs(-9223372036854775807 - 1)"
+)
+
+type blindFixture struct {
+	t     *testing.T
+	pools *db.Pools
+	store *AlertsService
+	rec   *recorder
+	ev    *Evaluator
+}
+
+func newBlindFixture(t *testing.T, cooldownMs int64) *blindFixture {
+	t.Helper()
+	pools := newTestPools(t)
+	f := &blindFixture{t: t, pools: pools, store: NewAlertsService(pools.Meta), rec: &recorder{}}
+	f.ev = NewEvaluator(f.store, pools.LogsRead, f.rec)
+	if err := f.store.Create(context.Background(), Alert{
+		Name: "watcher", Query: goodQuery, CheckIntervalMs: MinCheckIntervalMs, CooldownMs: cooldownMs,
+		Target: `{"type":"pushover"}`, Enabled: true,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+// check makes the alert due, swaps in q, runs one evaluation and returns the row.
+func (f *blindFixture) check(q string) Alert {
+	f.t.Helper()
+	if _, err := f.pools.Meta.Exec("UPDATE alerts SET query = ?, last_checked_at = last_checked_at - ?", q, MinCheckIntervalMs+1000); err != nil {
+		f.t.Fatal(err)
+	}
+	f.ev.tick(context.Background())
+	f.ev.wg.Wait()
+	return f.alert()
+}
+
+func (f *blindFixture) alert() Alert {
+	f.t.Helper()
+	alerts, err := f.store.List(context.Background())
+	if err != nil || len(alerts) != 1 {
+		f.t.Fatalf("list: %v (%d alerts)", err, len(alerts))
+	}
+	return alerts[0]
+}
+
+// age moves the streak's clock back, as if ms had passed.
+func (f *blindFixture) age(ms int64) {
+	f.t.Helper()
+	if _, err := f.pools.Meta.Exec(
+		"UPDATE alerts SET failing_since = failing_since - ?, failure_notified_at = failure_notified_at - ?", ms, ms); err != nil {
+		f.t.Fatal(err)
+	}
+}
+
+func (f *blindFixture) announced() int64 { return f.rec.failureCalls.Load() }
+
+// A query that no longer validates fails the same way on every check, so the
+// first failure is announced: waiting for more would keep an hourly alert
+// silent for hours over something that cannot fix itself.
+func TestBlindAlertInvalidQueryAnnouncedAtOnce(t *testing.T) {
+	f := newBlindFixture(t, 60*60*1000)
+
+	a := f.check(invalidQuery)
+	if f.announced() != 1 {
+		t.Fatalf("announcements after the first failed check = %d, want 1", f.announced())
+	}
+	if reason, _ := f.rec.lastReason.Load().(string); !strings.Contains(reason, "sqlite_master") {
+		t.Errorf("reason = %q, want the validation error", reason)
+	}
+	if a.FailureCount != 1 || !a.FailingSince.Valid || !a.FailureNotifiedAt.Valid || !a.QueryBroken() {
+		t.Fatalf("state: count=%d since=%v notified=%v broken=%v", a.FailureCount, a.FailingSince, a.FailureNotifiedAt, a.QueryBroken())
+	}
+
+	// still broken: quiet inside the cooldown, repeated after it
+	f.check(invalidQuery)
+	if f.announced() != 1 {
+		t.Fatalf("repeated inside the cooldown: %d", f.announced())
+	}
+	f.age(60*60*1000 + 1000)
+	f.check(invalidQuery)
+	if f.announced() != 2 {
+		t.Fatalf("not repeated after the cooldown: %d", f.announced())
+	}
+
+	// fixed: the streak ends without ceremony
+	a = f.check(goodQuery)
+	if a.FailureCount != 0 || a.FailingSince.Valid || a.LastError.Valid || a.QueryBroken() {
+		t.Fatalf("streak not cleared: count=%d since=%v err=%v", a.FailureCount, a.FailingSince, a.LastError)
+	}
+}
+
+// A query that errors when run may just have hit a slow moment: it takes a
+// second failed check AND five minutes before anyone is told.
+func TestBlindAlertExecutionErrorIsDebounced(t *testing.T) {
+	f := newBlindFixture(t, 0)
+
+	a := f.check(execFailsQuery)
+	if !a.LastError.Valid || !strings.Contains(a.LastError.String, "query failed") {
+		t.Fatalf("the test query must fail at execution, not validation: %v", a.LastError)
+	}
+	if f.announced() != 0 || a.QueryBroken() {
+		t.Fatalf("one failed check: announced=%d broken=%v, want neither", f.announced(), a.QueryBroken())
+	}
+
+	// a single failure long ago is still a single failure
+	f.age(failureNotifyAfterMs * 10)
+	f.check(goodQuery)
+	f.check(execFailsQuery)
+	if f.announced() != 0 {
+		t.Fatalf("a recovered streak counted towards the next one: %d", f.announced())
+	}
+
+	// second check in a row, but minutes have not passed
+	a = f.check(execFailsQuery)
+	if f.announced() != 0 || !a.QueryBroken() {
+		t.Fatalf("two quick failures: announced=%d broken=%v, want 0 and true", f.announced(), a.QueryBroken())
+	}
+
+	// the channel is down when the threshold is reached: not marked, retried
+	f.rec.failureFail.Store(true)
+	f.age(failureNotifyAfterMs + 1000)
+	if a = f.check(execFailsQuery); a.FailureNotifiedAt.Valid {
+		t.Fatal("marked as announced although the send failed")
+	}
+	f.rec.failureFail.Store(false)
+	f.check(execFailsQuery)
+	if f.announced() != 1 {
+		t.Fatalf("announcement not retried after a failed send: %d", f.announced())
+	}
+
+	// zero cooldown must not mean "every check": five minutes is the floor
+	f.check(execFailsQuery)
+	if f.announced() != 1 {
+		t.Fatalf("zero cooldown repeated on the very next check: %d", f.announced())
+	}
+}
+
+// The cooldown has to span streaks: an alert that flaps (fails for a while,
+// one good check, fails again) must not announce every time it re-breaks.
+func TestBlindAlertFlappingRespectsCooldown(t *testing.T) {
+	f := newBlindFixture(t, 24*60*60*1000)
+	for cycle := range 3 {
+		f.check(execFailsQuery)
+		f.age(failureNotifyAfterMs + 1000)
+		f.check(execFailsQuery)
+		if f.announced() != 1 {
+			t.Fatalf("cycle %d: %d announcements inside a 24h cooldown, want 1", cycle, f.announced())
+		}
+		f.check(goodQuery)
+	}
+}
+
+// Editing an alert (which is also how it is disabled and re-enabled) starts it
+// over: a streak from before must not page on the first check afterwards.
+func TestAlertUpdateResetsFailureStreak(t *testing.T) {
+	f := newBlindFixture(t, 0)
+	ctx := context.Background()
+	weekAgo := time.Now().UnixMilli() - 7*24*60*60*1000
+	if _, err := f.pools.Meta.Exec(
+		`UPDATE alerts SET failure_count = 9, failing_since = ?, failure_notified_at = ?, last_error = 'old', last_error_at = 1`,
+		weekAgo, weekAgo); err != nil {
+		t.Fatal(err)
+	}
+	a := f.alert()
+	a.Enabled = false
+	if err := f.store.Update(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	a.Enabled = true
+	if err := f.store.Update(ctx, a); err != nil {
+		t.Fatal(err)
+	}
+	if got := f.alert(); got.FailureCount != 0 || got.FailingSince.Valid || got.FailureNotifiedAt.Valid || got.LastError.Valid {
+		t.Fatalf("Update kept stale state: %+v", got)
+	}
+	f.check(execFailsQuery)
+	if f.announced() != 0 {
+		t.Fatalf("announced on the first failed check after re-enabling: %d", f.announced())
+	}
+}
+
+// The evaluator holds a copy of the alert from before the check ran. If the
+// alert is edited while that check is in flight, the verdict must not be
+// decided from the copy: it used to announce seconds after the admin's fix.
+func TestBlindAlertIgnoresStaleCopy(t *testing.T) {
+	f := newBlindFixture(t, 0)
+	ctx := context.Background()
+	now := time.Now().UnixMilli()
+
+	// what the evaluator loaded: a long streak, due for an announcement
+	stale := f.alert()
+	stale.Query = execFailsQuery
+	stale.FailureCount = 9
+	stale.FailingSince = sql.NullInt64{Int64: now - failureNotifyAfterMs*10, Valid: true}
+
+	// meanwhile the admin replaced the query: the late verdict is about a
+	// query that no longer exists and must change nothing
+	f.ev.recordError(ctx, stale, "query failed: late", now, false)
+	if a := f.alert(); f.announced() != 0 || a.FailureCount != 0 || a.LastError.Valid {
+		t.Fatalf("a check of the old query touched the edited alert: announced=%d count=%d err=%v", f.announced(), a.FailureCount, a.LastError)
+	}
+
+	// same query, but the streak was reset under it (any other field edited):
+	// the database says this is failure one, and that decides
+	if _, err := f.pools.Meta.Exec("UPDATE alerts SET query = ?", execFailsQuery); err != nil {
+		t.Fatal(err)
+	}
+	f.ev.recordError(ctx, stale, "query failed: late", now, false)
+	if a := f.alert(); f.announced() != 0 || a.FailureCount != 1 {
+		t.Fatalf("decided from the stale copy: announced=%d count=%d, want 0 and 1", f.announced(), a.FailureCount)
 	}
 }
 
