@@ -253,7 +253,7 @@ func warWindowLabel(v WarRoomView, oob bool) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, " class=\"font-mono text-sm opacity-80 whitespace-nowrap\" data-win-from=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, " class=\"font-mono text-sm opacity-80\" data-win-from=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -293,33 +293,33 @@ func warWindowLabel(v WarRoomView, oob bool) templ.Component {
 			}
 			templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, ">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "><span class=\"whitespace-nowrap\" data-win-part=\"from\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(v.FromMs))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 68, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 68, Col: 74}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, " → ")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</span> → <span class=\"whitespace-nowrap\" data-win-part=\"to\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(v.ToMs))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 68, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 68, Col: 156}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</span>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "</span></span>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -812,7 +812,7 @@ func warLogs(v WarRoomView, oob bool) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div class=\"stream-scroll overflow-y-auto overflow-x-hidden h-[45vh] border border-base-content/15 rounded-box bg-base-100 flex flex-col p-1\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div class=\"stream-scroll @container overflow-y-auto overflow-x-hidden h-[45vh] border border-base-content/15 rounded-box bg-base-100 flex flex-col p-1\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -935,72 +935,42 @@ func warStreamRow(r LogRow) templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "<div class=\"stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer\" data-id=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var33 string
-		templ_7745c5c3_Var33, templ_7745c5c3_Err = templruntime.NewAttributeExpression(rowID(r.ID)).Resolve(ctx)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 205, Col: 139}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "\"><span class=\"font-mono text-sm opacity-70 whitespace-nowrap\" data-ts=\"")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var34 string
-		templ_7745c5c3_Var34, templ_7745c5c3_Err = templruntime.NewAttributeExpression(msString(r.Ts)).Resolve(ctx)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 206, Col: 87}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		var templ_7745c5c3_Var35 string
-		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(r.Ts))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 206, Col: 105}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "</span> ")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
 		{
 			templ_7745c5c3_ElementWriter := templ_7745c5c3_Buffer
 			templ_7745c5c3_Buffer := templ.GetBuffer()
 			var templ_7745c5c3_ElementScripts []templ.ComponentScript
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "<span class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, "<div class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var36 = []any{levelClass(r.Level) + " " + streamLevelWidth}
-			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_ElementWriter, templ_7745c5c3_Var36...)
+			var templ_7745c5c3_Var33 = []any{"stream-row " + streamRowLayout}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_ElementWriter, templ_7745c5c3_Var33...)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var37 string
-			templ_7745c5c3_Var37, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var36).String()).Resolve(ctx)
+			var templ_7745c5c3_Var34 string
+			templ_7745c5c3_Var34, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var33).String()).Resolve(ctx)
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 1, Col: 0}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var37)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, "\" data-id=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var35 string
+			templ_7745c5c3_Var35, templ_7745c5c3_Err = templruntime.NewAttributeExpression(rowID(r.ID)).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 205, Col: 69}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var35)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, "\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1014,59 +984,165 @@ func warStreamRow(r LogRow) templ.Component {
 			}
 			templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, ">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, "><span class=\"font-mono text-sm opacity-70 whitespace-nowrap\" data-ts=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var38 string
-		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(levelName(r.Level))
+		var templ_7745c5c3_Var36 string
+		templ_7745c5c3_Var36, templ_7745c5c3_Err = templruntime.NewAttributeExpression(msString(r.Ts)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 207, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 206, Col: 87}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "</span> <span class=\"badge badge-sm badge-outline font-mono shrink-0 w-28 min-w-0 justify-center\"><span class=\"truncate\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var39 string
-		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 208, Col: 126}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, "</span></span> <span class=\"font-mono text-sm truncate min-w-0\" title=\"")
+		var templ_7745c5c3_Var37 string
+		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(utcTime(r.Ts))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 206, Col: 105}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, "</span> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		{
+			templ_7745c5c3_ElementWriter := templ_7745c5c3_Buffer
+			templ_7745c5c3_Buffer := templ.GetBuffer()
+			var templ_7745c5c3_ElementScripts []templ.ComponentScript
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, "<span class=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var38 = []any{levelClass(r.Level) + " " + streamLevelWidth}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_ElementWriter, templ_7745c5c3_Var38...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var39 string
+			templ_7745c5c3_Var39, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var38).String()).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 1, Col: 0}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var39)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, "\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_ElementWriter, templ_7745c5c3_ElementScripts...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteTo(templ_7745c5c3_ElementWriter)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ.ReleaseBuffer(templ_7745c5c3_Buffer)
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, ">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var40 string
-		templ_7745c5c3_Var40, templ_7745c5c3_Err = templruntime.NewAttributeExpression(r.Message).Resolve(ctx)
+		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(levelName(r.Level))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 209, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 207, Col: 83}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var40)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, "</span> <span class=\"badge badge-sm badge-outline font-mono shrink-0 w-28 max-w-full min-w-0 justify-center\"><span class=\"truncate\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var41 string
-		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(r.Message)
+		templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(r.Service)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 209, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 208, Col: 137}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "</span></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, "</span></span> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		{
+			templ_7745c5c3_ElementWriter := templ_7745c5c3_Buffer
+			templ_7745c5c3_Buffer := templ.GetBuffer()
+			var templ_7745c5c3_ElementScripts []templ.ComponentScript
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "<span class=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var42 = []any{streamMsgLayout}
+			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_ElementWriter, templ_7745c5c3_Var42...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var43 string
+			templ_7745c5c3_Var43, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.CSSClasses(templ_7745c5c3_Var42).String()).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 1, Col: 0}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "\" title=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var44 string
+			templ_7745c5c3_Var44, templ_7745c5c3_Err = templruntime.NewAttributeExpression(r.Message).Resolve(ctx)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 209, Col: 51}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var44)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_ElementWriter, templ_7745c5c3_ElementScripts...)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteTo(templ_7745c5c3_ElementWriter)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ.ReleaseBuffer(templ_7745c5c3_Buffer)
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, ">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var45 string
+		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(r.Message)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 209, Col: 65}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, "</span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1091,20 +1167,20 @@ func warRoomScript() templ.Component {
 		}
 		ctx = templ.InitializeContext(ctx)
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, "<style>\n\t\t#war-main canvas[data-chart] { cursor: crosshair; touch-action: none; }\n\t\t.war-brush-box {\n\t\t\tposition: absolute; top: 0; bottom: 0; z-index: 5;\n\t\t\tbackground: color-mix(in oklab, var(--color-primary) 25%, transparent);\n\t\t\tborder-left: 1px solid var(--color-primary);\n\t\t\tborder-right: 1px solid var(--color-primary);\n\t\t\tpointer-events: none;\n\t\t}\n\t\t/* the pinned time line, mirrored across every chart */\n\t\t.war-pin {\n\t\t\tposition: absolute; top: 0; bottom: 0; width: 0; z-index: 4;\n\t\t\tborder-left: 1px dashed var(--color-warning);\n\t\t\tpointer-events: none;\n\t\t}\n\t\t.war-pin[data-t]::after {\n\t\t\tcontent: attr(data-t);\n\t\t\tposition: absolute; top: 2px; left: 5px;\n\t\t\tfont-family: monospace; font-size: 11px; white-space: nowrap;\n\t\t\tcolor: var(--color-warning);\n\t\t\tbackground: color-mix(in oklab, var(--color-base-100) 85%, transparent);\n\t\t\tpadding: 0 4px; border-radius: 4px;\n\t\t}\n\t\t.war-pin-flip[data-t]::after { left: auto; right: 5px; }\n\t\t/* the log line nearest the pinned moment; inset shadow, not border,\n\t\t   so marking never shifts the row's content */\n\t\t.war-pin-row {\n\t\t\tbox-shadow: inset 3px 0 0 var(--color-warning);\n\t\t\tbackground: color-mix(in oklab, var(--color-warning) 8%, transparent);\n\t\t}\n\t\t@keyframes war-pin-flash {\n\t\t\t0% { background: color-mix(in oklab, var(--color-warning) 35%, transparent); }\n\t\t\t100% { background: color-mix(in oklab, var(--color-warning) 8%, transparent); }\n\t\t}\n\t\t.war-pin-row-flash { animation: war-pin-flash 1.2s ease-out; }\n\t</style><script nonce=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, "<style>\n\t\t#war-main canvas[data-chart] { cursor: crosshair; touch-action: none; }\n\t\t.war-brush-box {\n\t\t\tposition: absolute; top: 0; bottom: 0; z-index: 5;\n\t\t\tbackground: color-mix(in oklab, var(--color-primary) 25%, transparent);\n\t\t\tborder-left: 1px solid var(--color-primary);\n\t\t\tborder-right: 1px solid var(--color-primary);\n\t\t\tpointer-events: none;\n\t\t}\n\t\t/* the pinned time line, mirrored across every chart */\n\t\t.war-pin {\n\t\t\tposition: absolute; top: 0; bottom: 0; width: 0; z-index: 4;\n\t\t\tborder-left: 1px dashed var(--color-warning);\n\t\t\tpointer-events: none;\n\t\t}\n\t\t.war-pin[data-t]::after {\n\t\t\tcontent: attr(data-t);\n\t\t\tposition: absolute; top: 2px; left: 5px;\n\t\t\tfont-family: monospace; font-size: 11px; white-space: nowrap;\n\t\t\tcolor: var(--color-warning);\n\t\t\tbackground: color-mix(in oklab, var(--color-base-100) 85%, transparent);\n\t\t\tpadding: 0 4px; border-radius: 4px;\n\t\t}\n\t\t.war-pin-flip[data-t]::after { left: auto; right: 5px; }\n\t\t/* the log line nearest the pinned moment; inset shadow, not border,\n\t\t   so marking never shifts the row's content */\n\t\t.war-pin-row {\n\t\t\tbox-shadow: inset 3px 0 0 var(--color-warning);\n\t\t\tbackground: color-mix(in oklab, var(--color-warning) 8%, transparent);\n\t\t}\n\t\t@keyframes war-pin-flash {\n\t\t\t0% { background: color-mix(in oklab, var(--color-warning) 35%, transparent); }\n\t\t\t100% { background: color-mix(in oklab, var(--color-warning) 8%, transparent); }\n\t\t}\n\t\t.war-pin-row-flash { animation: war-pin-flash 1.2s ease-out; }\n\t</style><script nonce=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var43 string
-		templ_7745c5c3_Var43, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.GetNonce(ctx)).Resolve(ctx)
+		var templ_7745c5c3_Var47 string
+		templ_7745c5c3_Var47, templ_7745c5c3_Err = templruntime.NewAttributeExpression(templ.GetNonce(ctx)).Resolve(ctx)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `ui/templates/warroom.templ`, Line: 250, Col: 36}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var43)
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var47)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, "\">\n\t\t(() => {\n\t\t\tconst form = document.getElementById(\"war-form\");\n\t\t\tconst follow = document.getElementById(\"war-follow\");\n\n\t\t\tfunction submitWindow(from, to) {\n\t\t\t\tform.elements.from.value = Math.round(from);\n\t\t\t\tform.elements.to.value = Math.round(to);\n\t\t\t\tform.requestSubmit();\n\t\t\t}\n\n\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\tconst btn = e.target.closest(\"[data-span-ms]\");\n\t\t\t\tif (!btn) return;\n\t\t\t\tconst now = Date.now();\n\t\t\t\tsubmitWindow(now - Number(btn.dataset.spanMs), now);\n\t\t\t});\n\n\t\t\tfollow.addEventListener(\"change\", () => form.requestSubmit());\n\n\t\t\t// the label is server-rendered UTC; show it in local time\n\t\t\tfunction fmtWindow() {\n\t\t\t\tconst el = document.getElementById(\"war-window-label\");\n\t\t\t\tif (!el) return;\n\t\t\t\tconst f = (ms) => new Date(Number(ms)).toLocaleString(undefined, { hour12: false });\n\t\t\t\tel.textContent = f(el.dataset.winFrom) + \" → \" + f(el.dataset.winTo);\n\t\t\t}\n\t\t\tfmtWindow();\n\t\t\tdocument.addEventListener(\"htmx:after:swap\", fmtWindow);\n\n\t\t\t// follow-now refresh: OOB fragments update charts and logs in place\n\t\t\tsetInterval(() => {\n\t\t\t\tif (!follow.checked) return;\n\t\t\t\tconst u = new URL(location);\n\t\t\t\tu.searchParams.set(\"frag\", \"panes\");\n\t\t\t\thtmx.ajax(\"GET\", u.pathname + u.search, { swap: \"none\" });\n\t\t\t}, 15000);\n\n\t\t\t// hand-rolled brush: drag across any chart selects the new window.\n\t\t\t// Charts use a category axis, so getValueForPixel yields an INDEX\n\t\t\t// into the payload's labelsMs - the index maps back to epoch ms.\n\t\t\tlet brush = null;\n\t\t\tfunction updateBox(e) {\n\t\t\t\tconst r = brush.wrap.getBoundingClientRect();\n\t\t\t\tconst a = Math.min(brush.x0, e.clientX) - r.left;\n\t\t\t\tconst b = Math.max(brush.x0, e.clientX) - r.left;\n\t\t\t\tbrush.box.style.left = a + \"px\";\n\t\t\t\tbrush.box.style.width = Math.max(1, b - a) + \"px\";\n\t\t\t}\n\t\t\tdocument.addEventListener(\"pointerdown\", (e) => {\n\t\t\t\tconst canvas = e.target.closest(\"#war-main canvas[data-chart]\");\n\t\t\t\tif (!canvas || e.button !== 0) return;\n\t\t\t\tconst chart = Chart.getChart(canvas);\n\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + canvas.dataset.chart);\n\t\t\t\tif (!chart || !dataEl) return;\n\t\t\t\tconst ms = JSON.parse(dataEl.textContent).labelsMs || [];\n\t\t\t\tif (ms.length < 2) return;\n\t\t\t\te.preventDefault();\n\t\t\t\tconst box = document.createElement(\"div\");\n\t\t\t\tbox.className = \"war-brush-box\";\n\t\t\t\tcanvas.parentElement.appendChild(box);\n\t\t\t\tbrush = { canvas, chart, ms, wrap: canvas.parentElement, box, x0: e.clientX };\n\t\t\t\tupdateBox(e);\n\t\t\t});\n\t\t\tdocument.addEventListener(\"pointermove\", (e) => { if (brush) updateBox(e); });\n\t\t\tdocument.addEventListener(\"pointerup\", (e) => {\n\t\t\t\tif (!brush) return;\n\t\t\t\tconst { chart, ms, canvas, box, x0 } = brush;\n\t\t\t\tbox.remove();\n\t\t\t\tbrush = null;\n\t\t\t\tconst r = canvas.getBoundingClientRect();\n\t\t\t\tconst px0 = Math.min(x0, e.clientX) - r.left;\n\t\t\t\tconst px1 = Math.max(x0, e.clientX) - r.left;\n\t\t\t\tif (px1 - px0 < 5) { // a click, not a drag: pin the time line\n\t\t\t\t\tconst i = Math.max(0, Math.min(ms.length - 1, Math.round(chart.scales.x.getValueForPixel(px0))));\n\t\t\t\t\tconst bucket = ms[1] - ms[0];\n\t\t\t\t\tconst t = ms[i] + bucket / 2; // bucket center lands right on coarser charts too\n\t\t\t\t\tpinnedMs = pinnedMs === t ? null : t; // same spot toggles off\n\t\t\t\t\trenderPins({ scroll: true, flash: true, smooth: true });\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tconst clamp = (i) => Math.max(0, Math.min(ms.length - 1, Math.round(i)));\n\t\t\t\tconst i0 = clamp(chart.scales.x.getValueForPixel(px0));\n\t\t\t\tconst i1 = clamp(chart.scales.x.getValueForPixel(px1));\n\t\t\t\tif (i1 <= i0) return;\n\t\t\t\tconst bucket = ms[1] - ms[0];\n\t\t\t\tconst from = ms[i0];\n\t\t\t\tlet to = ms[i1] + bucket; // the last selected bucket counts too\n\t\t\t\tif (to - from < 60000) to = from + 60000;\n\t\t\t\tfollow.checked = false; // zooming into the past is not \"now\"\n\t\t\t\tsubmitWindow(from, to);\n\t\t\t});\n\n\t\t\t// pinned time line: a click on any chart drops the same vertical\n\t\t\t// line on every chart, so metrics and logs read at one moment.\n\t\t\t// Fractional category index = (t - labels[0]) / bucket, and\n\t\t\t// getPixelForValue interpolates it - buckets differ per chart.\n\t\t\tlet pinnedMs = null;\n\t\t\tfunction renderPins(opts) {\n\t\t\t\topts = opts || {};\n\t\t\t\tdocument.querySelectorAll(\".war-pin\").forEach((el) => el.remove());\n\t\t\t\tmarkLogRow(opts);\n\t\t\t\tif (pinnedMs === null) return;\n\t\t\t\tlet labeled = false;\n\t\t\t\tdocument.querySelectorAll(\"#war-main canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst chart = Chart.getChart(c);\n\t\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + c.dataset.chart);\n\t\t\t\t\tif (!chart || !dataEl) return;\n\t\t\t\t\tconst ms = JSON.parse(dataEl.textContent).labelsMs || [];\n\t\t\t\t\tif (ms.length < 2) return;\n\t\t\t\t\tconst idx = (pinnedMs - ms[0]) / (ms[1] - ms[0]);\n\t\t\t\t\tif (idx < -0.5 || idx > ms.length - 0.5) return;\n\t\t\t\t\tconst x = chart.scales.x.getPixelForValue(idx);\n\t\t\t\t\tif (!isFinite(x)) return;\n\t\t\t\t\tconst line = document.createElement(\"div\");\n\t\t\t\t\tline.className = \"war-pin\";\n\t\t\t\t\tline.style.left = x + \"px\";\n\t\t\t\t\tif (!labeled) { // the time itself, once - on the topmost chart\n\t\t\t\t\t\tline.dataset.t = new Date(pinnedMs).toLocaleTimeString(undefined, { hour12: false });\n\t\t\t\t\t\tif (x > c.getBoundingClientRect().width - 80) line.classList.add(\"war-pin-flip\");\n\t\t\t\t\t\tlabeled = true;\n\t\t\t\t\t}\n\t\t\t\t\tc.parentElement.appendChild(line);\n\t\t\t\t});\n\t\t\t}\n\t\t\t// markLogRow scrolls the logs pane to the line nearest the pinned\n\t\t\t// moment and marks it. Container scroll ONLY - the page viewport\n\t\t\t// never jumps because of a chart click. onlyIfMissing skips the\n\t\t\t// work when the marked row survived the swap (e.g. a detail\n\t\t\t// expansion settled, not a pane refresh) so it can't re-yank a\n\t\t\t// pane the user has scrolled elsewhere.\n\t\t\tfunction markLogRow(opts) {\n\t\t\t\tif (pinnedMs !== null && opts.onlyIfMissing && document.querySelector(\".war-pin-row\")) return;\n\t\t\t\tdocument.querySelectorAll(\".war-pin-row\").forEach((el) => el.classList.remove(\"war-pin-row\", \"war-pin-row-flash\"));\n\t\t\t\tif (pinnedMs === null) return;\n\t\t\t\tconst rows = document.querySelectorAll(\"#war-logs .stream-row\");\n\t\t\t\tlet target = null;\n\t\t\t\tfor (const row of rows) {\n\t\t\t\t\tconst ts = row.querySelector(\"[data-ts]\");\n\t\t\t\t\tif (ts && Number(ts.dataset.ts) >= pinnedMs) { target = row; break; }\n\t\t\t\t}\n\t\t\t\t// pin past the newest loaded line: the last row is the nearest\n\t\t\t\tif (!target && rows.length) target = rows[rows.length - 1];\n\t\t\t\tif (!target) return; // aggregation table, or an empty window\n\t\t\t\ttarget.classList.add(\"war-pin-row\");\n\t\t\t\tif (opts.flash) target.classList.add(\"war-pin-row-flash\");\n\t\t\t\tif (opts.scroll) {\n\t\t\t\t\tconst pane = target.closest(\".stream-scroll\");\n\t\t\t\t\tif (!pane) return;\n\t\t\t\t\tconst top = target.getBoundingClientRect().top - pane.getBoundingClientRect().top\n\t\t\t\t\t\t+ pane.scrollTop - pane.clientHeight / 2 + target.offsetHeight / 2;\n\t\t\t\t\tpane.scrollTo({ top, behavior: opts.smooth ? \"smooth\" : \"auto\" });\n\t\t\t\t}\n\t\t\t}\n\t\t\tdocument.addEventListener(\"keydown\", (e) => {\n\t\t\t\tif (e.key === \"Escape\" && pinnedMs !== null) { pinnedMs = null; renderPins(); }\n\t\t\t});\n\t\t\t// charts are rebuilt on follow refreshes and theme flips; re-drop\n\t\t\t// the line after they settle (chartScripts renders first: it\n\t\t\t// registered its after:swap listener before this one). The row\n\t\t\t// re-marks and re-scrolls only when the pane was actually replaced.\n\t\t\tdocument.addEventListener(\"htmx:after:swap\", () =>\n\t\t\t\trequestAnimationFrame(() => renderPins({ scroll: true, onlyIfMissing: true })));\n\t\t\tnew MutationObserver(() => requestAnimationFrame(() => renderPins({ onlyIfMissing: true })))\n\t\t\t\t.observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\t\t})();\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, "\">\n\t\t(() => {\n\t\t\tconst form = document.getElementById(\"war-form\");\n\t\t\tconst follow = document.getElementById(\"war-follow\");\n\n\t\t\tfunction submitWindow(from, to) {\n\t\t\t\tform.elements.from.value = Math.round(from);\n\t\t\t\tform.elements.to.value = Math.round(to);\n\t\t\t\tform.requestSubmit();\n\t\t\t}\n\n\t\t\tdocument.addEventListener(\"click\", (e) => {\n\t\t\t\tconst btn = e.target.closest(\"[data-span-ms]\");\n\t\t\t\tif (!btn) return;\n\t\t\t\tconst now = Date.now();\n\t\t\t\tsubmitWindow(now - Number(btn.dataset.spanMs), now);\n\t\t\t});\n\n\t\t\tfollow.addEventListener(\"change\", () => form.requestSubmit());\n\n\t\t\t// the label is server-rendered UTC; show it in local time\n\t\t\tfunction fmtWindow() {\n\t\t\t\tconst el = document.getElementById(\"war-window-label\");\n\t\t\t\tif (!el) return;\n\t\t\t\tconst f = (ms) => window.poomlTime.fmt(ms, false);\n\t\t\t\tel.querySelector('[data-win-part=\"from\"]').textContent = f(el.dataset.winFrom);\n\t\t\t\tel.querySelector('[data-win-part=\"to\"]').textContent = f(el.dataset.winTo);\n\t\t\t}\n\t\t\tfmtWindow();\n\t\t\tdocument.addEventListener(\"htmx:after:swap\", fmtWindow);\n\n\t\t\t// follow-now refresh: OOB fragments update charts and logs in place\n\t\t\tsetInterval(() => {\n\t\t\t\tif (!follow.checked) return;\n\t\t\t\tconst u = new URL(location);\n\t\t\t\tu.searchParams.set(\"frag\", \"panes\");\n\t\t\t\thtmx.ajax(\"GET\", u.pathname + u.search, { swap: \"none\" });\n\t\t\t}, 15000);\n\n\t\t\t// hand-rolled brush: drag across any chart selects the new window.\n\t\t\t// Charts use a category axis, so getValueForPixel yields an INDEX\n\t\t\t// into the payload's labelsMs - the index maps back to epoch ms.\n\t\t\tlet brush = null;\n\t\t\tfunction updateBox(e) {\n\t\t\t\tconst r = brush.wrap.getBoundingClientRect();\n\t\t\t\tconst a = Math.min(brush.x0, e.clientX) - r.left;\n\t\t\t\tconst b = Math.max(brush.x0, e.clientX) - r.left;\n\t\t\t\tbrush.box.style.left = a + \"px\";\n\t\t\t\tbrush.box.style.width = Math.max(1, b - a) + \"px\";\n\t\t\t}\n\t\t\tdocument.addEventListener(\"pointerdown\", (e) => {\n\t\t\t\tconst canvas = e.target.closest(\"#war-main canvas[data-chart]\");\n\t\t\t\tif (!canvas || e.button !== 0) return;\n\t\t\t\tconst chart = Chart.getChart(canvas);\n\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + canvas.dataset.chart);\n\t\t\t\tif (!chart || !dataEl) return;\n\t\t\t\tconst ms = JSON.parse(dataEl.textContent).labelsMs || [];\n\t\t\t\tif (ms.length < 2) return;\n\t\t\t\te.preventDefault();\n\t\t\t\tconst box = document.createElement(\"div\");\n\t\t\t\tbox.className = \"war-brush-box\";\n\t\t\t\tcanvas.parentElement.appendChild(box);\n\t\t\t\tbrush = { canvas, chart, ms, wrap: canvas.parentElement, box, x0: e.clientX };\n\t\t\t\tupdateBox(e);\n\t\t\t});\n\t\t\tdocument.addEventListener(\"pointermove\", (e) => { if (brush) updateBox(e); });\n\t\t\tdocument.addEventListener(\"pointerup\", (e) => {\n\t\t\t\tif (!brush) return;\n\t\t\t\tconst { chart, ms, canvas, box, x0 } = brush;\n\t\t\t\tbox.remove();\n\t\t\t\tbrush = null;\n\t\t\t\tconst r = canvas.getBoundingClientRect();\n\t\t\t\tconst px0 = Math.min(x0, e.clientX) - r.left;\n\t\t\t\tconst px1 = Math.max(x0, e.clientX) - r.left;\n\t\t\t\tif (px1 - px0 < 5) { // a click, not a drag: pin the time line\n\t\t\t\t\tconst i = Math.max(0, Math.min(ms.length - 1, Math.round(chart.scales.x.getValueForPixel(px0))));\n\t\t\t\t\tconst bucket = ms[1] - ms[0];\n\t\t\t\t\tconst t = ms[i] + bucket / 2; // bucket center lands right on coarser charts too\n\t\t\t\t\tpinnedMs = pinnedMs === t ? null : t; // same spot toggles off\n\t\t\t\t\trenderPins({ scroll: true, flash: true, smooth: true });\n\t\t\t\t\treturn;\n\t\t\t\t}\n\t\t\t\tconst clamp = (i) => Math.max(0, Math.min(ms.length - 1, Math.round(i)));\n\t\t\t\tconst i0 = clamp(chart.scales.x.getValueForPixel(px0));\n\t\t\t\tconst i1 = clamp(chart.scales.x.getValueForPixel(px1));\n\t\t\t\tif (i1 <= i0) return;\n\t\t\t\tconst bucket = ms[1] - ms[0];\n\t\t\t\tconst from = ms[i0];\n\t\t\t\tlet to = ms[i1] + bucket; // the last selected bucket counts too\n\t\t\t\tif (to - from < 60000) to = from + 60000;\n\t\t\t\tfollow.checked = false; // zooming into the past is not \"now\"\n\t\t\t\tsubmitWindow(from, to);\n\t\t\t});\n\n\t\t\t// pinned time line: a click on any chart drops the same vertical\n\t\t\t// line on every chart, so metrics and logs read at one moment.\n\t\t\t// Fractional category index = (t - labels[0]) / bucket, and\n\t\t\t// getPixelForValue interpolates it - buckets differ per chart.\n\t\t\tlet pinnedMs = null;\n\t\t\tfunction renderPins(opts) {\n\t\t\t\topts = opts || {};\n\t\t\t\tdocument.querySelectorAll(\".war-pin\").forEach((el) => el.remove());\n\t\t\t\tmarkLogRow(opts);\n\t\t\t\tif (pinnedMs === null) return;\n\t\t\t\tlet labeled = false;\n\t\t\t\tdocument.querySelectorAll(\"#war-main canvas[data-chart]\").forEach((c) => {\n\t\t\t\t\tconst chart = Chart.getChart(c);\n\t\t\t\t\tconst dataEl = document.getElementById(\"chart-data-\" + c.dataset.chart);\n\t\t\t\t\tif (!chart || !dataEl) return;\n\t\t\t\t\tconst ms = JSON.parse(dataEl.textContent).labelsMs || [];\n\t\t\t\t\tif (ms.length < 2) return;\n\t\t\t\t\tconst idx = (pinnedMs - ms[0]) / (ms[1] - ms[0]);\n\t\t\t\t\tif (idx < -0.5 || idx > ms.length - 0.5) return;\n\t\t\t\t\tconst x = chart.scales.x.getPixelForValue(idx);\n\t\t\t\t\tif (!isFinite(x)) return;\n\t\t\t\t\tconst line = document.createElement(\"div\");\n\t\t\t\t\tline.className = \"war-pin\";\n\t\t\t\t\tline.style.left = x + \"px\";\n\t\t\t\t\tif (!labeled) { // the time itself, once - on the topmost chart\n\t\t\t\t\t\tline.dataset.t = new Date(pinnedMs).toLocaleTimeString(undefined, { hour12: false });\n\t\t\t\t\t\tif (x > c.getBoundingClientRect().width - 80) line.classList.add(\"war-pin-flip\");\n\t\t\t\t\t\tlabeled = true;\n\t\t\t\t\t}\n\t\t\t\t\tc.parentElement.appendChild(line);\n\t\t\t\t});\n\t\t\t}\n\t\t\t// markLogRow scrolls the logs pane to the line nearest the pinned\n\t\t\t// moment and marks it. Container scroll ONLY - the page viewport\n\t\t\t// never jumps because of a chart click. onlyIfMissing skips the\n\t\t\t// work when the marked row survived the swap (e.g. a detail\n\t\t\t// expansion settled, not a pane refresh) so it can't re-yank a\n\t\t\t// pane the user has scrolled elsewhere.\n\t\t\tfunction markLogRow(opts) {\n\t\t\t\tif (pinnedMs !== null && opts.onlyIfMissing && document.querySelector(\".war-pin-row\")) return;\n\t\t\t\tdocument.querySelectorAll(\".war-pin-row\").forEach((el) => el.classList.remove(\"war-pin-row\", \"war-pin-row-flash\"));\n\t\t\t\tif (pinnedMs === null) return;\n\t\t\t\tconst rows = document.querySelectorAll(\"#war-logs .stream-row\");\n\t\t\t\tlet target = null;\n\t\t\t\tfor (const row of rows) {\n\t\t\t\t\tconst ts = row.querySelector(\"[data-ts]\");\n\t\t\t\t\tif (ts && Number(ts.dataset.ts) >= pinnedMs) { target = row; break; }\n\t\t\t\t}\n\t\t\t\t// pin past the newest loaded line: the last row is the nearest\n\t\t\t\tif (!target && rows.length) target = rows[rows.length - 1];\n\t\t\t\tif (!target) return; // aggregation table, or an empty window\n\t\t\t\ttarget.classList.add(\"war-pin-row\");\n\t\t\t\tif (opts.flash) target.classList.add(\"war-pin-row-flash\");\n\t\t\t\tif (opts.scroll) {\n\t\t\t\t\tconst pane = target.closest(\".stream-scroll\");\n\t\t\t\t\tif (!pane) return;\n\t\t\t\t\tconst top = target.getBoundingClientRect().top - pane.getBoundingClientRect().top\n\t\t\t\t\t\t+ pane.scrollTop - pane.clientHeight / 2 + target.offsetHeight / 2;\n\t\t\t\t\tpane.scrollTo({ top, behavior: opts.smooth ? \"smooth\" : \"auto\" });\n\t\t\t\t}\n\t\t\t}\n\t\t\tdocument.addEventListener(\"keydown\", (e) => {\n\t\t\t\tif (e.key === \"Escape\" && pinnedMs !== null) { pinnedMs = null; renderPins(); }\n\t\t\t});\n\t\t\t// charts are rebuilt on follow refreshes and theme flips; re-drop\n\t\t\t// the line after they settle (chartScripts renders first: it\n\t\t\t// registered its after:swap listener before this one). The row\n\t\t\t// re-marks and re-scrolls only when the pane was actually replaced.\n\t\t\tdocument.addEventListener(\"htmx:after:swap\", () =>\n\t\t\t\trequestAnimationFrame(() => renderPins({ scroll: true, onlyIfMissing: true })));\n\t\t\tnew MutationObserver(() => requestAnimationFrame(() => renderPins({ onlyIfMissing: true })))\n\t\t\t\t.observe(document.documentElement, { attributes: true, attributeFilter: [\"data-theme\"] });\n\t\t})();\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -206,12 +206,12 @@ templ streamPanel(rows []LogRow) {
 	if len(rows) == 0 {
 		<p class="text-sm opacity-60 italic py-2">No matching log lines right now.</p>
 	} else {
-		<div class="stream-scroll overflow-y-auto overflow-x-hidden max-h-56 flex flex-col">
+		<div class="stream-scroll @container overflow-y-auto overflow-x-hidden max-h-56 flex flex-col">
 			for _, r := range rows {
-				<div class="stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer" data-id={ fmt.Sprint(r.ID) }>
+				<div class={ "stream-row " + streamRowLayout } data-id={ fmt.Sprint(r.ID) }>
 					<span class="font-mono text-sm opacity-70 whitespace-nowrap" data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span>
 					<span class={ levelClass(r.Level) + " " + streamLevelWidth }>{ levelName(r.Level) }</span>
-					<span class="font-mono text-sm truncate min-w-0" title={ r.Message }>{ r.Message }</span>
+					<span class={ streamMsgLayout } title={ r.Message }>{ r.Message }</span>
 				</div>
 			}
 		</div>
@@ -423,18 +423,7 @@ templ chartScripts() {
 				});
 			}
 
-			// stream panels carry [data-ts] rows: compact local times, same
-			// convention as the log viewer; detail expansions want the full date
-			function fmtTs() {
-				document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
-					el.dataset.tsDone = "1";
-					const t = new Date(Number(el.dataset.ts));
-					el.textContent = el.hasAttribute("data-ts-full")
-						? t.toLocaleString(undefined, { hour12: false })
-						: t.toLocaleTimeString(undefined, { hour12: false });
-					el.title = t.toLocaleString(undefined, { hour12: false });
-				});
-			}
+			const fmtTs = () => window.poomlTime.apply();
 			// newest at the bottom, pane anchored there - but only when the pane
 			// itself (re)loaded, so expanding a row doesn't yank it back down
 			function anchorStreams(root) {

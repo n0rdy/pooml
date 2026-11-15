@@ -273,7 +273,7 @@ templ homeScript() {
 			function fmt() {
 				document.querySelectorAll("[data-reltime]").forEach((el) => {
 					el.textContent = rel(Number(el.dataset.reltime));
-					el.title = new Date(Number(el.dataset.reltime)).toLocaleString();
+					el.title = window.poomlTime.tip(el.dataset.reltime);
 				});
 			}
 			fmt();

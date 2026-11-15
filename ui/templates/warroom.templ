@@ -62,10 +62,10 @@ templ warWindowLabel(v WarRoomView, oob bool) {
 	<span
 		id="war-window-label"
 		{ oobAttr(oob)... }
-		class="font-mono text-sm opacity-80 whitespace-nowrap"
+		class="font-mono text-sm opacity-80"
 		data-win-from={ msString(v.FromMs) }
 		data-win-to={ msString(v.ToMs) }
-	>{ utcTime(v.FromMs) } → { utcTime(v.ToMs) }</span>
+	><span class="whitespace-nowrap" data-win-part="from">{ utcTime(v.FromMs) }</span> → <span class="whitespace-nowrap" data-win-part="to">{ utcTime(v.ToMs) }</span></span>
 }
 
 templ warPreset(label string, spanMs int64) {
@@ -164,7 +164,7 @@ templ warLogs(v WarRoomView, oob bool) {
 			if len(v.Logs.Rows) == 0 {
 				<p class="text-sm opacity-60 italic py-2">Nothing in this window at these levels. Widen the window, or loosen the query.</p>
 			} else {
-				<div class="stream-scroll overflow-y-auto overflow-x-hidden h-[45vh] border border-base-content/15 rounded-box bg-base-100 flex flex-col p-1">
+				<div class="stream-scroll @container overflow-y-auto overflow-x-hidden h-[45vh] border border-base-content/15 rounded-box bg-base-100 flex flex-col p-1">
 					for _, r := range v.Logs.Rows {
 						@warStreamRow(r)
 					}
@@ -202,11 +202,11 @@ templ warLogs(v WarRoomView, oob bool) {
 // warStreamRow reuses the stream-row interaction (click expands the detail,
 // wired in chartScripts) plus the service badge the panel variant lacks.
 templ warStreamRow(r LogRow) {
-	<div class="stream-row flex items-baseline gap-2 px-1 py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer" data-id={ rowID(r.ID) }>
+	<div class={ "stream-row " + streamRowLayout } data-id={ rowID(r.ID) }>
 		<span class="font-mono text-sm opacity-70 whitespace-nowrap" data-ts={ msString(r.Ts) }>{ utcTime(r.Ts) }</span>
 		<span class={ levelClass(r.Level) + " " + streamLevelWidth }>{ levelName(r.Level) }</span>
-		<span class="badge badge-sm badge-outline font-mono shrink-0 w-28 min-w-0 justify-center"><span class="truncate">{ r.Service }</span></span>
-		<span class="font-mono text-sm truncate min-w-0" title={ r.Message }>{ r.Message }</span>
+		<span class="badge badge-sm badge-outline font-mono shrink-0 w-28 max-w-full min-w-0 justify-center"><span class="truncate">{ r.Service }</span></span>
+		<span class={ streamMsgLayout } title={ r.Message }>{ r.Message }</span>
 	</div>
 }
 
@@ -271,8 +271,9 @@ templ warRoomScript() {
 			function fmtWindow() {
 				const el = document.getElementById("war-window-label");
 				if (!el) return;
-				const f = (ms) => new Date(Number(ms)).toLocaleString(undefined, { hour12: false });
-				el.textContent = f(el.dataset.winFrom) + " → " + f(el.dataset.winTo);
+				const f = (ms) => window.poomlTime.fmt(ms, false);
+				el.querySelector('[data-win-part="from"]').textContent = f(el.dataset.winFrom);
+				el.querySelector('[data-win-part="to"]').textContent = f(el.dataset.winTo);
 			}
 			fmtWindow();
 			document.addEventListener("htmx:after:swap", fmtWindow);
