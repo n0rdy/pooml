@@ -92,6 +92,15 @@ func levelName(l *int) string {
 // with ERROR/DEBUG ones. The Logs page gets the same alignment from its table.
 const streamLevelWidth = "w-14 justify-center shrink-0"
 
+// Stream rows stack (metadata line, message below at full width) when their
+// pane is narrow: a dashboard panel can be narrow on a wide screen, so the
+// break follows the container (@2xl = 42rem), not the viewport. Stacked rows
+// are a grid, not flex-wrap: a wide service badge must shrink, not wrap.
+const (
+	streamRowLayout = "grid grid-cols-[auto_auto_minmax(0,1fr)] @2xl:flex items-baseline gap-x-2 px-1 py-1 @2xl:py-0.5 rounded hover:bg-base-content/5 min-w-0 cursor-pointer"
+	streamMsgLayout = "font-mono text-sm truncate min-w-0 col-span-full"
+)
+
 func levelClass(l *int) string {
 	base := "badge badge-sm font-mono cursor-pointer"
 	if l == nil {

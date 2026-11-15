@@ -136,7 +136,7 @@ templ logViewer(v LogsView) {
 		<table class="table font-mono">
 			<thead class="sticky top-0 bg-base-100 z-10">
 				<tr class="text-sm text-center">
-					<th class="w-32">time</th>
+					<th>time</th>
 					<th class="w-16">level</th>
 					<th class="w-28 hidden sm:table-cell">service</th>
 					<th>message</th>
@@ -253,8 +253,8 @@ templ LogDetailBlock(d LogDetail) {
 // host. One notch of muting on labels, weight on values, nothing stacked.
 templ logDetailMeta(d LogDetail) {
 	@metaPair("id", rowID(d.ID))
-	<span class="whitespace-nowrap"><span class="opacity-60">event</span> <span class="font-semibold" data-ts={ msString(d.Ts) } data-ts-full>{ utcTime(d.Ts) }</span></span>
-	<span class="whitespace-nowrap"><span class="opacity-60">ingested</span> <span class="font-semibold" data-ts={ msString(d.IngestedAt) } data-ts-full>{ utcTime(d.IngestedAt) }</span></span>
+	<span class="whitespace-nowrap"><span class="opacity-60">event</span> <span class="font-semibold" data-ts={ msString(d.Ts) }>{ utcTime(d.Ts) }</span></span>
+	<span class="whitespace-nowrap"><span class="opacity-60">ingested</span> <span class="font-semibold" data-ts={ msString(d.IngestedAt) }>{ utcTime(d.IngestedAt) }</span></span>
 	@metaPair("service", d.Service)
 	@metaPair("host", d.Host)
 }
@@ -335,11 +335,7 @@ templ LogDetailPage(d LogDetail, csrfToken string) {
 				</div>
 			</div>
 		</div>
-		<script nonce={ templ.GetNonce(ctx) }>
-			document.querySelectorAll("[data-ts]").forEach((el) => {
-				el.textContent = new Date(Number(el.dataset.ts)).toLocaleString(undefined, { hour12: false });
-			});
-		</script>
+		<script nonce={ templ.GetNonce(ctx) }>window.poomlTime.apply();</script>
 	}
 }
 
@@ -395,6 +391,26 @@ templ logsScript() {
 			overflow: visible;
 			text-overflow: clip;
 		}
+		/* a wrapped message's first line shares a baseline with its time */
+		.log-row > td { vertical-align: baseline; }
+		/* phones: columns left the message ~130px, so rows stack instead -
+		   time, level, service on one line, the message at full width below */
+		@media (width < 40rem) {
+			#log-scroll > table:has(#log-rows), #log-rows, #log-rows > tr, #log-rows > tr > td { display: block; }
+			#log-scroll > table:has(#log-rows) > thead { display: none; }
+			/* grid, not flex-wrap: a long service name must shrink (ellipsis,
+			   tooltip has it) rather than wrap onto a third line */
+			#log-rows > tr.log-row {
+				display: grid; grid-template-columns: auto 4rem minmax(0, 1fr);
+				align-items: baseline; gap: 0.25rem 0.75rem; padding: 0.5rem 0.75rem;
+				border-bottom: 1px solid color-mix(in oklab, var(--color-base-content) 5%, transparent);
+			}
+			/* daisy draws the row separator per cell, which stacking splits up */
+			#log-rows > tr.log-row > td { padding: 0; border: 0; text-align: start; min-width: 0; }
+			#log-rows > tr.log-row > td:nth-child(2) { text-align: center; }
+			#log-rows > tr.log-row > td .badge { max-width: 100%; }
+			#log-rows > tr.log-row > td.msg-cell { grid-column: 1 / -1; max-width: none; }
+		}
 		/* same focus treatment as daisy inputs, so the editor reads as a field */
 		/* cause-and-effect: pulses when a quick filter rewrites the query */
 		#sql-editor.query-updated {
@@ -413,21 +429,7 @@ templ logsScript() {
 	// reflows once the network catches up (the "jump on load", round two).
 	<script nonce={ templ.GetNonce(ctx) }>
 		(() => {
-			// compact local times in rows (full timestamp on hover); detail
-			// rows marked data-ts-full keep the complete local timestamp
-			function fmtTimes() {
-				document.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
-					el.dataset.tsDone = "1";
-					const t = new Date(Number(el.dataset.ts));
-					if (el.hasAttribute("data-ts-full")) {
-						el.textContent = t.toLocaleString(undefined, { hour12: false });
-					} else {
-						el.textContent = t.toLocaleTimeString(undefined, { hour12: false })
-							+ "." + String(t.getMilliseconds()).padStart(3, "0");
-					}
-					el.title = t.toLocaleString(undefined, { hour12: false });
-				});
-			}
+			const fmtTimes = () => window.poomlTime.apply();
 
 			const pane = () => document.getElementById("log-scroll");
 			function anchorBottom() {

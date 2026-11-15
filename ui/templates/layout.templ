@@ -28,6 +28,7 @@ templ Base(title string) {
 			@importMap()
 			@contrastFixes()
 			@themeScript()
+			@timeScript()
 		</head>
 		<body class="min-h-screen bg-base-200 text-base-content">
 			{ children... }
@@ -228,6 +229,37 @@ templ themeScript() {
 				const t = document.getElementById("theme-toggle");
 				if (t && localStorage.getItem("pooml-theme") === "light") t.checked = true;
 			});
+		})();
+	</script>
+}
+
+// timeScript is the one timestamp format: local ISO, fixed width (no locale
+// reordering), zone on hover. The date is always shown: a bare time never
+// says which day. Classic script, so pages can format during parse.
+templ timeScript() {
+	<script nonce={ templ.GetNonce(ctx) }>
+		(() => {
+			const p = (n, w = 2) => String(n).padStart(w, "0");
+			const zoneFmt = new Intl.DateTimeFormat(undefined, { timeZoneName: "short" });
+			function fmt(ms, withMs = true) {
+				const t = new Date(Number(ms));
+				const s = t.getFullYear() + "-" + p(t.getMonth() + 1) + "-" + p(t.getDate())
+					+ " " + p(t.getHours()) + ":" + p(t.getMinutes()) + ":" + p(t.getSeconds());
+				return withMs ? s + "." + p(t.getMilliseconds(), 3) : s;
+			}
+			// per timestamp, not per page: DST gives one window two zone names
+			function tip(ms) {
+				const z = zoneFmt.formatToParts(new Date(Number(ms))).find((x) => x.type === "timeZoneName");
+				return fmt(ms) + (z ? " " + z.value : "");
+			}
+			function apply(root = document) {
+				root.querySelectorAll("[data-ts]:not([data-ts-done])").forEach((el) => {
+					el.dataset.tsDone = "1";
+					el.textContent = fmt(el.dataset.ts);
+					el.title = tip(el.dataset.ts);
+				});
+			}
+			window.poomlTime = { fmt, tip, apply };
 		})();
 	</script>
 }
