@@ -5,7 +5,7 @@
     "css": "tailwindcss -i input.css -o ../static/styles.css --minify"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1.0",
+    "@tailwindcss/cli": "^4.3.5",
     "daisyui": "^5.7.50",
     "tailwindcss": "^4.1.0"
   }
